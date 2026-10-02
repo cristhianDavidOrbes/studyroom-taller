@@ -15,14 +15,21 @@ const web='apps/web/src/', api='apps/api/src/';
 const db='apps/api/prisma/schema.prisma', contract='docs/implementation-contract.md';
 const migration='apps/api/prisma/migrations/20261002050007_studyroom_initial/migration.sql';
 const suites={
-  apiUnit:{file:'apps/api/test/security.spec.ts',command:'npm test -w @studyroom/api',reported:'19 pruebas unitarias API aprobadas en la sesión según el agente principal; verificar el artefacto actualizado si existe.'},
-  authz:{file:'apps/api/test/authorization.spec.ts',command:'npm test -w @studyroom/api',reported:'Parte de las pruebas unitarias API.'},
-  queue:{file:'apps/api/test/queue.spec.ts',command:'npm test -w @studyroom/api',reported:'Parte de las pruebas unitarias API.'},
-  apiIntegration:{file:'tests/api.integration.mjs',command:'node --test tests/api.integration.mjs',reported:'14 pruebas/subpruebas aprobadas contra Firebase Auth emulator y PostgreSQL según el agente principal. No acredita Firebase de producción.'},
+  apiUnit:{file:'apps/api/test/security.spec.ts',command:'npm test -w @studyroom/api',reported:'Pruebas unitarias API ejecutadas; verificar el resultado durable actualizado.',log:'docs/verification/backend-unit.txt'},
+  authz:{file:'apps/api/test/authorization.spec.ts',command:'npm test -w @studyroom/api',reported:'Parte de las pruebas unitarias API.',log:'docs/verification/backend-unit.txt'},
+  queue:{file:'apps/api/test/queue.spec.ts',command:'npm test -w @studyroom/api',reported:'Parte de las pruebas unitarias API.',log:'docs/verification/backend-unit.txt'},
+  queueTimezone:{file:'apps/api/scripts/verify-queue-timezone.cjs',command:'node apps/api/scripts/verify-queue-timezone.cjs',artifact:'docs/verification/queue-timezone.json'},
+  apiIntegration:{file:'tests/api.integration.mjs',command:'node --test tests/api.integration.mjs',reported:'14 pruebas/subpruebas aprobadas contra Firebase Auth emulator y PostgreSQL según el agente principal. No acredita Firebase de producción.',log:'docs/verification/api-integration.txt'},
   browser:{file:'apps/web/tests/browser-smoke.mjs',command:'node apps/web/tests/browser-smoke.mjs',artifact:'apps/web/test-results/browser-smoke.json'},
+  mediaBrowsers:{file:'apps/web/tests/media-collaboration.mjs',command:'node apps/web/tests/media-collaboration.mjs',artifact:'apps/web/test-results/media-collaboration.json'},
   annotation:{file:'apps/web/src/annotations.test.ts',command:'npm test -w @studyroom/web',reported:'Casos de transformación de coordenadas; no acredita transmisión en dispositivos reales.'},
-  gateway:{file:'apps/ai-gateway/test/gateway.test.ts',command:'npm test -w @studyroom/ai-gateway',reported:'13 pruebas aprobadas observadas directamente durante esta implementación.'},
+  gateway:{file:'apps/ai-gateway/test/gateway.test.ts',command:'npm test -w @studyroom/ai-gateway',reported:'15 pruebas aprobadas, incluida regresión de bloqueo Windows del registro durable de cuotas.',log:'docs/verification/gateway-unit.txt'},
   localModel:{file:'scripts/local-ai/verify.ps1',command:'.\\scripts\\local-ai\\verify.ps1',artifact:'apps/ai-gateway/model-verification.json'},
+  publicTunnel:{file:'scripts/local-ai/verify-public.mjs',command:'node scripts/local-ai/verify-public.mjs',artifact:'apps/ai-gateway/tunnel-verification.json'},
+  cloud:{file:'docs/verification/cloud-smoke.json',command:'Validación de API local conectada a proveedores reales; ver condiciones en el artefacto.',artifact:'docs/verification/cloud-smoke.json'},
+  deployment:{file:'render.yaml',command:'Verificación de paneles reales y navegador publicado; condiciones en el artefacto.',artifact:'docs/verification/deployment.json'},
+  restore:{file:'scripts/verify-logical-restore.cjs',command:'node scripts/verify-logical-restore.cjs',artifact:'docs/verification/logical-restore.json'},
+  localWorker:{file:'apps/api/scripts/verify-local-ai.mjs',command:'node apps/api/scripts/verify-local-ai.mjs',artifact:'docs/verification/ai-api-local.json'},
 };
 const gates={
   deployment:'DEPLOYMENT_FREE: comprobar Render Free, HTTPS, cold start, orígenes Firebase/CORS, planes gratuitos y límites en los paneles reales. Un despliegue local no satisface esta puerta.',
@@ -32,14 +39,14 @@ const gates={
   recovery:'MEDIA_RECOVERY: UDP bloqueado/TURN-TLS, Wi-Fi→datos, corte5s y recuperación≤10s; reinicio API conservando medios, chat y señales recuperan estado.',
   annotations:'ANNOTATIONS_REAL: señalamientos visibles para otros participantes sobre la pantalla compartida, resoluciones distintas, teclado y permisos reales; no hay pizarra separada.',
   storage:'STORAGE_REAL: subida/descarga/eliminación autorizadas en Supabase privado con dos usuarios, documento inválido, cuota y URL vencida; comprobar extracción de PDFs.',
-  restore:'RESTORE: restaurar un respaldo PostgreSQL en una base vacía y validar relaciones; la migración aplicada no sustituye una restauración.',
-  aiTunnel:'AI_TUNNEL: llamada desde Render por HTTPS ngrok al PC, 401 público sin secreto, PC suspendido/apagado y túnel caído; sin fallback facturable.',
+  restore:'RESTORE: recuperación operacional con datos representativos, objetos Storage e identidades. Se registra por separado la restauración lógica real de las 13 tablas y cinco filas existentes; no equivale a pg_dump ni a recuperación completa del proveedor.',
+  aiTunnel:'AI_TUNNEL: operación desde Render por HTTPS ngrok al PC, incluyendo PC suspendido/apagado y túnel caído; sin fallback facturable. Una solicitud exitosa acredita conexión, no todos los fallos operativos.',
   aiQuality:'AI_QUALITY: evaluar español, fidelidad y quizzes con material real variado; tres muestras correctas no son una evaluación estadística.',
   aiRecovery:'AI_DURABLE: reiniciar API durante trabajo y recuperar lease vencido sin duplicar resultado; validar cola y cancelación con motor real.',
   roomFlows:'ROOM_FLOWS: completar positivo y negativo de cada filtro, recomendación, invitación, fecha y transición desde la interfaz con usuarios distintos.',
   collaboration:'COLLABORATION_REAL: dos clientes de sala prueban presencia, reacciones, mano, chat, notas privadas y timer bajo desconexión/reconexión.',
   ci:'CI_REMOTE: ejecutar el workflow en el repositorio conectado con límites gratuitos, retención y bloqueo de gasto; las pruebas locales no prueban GitHub Actions.',
-  feedback:'AI_FEEDBACK: usuario autorizado valora/reporta respuesta completa; comprobar persistencia, deduplicación, rechazo de valoración ajena e interfaz.',
+  feedback:'AI_FEEDBACK: completar reporte con motivo, deduplicación, rechazo de valoración ajena e interfaz. La valoración positiva guardada mediante API se registra por separado.',
   history:'HISTORY_REAL: exportación JSON/Markdown, filtros/fechas, privacidad, intento de quiz y reporte coherente en sesiones y usuarios reales.',
 };
 
@@ -78,10 +85,10 @@ const rows=[
  [35,'Presencia por usuario, autorización de sala y snapshot al reconectar.',['room.tsx'],['realtime.ts','rooms.ts'],['apiIntegration'],'Socket reconecta y obtiene snapshot.',['collaboration']],
  [36,'Chat persistente idempotente con distribución a sala.',['room.tsx'],['rooms.ts','realtime.ts','events.ts'],['apiIntegration','browser'],'Enviar, persistir, idempotencia y texto vacío.',['collaboration']],
  [37,'Reacciones permitidas y estado de mano levantada.',['room.tsx'],['realtime.ts','rooms.ts'],[],'Eventos implementados; falta caso automático específico entre dos clientes.',['collaboration']],
- [38,'Videollamada LiveKit SFU con ajuste de calidad y estadísticas exportables.',['media.tsx'],['rooms.ts'],['queue'],'Límite de duración/reserva unitario; no hay llamada real de aceptación.',['media','recovery']],
- [39,'Cámara, micrófono, selección de dispositivos, reproducción y solo audio.',['media.tsx'],['rooms.ts'],[],'Controles presentes; hardware real/denegación de permisos pendiente.',['media','recovery']],
- [40,'Pantalla compartida con audio opcional y límite720p/15fps.',['media.tsx'],['rooms.ts'],[],'Código de publicación presente; dos receptores reales pendientes.',['media','recovery']],
- [41,'Menú compacto sobre cámara; puntero/trazo/borrado sincronizados sobre pantalla.',['media.tsx','annotations.ts'],['rooms.ts','validation.ts'],['annotation','authz','apiUnit'],'Normalización/barras negras, límites y permiso de pantalla; transmisión real pendiente.',['media','recovery','annotations']],
+ [38,'Videollamada LiveKit SFU con ajuste de calidad y estadísticas exportables.',['media.tsx'],['rooms.ts'],['queue'],'Reserva unitaria y dos navegadores por SFU real con medios sintéticos; no acredita llamada física prolongada.',['media','recovery']],
+ [39,'Cámara, micrófono, selección de dispositivos, reproducción y solo audio.',['media.tsx'],['rooms.ts'],[],'Cámara/micrófono sintéticos entre navegadores; hardware físico, inteligibilidad y permisos siguen pendientes.',['media','recovery']],
+ [40,'Pantalla compartida con audio opcional y límite720p/15fps.',['media.tsx'],['rooms.ts'],[],'Pantalla sintética llega al segundo navegador por LiveKit; compartir pantalla física y audio requiere comprobación propia.',['media','recovery']],
+ [41,'Menú compacto sobre cámara; puntero/trazo/borrado sincronizados sobre pantalla.',['media.tsx','annotations.ts'],['rooms.ts','validation.ts'],['annotation','authz','apiUnit'],'Coordenadas y permisos; menú, puntero, teclado, cambio de rol y borrado entre navegadores con pantalla sintética.',['media','recovery','annotations']],
  [42,'Subir/listar/ver/borrar documentos con URLs privadas.',['room.tsx'],['documents.ts'],['apiUnit'],'Validación de archivo falso/nombre; integración completa pendiente.',['storage']],
  [43,'Notas privadas persistentes por usuario y sala.',['room.tsx'],['rooms.ts'],['apiIntegration','browser'],'Aislamiento entre dos usuarios y persistencia al recargar.',['collaboration']],
  [44,'Temporizador compartido de enfoque/descanso con control por rol.',['room.tsx'],['rooms.ts'],['apiIntegration','authz','browser'],'Inicio/pausa y rechazo de participante.',['collaboration']],
@@ -98,6 +105,7 @@ const rows=[
  [57,'Historial, filtros, resultados, intentos y exportación.',['history.tsx'],['ai.ts','controller.ts'],['apiIntegration','browser'],'Lectura autorizada/historial, UI; filtros/exportación requieren cobertura adicional.',['history']],
 ];
 const extraFiles={27:[db],30:[db,migration,'apps/api/prisma/seed.ts','apps/api/supabase/migrations/20261002050007_studyroom_initial.sql'],33:['package.json','.github/workflows/ci.yml'],46:['apps/ai-gateway/src/server.ts','apps/ai-gateway/src/config.ts','apps/ai-gateway/local-ai.md'],50:['apps/ai-gateway/src/core.ts','scripts/local-ai/watchdog.ps1']};
+const cloudScopes={2:'Identidad Firebase real y perfil PostgreSQL.',5:'Verificación Firebase real; falta revocación entre dispositivos.',19:'Sala usada en el smoke cloud.',27:'Prisma con Supabase y TLS estricto.',28:'Firebase real y conexión TLS; alcance exacto de despliegue indicado en el artefacto.',29:'Bucket privado y emisión de token de sala autorizada; no todos los permisos.',31:'Subida y URL firmada; acceso público al bucket rechazado.',38:'Token real LiveKit; este artefacto no prueba la videollamada.',42:'Documento privado subido y descargado; no todos los formatos y fallos.',46:'Inferencia por HTTPS ngrok con resultado persistido.',47:'Pregunta mediante cola de API y respuesta persistida con modelo real.',49:'Autorización de recursos ejercitada parcialmente; no todos los casos de contexto.',50:'Proveedor local utilizado; no prueba de cuota real agotada.',53:'Cierre y sesión almacenada en Supabase real.'};
 const stories=new Map();
 for(const [number,behavior,front,back,testIds,testedScope,manual] of rows){
   const key=`SUT-${number}`;
@@ -107,23 +115,55 @@ for(const [number,behavior,front,back,testIds,testedScope,manual] of rows){
   const missing=[];
   for(const file of files)if(!await exists(file))missing.push(file);
   const evidence=[];
-  for(const id of testIds){
+  const selectedTests=[...testIds,...(cloudScopes[number]?['cloud']:[]),...([46,47,50].includes(number)?['publicTunnel']:[]),...([23,38,39,40,41].includes(number)?['mediaBrowsers']:[]),...([46,47,50,54,55,56].includes(number)?['queueTimezone']:[]),...([27,30].includes(number)?['restore']:[]),...([47,49,50,51].includes(number)?['localWorker']:[]),...([2,3,19,28,33,46,50].includes(number)?['deployment']:[])];
+  for(const id of selectedTests){
     const suite=suites[id];
     let status=suite.reported?'executed_partial_scope':'not_executed';
     let detail=suite.reported??'Sin resultado registrado.';
+    if(suite.log&&await exists(suite.log)){
+      const log=await readFile(resolve(root,suite.log),'utf8');
+      const passed=/Tests:\s*\d+ passed|(?:#|ℹ) pass \d+/i.test(log);
+      const failed=/Tests:.*\bfailed\b|(?:#|ℹ) fail [1-9]/i.test(log);
+      status=passed&&!failed?'passed_partial_scope':failed?'failed_partial_run':'unconfirmed_log';
+      detail=`Resultado durable: ${suite.log}. La cobertura se limita a los escenarios nombrados para esta historia.`;
+    }
     if(suite.artifact&&await exists(suite.artifact)){
       const artifact=await json(suite.artifact);
       if(id==='browser'){
         status=artifact.error?'failed_partial_run':artifact.results?.length>=5&&artifact.results.every(r=>r.status==='passed')?'passed_partial_scope':'partial_run';
         detail=`${artifact.results?.length??0} pasos; ${artifact.error?'el último registro contiene un error':'sin error registrado'}. No acredita todos los flujos de la aplicación.`;
+      }else if(id==='mediaBrowsers'){
+        status=artifact.status==='passed'&&artifact.checks?.length>=5&&artifact.checks.every(check=>check.status==='passed')?'passed_partial_scope':artifact.error||artifact.status==='failed'?'failed_partial_run':'not_verified';
+        detail=`${artifact.checks?.filter(check=>check.status==='passed').length??0} escenarios aprobados con dos navegadores aislados, medios sintéticos y SFU LiveKit real. No valida dispositivos físicos, redes distintas, inteligibilidad de audio ni cuatro participantes durante 60 minutos.`;
+      }else if(id==='queueTimezone'){
+        status=artifact.status==='passed'&&artifact.results?.length===2&&artifact.results.every(item=>item.due===true&&item.leaseSeconds===240)?'passed_partial_scope':'not_verified';
+        detail='PostgreSQL real: trabajo vencido elegible y lease de 240 segundos tanto en America/Bogota como en UTC. No acredita por sí sola reinicio y recuperación de un trabajo de IA completo.';
+      }else if(id==='restore'){
+        status=artifact.status==='passed'&&artifact.tables?.length===13&&artifact.tables.every(table=>table.matched)&&artifact.foreignKeys?.validated===true?'passed_partial_scope':'not_verified';
+        detail=`Instantánea lógica de 13 tablas Supabase, ${artifact.tables?.reduce((sum,table)=>sum+table.sourceRows,0)??0} filas; hashes/conteos iguales en base local nueva, ocho FK validadas y RLS activo. Sin pg_dump, objetos Storage ni cuentas Firebase.`;
+      }else if(id==='localWorker'){
+        status=artifact.status==='passed'&&artifact.job?.status==='completed'?'passed_partial_scope':'not_verified';
+        detail='API y cola PostgreSQL con modelo local real: respuesta numérica, fuentes autoritativas, valoración positiva y consumo. No acredita todos los marcadores de cita redactados por el modelo ni casos negativos de feedback.';
+      }else if(id==='deployment'){
+        status=artifact.frontend?.verified?.https&&artifact.frontend?.verified?.registration&&artifact.frontend?.verified?.privateRoomCreation?'passed_partial_scope':'not_verified';
+        detail='Planes gratuitos y publicación Render observados; registro, perfil y creación de sala privada en navegador publicado. No prueba todas las historias, cold start ni agotamiento de cuotas.';
       }else if(id==='localModel'){
         status=artifact.model?.name==='qwen3:4b-instruct'&&artifact.tests?.length===3&&artifact.unauthorizedStatus===401?'passed_partial_scope':'not_verified';
         detail='Tres muestras locales revisadas (español, resumen y quiz), autenticación y streaming. No es prueba del túnel ni de una llamada.';
+      }else if(id==='publicTunnel'){
+        status=artifact.publicInferenceVerified&&artifact.unauthorizedStatus===401?'passed_partial_scope':'not_verified';
+        detail='HTTPS ngrok público: 401 sin credencial, salud autenticada y respuesta final por streaming. No prueba PC suspendido o backend en Render.';
+      }else if(id==='cloud'){
+        const passed=artifact.passed===true&&artifact.checks?.every(check=>check.passed);
+        status=passed?'passed_partial_scope':artifact.error?'failed_partial_run':'not_verified';
+        const environment=String(artifact.api??'').includes('.onrender.com')?'API desplegada en Render':'API local conectada a servicios reales';
+        detail=passed?`${cloudScopes[number]} ${artifact.checks?.length??0} comprobaciones totales del artefacto; ${environment}.`:`Última ejecución incompleta o fallida mediante ${environment}; ${artifact.checks?.filter(check=>check.passed).length??0} comprobaciones parciales. Revisar el artefacto: no acredita el alcance de esta historia.`;
       }
     }
-    evidence.push({id,path:suite.file,command:suite.command,status,scope:detail,...(suite.artifact?{artifact:suite.artifact}:{})});
+    evidence.push({id,path:suite.file,command:suite.command,status,scope:detail,...(suite.artifact?{artifact:suite.artifact}:{}),...(suite.log&&await exists(suite.log)?{log:suite.log}:{})});
   }
-  stories.set(key,{key,title:issue.fields.summary,epic:issue.fields.parent?.key,implemented:missing.length===0,implementationStatus:missing.length?'partial_missing_files':'source_present',implementationMeaning:'Existe implementación mapeada en código; no significa que todos los criterios de aceptación estén verificados.',behavior,implementationFiles:files,missingFiles:missing,automatedVerified:{status:evidence.length?'partial':'not_executed',scope:testedScope,evidence},manualPending:[...new Set(['deployment','accessibility',...manual])].map(id=>({id,description:gates[id],status:'pending'})),acceptanceComplete:false});
+  const scope=number===47?'Acceso privado, cancelación y streaming; pregunta real por cola del backend y HTTPS ngrok con respuesta persistida.':testedScope;
+  stories.set(key,{key,title:issue.fields.summary,epic:issue.fields.parent?.key,implemented:missing.length===0,implementationStatus:missing.length?'partial_missing_files':'source_present',implementationMeaning:'Existe implementación mapeada en código; no significa que todos los criterios de aceptación estén verificados.',behavior,implementationFiles:files,missingFiles:missing,automatedVerified:{status:evidence.some(item=>item.status==='failed_partial_run')?'partial_with_failures':evidence.length?'partial':'not_executed',scope,evidence},manualPending:[...new Set(['deployment','accessibility',...manual])].map(id=>({id,description:gates[id],status:'pending'})),acceptanceComplete:false});
 }
 
 const counts={};
@@ -180,7 +220,11 @@ for(const key of stories.keys()){
 const report={generatedAt:new Date().toISOString(),source:{file:sourcePath,sha256:createHash('sha256').update(sourceText).digest('hex')},counts,issueCount:trace.length,relationshipValidation:{orphaned:0,stories:50,tasksPerStory:3,activitiesPerStory:9,duplicateKeys:0},statusPolicy:'implemented solo indica código mapeado. automatedVerified es parcial y nombra alcance. manualPending conserva condiciones externas. No se actualizan estados Jira ni se declaran 657 incidencias aceptadas.',allAcceptanceComplete:false,stories:[...stories.values()],issues:trace};
 await mkdir(resolve(root,'docs'),{recursive:true});
 await writeFile(resolve(root,'docs/traceability.json'),JSON.stringify(report,null,2)+'\n');
-const table=report.stories.map(s=>`| [${s.key}](https://studyroomd.atlassian.net/browse/${s.key}) ${s.title} | ${s.implemented?'Código presente':'Implementación parcial'} | ${s.automatedVerified.status==='partial'?'Parcial; ver escenarios JSON':'Sin prueba específica'} | ${s.manualPending.filter(g=>!['deployment','accessibility'].includes(g.id)).map(g=>g.id).join(', ')} |`).join('\n');
-const text=`# Trazabilidad de StudyRoom\n\nGenerado ${report.generatedAt}. Fuente: [inventario Jira](jira-requirements.json), SHA-256 \`${report.source.sha256}\`.\n\nSe relacionan **657 incidencias: 7 épicas, 50 historias, 150 tareas y 450 actividades**. Cada historia tiene 3 tareas y 9 actividades; no hay claves duplicadas ni elementos huérfanos. El JSON conserva texto completo normalizado y hash de cada descripción original, relaciones Jira reales y relación semántica tarea→historia. No se redujo el alcance del inventario.\n\n**Código presente no equivale a aceptación completada.** Cada historia expone por separado \`implemented\`, \`automatedVerified\`, \`manualPending\` y \`acceptanceComplete\`. La existencia de un archivo solo confirma su ubicación: las pruebas y su alcance se enumeran explícitamente. Las tareas/actividades de calidad permanecen parciales mientras falten pruebas reales; ninguna incidencia se marca terminada ni se modifica Jira desde este generador.\n\n[Mapa detallado de las 657 incidencias](traceability.json) · [Contrato](implementation-contract.md) · [Guía de aceptación manual](acceptance-manual.md).\n\n## Historias y estado de verificación\n\nTodas conservan como pendientes la validación del despliegue gratuito y la evaluación completa de accesibilidad. La tabla muestra además las puertas específicas.\n\n| Historia | Implementación | Verificación automática | Pendiente específico |\n|---|---|---|---|\n${table}\n\n## Qué significa cada puerta pendiente\n\n${Object.entries(gates).map(([id,text])=>`- **${id}:** ${text}`).join('\n')}\n\n## Evidencias y límites\n\nEl mapa incluye pruebas unitarias API, integración Firebase Auth emulator/PostgreSQL, navegador, coordenadas de pantalla y seguridad/cola del gateway. Los resultados de navegador se leen de su JSON real al regenerar, conservando un fallo si el último registro falló. La inferencia local se verifica contra su modelo/digest y muestras guardadas. Los resultados de API comunicados por el agente principal se identifican como tales; no se inventan ejecuciones de CI o de producción.\n\nNo existe aceptación automática de todos los criterios por aprobar una suite: faltan, según la historia, casos específicos de ranking, correo real, Storage, medios, valoración y resultados de cierre con motor real. Una llamada de 60 minutos con cuatro equipos/redes, recuperación/TURN y carga de IA requiere evidencia propia. La cuenta Free y sus cuotas deben comprobarse en cada proveedor.\n\nRegenerar desde la raíz con \`npm run traceability\`. El script falla si cambia el inventario, encuentra huérfanos o deja una historia sin sus 3 tareas/9 actividades; actualizar el mapeo y conservar siempre los requisitos nuevos.\n`;
-await writeFile(resolve(root,'docs/traceability.md'),text);
+const table=report.stories.map(s=>`| [${s.key}](https://studyroomd.atlassian.net/browse/${s.key}) ${s.title} | ${s.implemented?'Código presente':'Implementación parcial'} | ${s.automatedVerified.status==='partial_with_failures'?'Parcial; último registro con fallo':s.automatedVerified.status==='partial'?'Parcial; ver escenarios JSON':'Sin prueba específica'} | ${s.manualPending.filter(g=>!['deployment','accessibility'].includes(g.id)).map(g=>g.id).join(', ')} |`).join('\n');
+const text=`# Trazabilidad de StudyRoom\n\nGenerado ${report.generatedAt}. Fuente: [inventario Jira](jira-requirements.json), SHA-256 \`${report.source.sha256}\`.\n\nSe relacionan **657 incidencias: 7 épicas, 50 historias, 150 tareas y 450 actividades**. Cada historia tiene 3 tareas y 9 actividades; no hay claves duplicadas ni elementos huérfanos. El JSON conserva texto completo normalizado y hash de cada descripción original, relaciones Jira reales y relación semántica tarea→historia. No se redujo el alcance del inventario.\n\n**Código presente no equivale a aceptación completada.** Cada historia expone por separado \`implemented\`, \`automatedVerified\`, \`manualPending\` y \`acceptanceComplete\`. La existencia de un archivo solo confirma su ubicación: las pruebas y su alcance se enumeran explícitamente. Las tareas/actividades de calidad permanecen parciales mientras falten pruebas reales; ninguna incidencia se marca terminada ni se modifica Jira desde este generador.\n\n[Mapa detallado de las 657 incidencias](traceability.json) · [Contrato](implementation-contract.md) · [Guía de aceptación manual](acceptance-manual.md).\n\n## Historias y estado de verificación\n\nTodas conservan como pendientes la validación del despliegue gratuito y la evaluación completa de accesibilidad. La tabla muestra además las puertas específicas.\n\n| Historia | Implementación | Verificación automática | Pendiente específico |\n|---|---|---|---|\n${table}\n\n## Qué significa cada puerta pendiente\n\n${Object.entries(gates).map(([id,text])=>`- **${id}:** ${text}`).join('\n')}\n\n## Evidencias y límites\n\nEl mapa incluye pruebas unitarias API, integración Firebase Auth emulator/PostgreSQL, navegador, coordenadas de pantalla y seguridad/cola del gateway. Lee los resultados durables de [API](verification/backend-unit.txt), [integración](verification/api-integration.txt), [navegador](../apps/web/test-results/browser-smoke.json) y [servicios reales](verification/cloud-smoke.json), conservando un fallo si el último registro falló. La [inferencia local](../apps/ai-gateway/model-verification.json) registra modelo, digest y tres muestras revisadas; la [prueba pública ngrok](../apps/ai-gateway/tunnel-verification.json) registra autenticación y streaming real. Cada evidencia indica qué acredita y qué queda fuera. No se inventan ejecuciones remotas de CI ni una llamada de aceptación.\n\nNo existe aceptación automática de todos los criterios por aprobar una suite: faltan, según la historia, casos específicos de ranking, correo real, restauración de respaldo, valoración e intentos de quiz, así como fallos, cuota y permisos adicionales de Storage. El cierre de sesión y una inferencia real no acreditan todos los resultados automáticos. La llamada de 60 minutos con cuatro equipos/redes, recuperación/TURN y carga simultánea de IA requiere evidencia propia. Verificar un plan gratuito tampoco acredita haber ensayado su cuota agotada; los paneles del proveedor son la referencia de consumo.\n\nRegenerar desde la raíz con \`npm run traceability\`. El script falla si cambia el inventario, encuentra huérfanos o deja una historia sin sus 3 tareas/9 actividades; actualizar el mapeo y conservar siempre los requisitos nuevos.\n`;
+const currentText=text
+  .replace('casos específicos de ranking, correo real, restauración de respaldo, valoración e intentos de quiz','casos específicos de ranking, correo real, recuperación operacional completa, valoración e intentos de quiz')
+  .replace('Todas conservan como pendientes la validación del despliegue gratuito y la evaluación completa de accesibilidad. La tabla muestra además las puertas específicas.','Todas conservan como pendientes la validación operacional completa del despliegue gratuito (incluidos cold start y cuotas) y la evaluación completa de accesibilidad. La publicación y varios flujos reales ya tienen evidencia separada. La tabla muestra además las puertas específicas.')
+  .replace('[servicios reales](verification/cloud-smoke.json), conservando','[servicios reales](verification/cloud-smoke.json), [publicación](verification/deployment.json), [respaldo/restauración](verification/logical-restore.json) y [medios sintéticos entre navegadores](../apps/web/test-results/media-collaboration.json), conservando');
+await writeFile(resolve(root,'docs/traceability.md'),currentText);
 console.log(JSON.stringify({issueCount:trace.length,counts,orphans:0,storiesWithSource:report.stories.filter(s=>s.implemented).length,acceptedIssues:0,files:['docs/traceability.json','docs/traceability.md']}));

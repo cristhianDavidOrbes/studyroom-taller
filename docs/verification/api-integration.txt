@@ -1,0 +1,23 @@
+▶ Flujos reales Firebase+PostgreSQL: acceso, salas, colaboración e historial
+  ✔ rechaza token ausente e inválido (6.5404ms)
+  ✔ perfil idempotente y preferencias validadas (118.4392ms)
+  ✔ crear, buscar, filtrar y editar salas (70.9626ms)
+  ✔ aislamiento y autorización de participantes (44.5666ms)
+  ✔ chat idempotente y notas privadas (29.4596ms)
+  ✔ temporizador y moderación por rol (24.039ms)
+  ✔ socket requiere membresía y devuelve estado tras reconectar (2891.9311ms)
+  ✔ IA protege contexto y resultados privados (27.8382ms)
+  ✔ cerrar almacena sesión, limita modificaciones y preserva historial (126.8319ms)
+  ✔ sala privada: código, enlace y expulsión (1296.9467ms)
+  ✔ capacidad bajo solicitudes simultáneas (126.0987ms)
+  ✔ programación futura y cancelación (109.8281ms)
+  ✔ cuotas disponibles sin revelar secretos (106.5143ms)
+✔ Flujos reales Firebase+PostgreSQL: acceso, salas, colaboración e historial (5004.6464ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5154.2954

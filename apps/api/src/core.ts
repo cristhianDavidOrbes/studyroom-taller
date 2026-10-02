@@ -28,7 +28,10 @@ import {
 import { z } from "zod";
 
 @Injectable()
-export class Db extends PrismaClient implements OnModuleInit, OnApplicationShutdown {
+export class Db
+  extends PrismaClient
+  implements OnModuleInit, OnApplicationShutdown
+{
   private sizeCheckAt = 0;
   private sizeBytes = 0;
   async onModuleInit() {

@@ -19,7 +19,7 @@ import { Ai } from "./ai";
 import { Realtime } from "./realtime";
 import { StorageGuard } from "./storage-guard";
 import { HealthController, AppController } from "./controller";
-import { documentContracts } from './openapi';
+import { documentContracts } from "./openapi";
 @Module({
   controllers: [HealthController, AppController],
   providers: [

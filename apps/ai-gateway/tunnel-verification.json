@@ -1,9 +1,44 @@
 {
-  "limitation": "La sesión del agente ngrok está establecida; DNS del PC no resolvió ngrok-free.dev durante la verificación. No se alteró DNS del equipo.",
-  "publicDnsResolvesFromPc": false,
-  "observedAt": "2026-10-02T05:29:49.7461674Z",
-  "ngrokAgentConnected": true,
-  "localPrivateRoute401Verified": true,
+  "observedAt": "2026-10-02T06:08:35.364Z",
   "publicUrl": "https://appetite-tuesday-empty.ngrok-free.dev",
-  "publicInferenceVerified": false
+  "ngrokAgentConnected": true,
+  "publicDnsResolvesFromPc": true,
+  "unauthorizedStatus": 401,
+  "authenticatedHealth": "ready",
+  "publicInferenceVerified": true,
+  "model": "qwen3:4b-instruct",
+  "events": [
+    {
+      "type": "delta",
+      "text": "Study"
+    },
+    {
+      "type": "delta",
+      "text": "Room"
+    },
+    {
+      "type": "delta",
+      "text": " conect"
+    },
+    {
+      "type": "delta",
+      "text": "ado"
+    },
+    {
+      "type": "delta",
+      "text": "."
+    },
+    {
+      "type": "done",
+      "model": "qwen3:4b-instruct",
+      "usage": {
+        "inputTokens": 29,
+        "outputTokens": 6,
+        "totalDurationMs": 359,
+        "firstTokenMs": 302,
+        "tokensPerSecond": 105.68
+      }
+    }
+  ],
+  "livekitCallTestExecuted": false
 }

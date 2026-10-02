@@ -1,0 +1,13 @@
+
+> @studyroom/api@1.0.0 test
+> jest --runInBand --silent
+
+PASS test/identity.spec.ts
+PASS test/queue.spec.ts
+PASS test/security.spec.ts
+PASS test/authorization.spec.ts
+
+Test Suites: 4 passed, 4 total
+Tests:       28 passed, 28 total
+Snapshots:   0 total
+Time:        4.055 s, estimated 5 s

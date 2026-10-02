@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-02T06:14:35.668Z",
+  "baseURL": "http://localhost:5173/",
+  "results": [
+    {
+      "name": "Acceso accesible sin desbordamiento y error de credenciales",
+      "status": "passed"
+    },
+    {
+      "name": "Registro de cuenta temporal y onboarding persistido",
+      "status": "passed"
+    },
+    {
+      "name": "Recuperación explícita tras fallo al descargar la vista de sala",
+      "status": "passed"
+    },
+    {
+      "name": "Crear sala, entrar y persistir chat y notas",
+      "status": "passed"
+    },
+    {
+      "name": "Timer sincronizado y menú de personas",
+      "status": "passed"
+    },
+    {
+      "name": "Historial, interfaz móvil y navegación por teclado",
+      "status": "passed"
+    }
+  ],
+  "errors": [],
+  "expectedErrors": [
+    "Failed to fetch dynamically imported module: http://localhost:5173/src/room.tsx?t=1790920752274",
+    "Failed to fetch dynamically imported module: http://localhost:5173/src/room.tsx?t=1790920752274"
+  ]
+}

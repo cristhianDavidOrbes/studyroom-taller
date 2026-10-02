@@ -1,19 +1,594 @@
-import { useState,type FormEvent } from 'react';
-import { useQuery,useQueryClient } from '@tanstack/react-query';
-import { Link,useNavigate } from 'react-router-dom';
-import { Search,Plus,ArrowUpRight,Users,Clock3,LockKeyhole,BookOpen,CalendarDays,SlidersHorizontal,Sparkles,ArrowRight } from 'lucide-react';
-import { api,errorText,json } from './api';
-import type { StudyRoom } from './types';
-import { useAuth } from './auth';
-import { Badge,dateTime,Empty,ErrorBox,Modal,Spinner,useToast } from './ui';
-export function RoomForm({room,onClose,onSaved}:{room?:StudyRoom;onClose:()=>void;onSaved:(room:StudyRoom)=>void}){const[busy,setBusy]=useState(false),[error,setError]=useState(''),[privacy,setPrivacy]=useState(room?.privacy||'public');
- async function submit(e:FormEvent<HTMLFormElement>){e.preventDefault();setBusy(true);setError('');const d=new FormData(e.currentTarget);const scheduled=String(d.get('scheduledAt')||'');const payload={title:String(d.get('title')),description:String(d.get('description')),subject:String(d.get('subject')),modality:String(d.get('modality')),level:String(d.get('level')),privacy,capacity:Number(d.get('capacity')),durationMinutes:Number(d.get('durationMinutes')),scheduledAt:scheduled?new Date(scheduled).toISOString():null,...(d.get('accessCode')?{accessCode:String(d.get('accessCode'))}:{})};try{onSaved(await api<StudyRoom>(room?`/rooms/${room.id}`:'/rooms',json(room?'PATCH':'POST',payload)));}catch(e){setError(errorText(e));}finally{setBusy(false);}}
- const localScheduled=room?.scheduledAt?new Date(new Date(room.scheduledAt).getTime()-new Date(room.scheduledAt).getTimezoneOffset()*60000).toISOString().slice(0,16):'';
- return <Modal title={room?'Editar sala':'Crea un espacio para aprender'} onClose={onClose}><form onSubmit={submit} className="form-stack"><p className="muted">Una meta clara hace que estudiar juntos sea más fácil.</p><ErrorBox message={error}/><label>Nombre de la sala<input name="title" placeholder="Ej. Cálculo sin miedo" required minLength={3} maxLength={100} defaultValue={room?.title}/></label><label>¿Qué van a estudiar?<textarea name="description" required minLength={10} maxLength={2000} rows={3} placeholder="Comparte el objetivo de la sesión y qué deberían traer." defaultValue={room?.description}/></label><div className="form-grid"><label>Materia<input name="subject" required maxLength={60} placeholder="Ej. Matemáticas" defaultValue={room?.subject}/></label><label>Nivel<select name="level" defaultValue={room?.level||'universitario'}><option value="secundaria">Secundaria</option><option value="universitario">Universitario</option><option value="avanzado">Avanzado</option><option value="todos">Todos los niveles</option></select></label><label>Modalidad<select name="modality" defaultValue={room?.modality||'colaborativo'}><option value="colaborativo">Colaborativo</option><option value="enfoque">Enfoque silencioso</option><option value="repaso">Repaso y preguntas</option></select></label><label>Participantes<select name="capacity" defaultValue={room?.capacity||4}>{[2,3,4].map(n=><option value={n} key={n}>{n} personas</option>)}</select></label><label>Privacidad<select value={privacy} onChange={e=>setPrivacy(e.target.value as typeof privacy)}><option value="public">Pública</option><option value="private">Privada con código</option></select></label><label>Duración estimada<select name="durationMinutes" defaultValue={room?.durationMinutes||60}><option value={25}>25 minutos</option><option value={50}>50 minutos</option><option value={60}>60 minutos</option><option value={90}>90 minutos</option></select></label></div>{privacy==='private'&&<label>{room?'Nuevo código (deja vacío para conservarlo)':'Código de acceso'}<input name="accessCode" required={!room} minLength={6} maxLength={40} autoComplete="off" placeholder="Al menos 6 caracteres"/></label>}<label>Programar para después <span className="muted">(opcional)</span><input name="scheduledAt" type="datetime-local" defaultValue={localScheduled}/><small>Se mostrará en la hora local de cada participante.</small></label><div className="form-actions"><button type="button" className="button secondary" onClick={onClose}>Cancelar</button><button className="button primary" disabled={busy}>{busy?'Guardando…':room?'Guardar cambios':'Crear sala'}<ArrowRight size={17}/></button></div></form></Modal>
+import { useState, type FormEvent } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Search,
+  Plus,
+  ArrowUpRight,
+  Users,
+  Clock3,
+  LockKeyhole,
+  BookOpen,
+  CalendarDays,
+  SlidersHorizontal,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
+import { api, errorText, json } from "./api";
+import type { StudyRoom } from "./types";
+import { useAuth } from "./auth";
+import {
+  Badge,
+  dateTime,
+  Empty,
+  ErrorBox,
+  Modal,
+  Spinner,
+  useToast,
+} from "./ui";
+export function RoomForm({
+  room,
+  onClose,
+  onSaved,
+}: {
+  room?: StudyRoom;
+  onClose: () => void;
+  onSaved: (room: StudyRoom) => void;
+}) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState(""),
+    [privacy, setPrivacy] = useState(room?.privacy || "public");
+  async function submit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    const d = new FormData(e.currentTarget);
+    const scheduled = String(d.get("scheduledAt") || "");
+    const payload = {
+      title: String(d.get("title")),
+      description: String(d.get("description")),
+      subject: String(d.get("subject")),
+      modality: String(d.get("modality")),
+      level: String(d.get("level")),
+      privacy,
+      capacity: Number(d.get("capacity")),
+      durationMinutes: Number(d.get("durationMinutes")),
+      scheduledAt: scheduled ? new Date(scheduled).toISOString() : null,
+      ...(d.get("accessCode")
+        ? { accessCode: String(d.get("accessCode")) }
+        : {}),
+    };
+    try {
+      onSaved(
+        await api<StudyRoom>(
+          room ? `/rooms/${room.id}` : "/rooms",
+          json(room ? "PATCH" : "POST", payload),
+        ),
+      );
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  const localScheduled = room?.scheduledAt
+    ? new Date(
+        new Date(room.scheduledAt).getTime() -
+          new Date(room.scheduledAt).getTimezoneOffset() * 60000,
+      )
+        .toISOString()
+        .slice(0, 16)
+    : "";
+  return (
+    <Modal
+      title={room ? "Editar sala" : "Crea un espacio para aprender"}
+      onClose={onClose}
+    >
+      <form onSubmit={submit} className="form-stack">
+        <p className="muted">
+          Una meta clara hace que estudiar juntos sea más fácil.
+        </p>
+        <ErrorBox message={error} />
+        <label>
+          Nombre de la sala
+          <input
+            name="title"
+            placeholder="Ej. Cálculo sin miedo"
+            required
+            minLength={3}
+            maxLength={100}
+            defaultValue={room?.title}
+          />
+        </label>
+        <label>
+          ¿Qué van a estudiar?
+          <textarea
+            name="description"
+            required
+            minLength={10}
+            maxLength={2000}
+            rows={3}
+            placeholder="Comparte el objetivo de la sesión y qué deberían traer."
+            defaultValue={room?.description}
+          />
+        </label>
+        <div className="form-grid">
+          <label>
+            Materia
+            <input
+              name="subject"
+              required
+              maxLength={60}
+              placeholder="Ej. Matemáticas"
+              defaultValue={room?.subject}
+            />
+          </label>
+          <label>
+            Nivel
+            <select name="level" defaultValue={room?.level || "universitario"}>
+              <option value="secundaria">Secundaria</option>
+              <option value="universitario">Universitario</option>
+              <option value="avanzado">Avanzado</option>
+              <option value="todos">Todos los niveles</option>
+            </select>
+          </label>
+          <label>
+            Modalidad
+            <select
+              name="modality"
+              defaultValue={room?.modality || "colaborativo"}
+            >
+              <option value="colaborativo">Colaborativo</option>
+              <option value="enfoque">Enfoque silencioso</option>
+              <option value="repaso">Repaso y preguntas</option>
+            </select>
+          </label>
+          <label>
+            Participantes
+            <select name="capacity" defaultValue={room?.capacity || 4}>
+              {[2, 3, 4].map((n) => (
+                <option value={n} key={n}>
+                  {n} personas
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Privacidad
+            <select
+              value={privacy}
+              onChange={(e) => setPrivacy(e.target.value as typeof privacy)}
+            >
+              <option value="public">Pública</option>
+              <option value="private">Privada con código</option>
+            </select>
+          </label>
+          <label>
+            Duración estimada
+            <select
+              name="durationMinutes"
+              defaultValue={room?.durationMinutes || 60}
+            >
+              <option value={25}>25 minutos</option>
+              <option value={50}>50 minutos</option>
+              <option value={60}>60 minutos</option>
+              <option value={90}>90 minutos</option>
+            </select>
+          </label>
+        </div>
+        {privacy === "private" && (
+          <label>
+            {room
+              ? "Nuevo código (deja vacío para conservarlo)"
+              : "Código de acceso"}
+            <input
+              name="accessCode"
+              required={!room}
+              minLength={6}
+              maxLength={40}
+              autoComplete="off"
+              placeholder="Al menos 6 caracteres"
+            />
+          </label>
+        )}
+        <label>
+          Programar para después <span className="muted">(opcional)</span>
+          <input
+            name="scheduledAt"
+            type="datetime-local"
+            defaultValue={localScheduled}
+          />
+          <small>Se mostrará en la hora local de cada participante.</small>
+        </label>
+        <div className="form-actions">
+          <button type="button" className="button secondary" onClick={onClose}>
+            Cancelar
+          </button>
+          <button className="button primary" disabled={busy}>
+            {busy ? "Guardando…" : room ? "Guardar cambios" : "Crear sala"}
+            <ArrowRight size={17} />
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
 }
-export function RoomCard({room,onSelect}:{room:StudyRoom;onSelect:(room:StudyRoom)=>void}){const scheduled=room.status==='scheduled';return <article className="room-card"><div className={`room-card-art subject-${room.subject.length%4}`}><span className="subject-label"><BookOpen size={15}/>{room.subject}</span><BookOpen className="card-art-icon" size={75} strokeWidth={1}/><span className="room-state"><span className={scheduled?'scheduled-dot':'live-dot'}/>{scheduled?'Programada':room.status==='open'?'En vivo':'Finalizada'}</span></div><div className="room-card-body"><div className="card-badges"><Badge>{room.level}</Badge>{room.privacy==='private'&&<LockKeyhole size={14} aria-label="Sala privada"/>}</div><button className="room-title" onClick={()=>onSelect(room)}><h3>{room.title}</h3></button><p className="room-description">{room.description}</p><div className="room-meta"><span><Users size={15}/>{room.participantCount} / {room.capacity}</span><span>{scheduled?<CalendarDays size={15}/>:<Clock3 size={15}/>} {scheduled?dateTime(room.scheduledAt):`${room.durationMinutes||60} min`}</span></div><div className="card-bottom"><span>{room.modality}</span><button className="text-button" onClick={()=>onSelect(room)}>Ver sala<ArrowUpRight size={16}/></button></div></div></article>}
-export function RoomDetails({room,onClose}:{room:StudyRoom;onClose:()=>void}){const[busy,setBusy]=useState(false),[error,setError]=useState('');const navigate=useNavigate();async function join(e:FormEvent<HTMLFormElement>){e.preventDefault();if(room.myRole){navigate(`/salas/${room.id}`);return;}setBusy(true);try{await api(`/rooms/${room.id}/join`,json('POST',{code:new FormData(e.currentTarget).get('code')||undefined}));navigate(`/salas/${room.id}`);}catch(e){setError(errorText(e));}finally{setBusy(false);}}
-return <Modal title={room.title} onClose={onClose}><div className="detail-tags"><Badge tone="green">{room.subject}</Badge><Badge>{room.level}</Badge><Badge>{room.modality}</Badge></div><p className="preserve-lines">{room.description}</p><div className="detail-grid"><div><Users size={19}/><strong>{room.participantCount} de {room.capacity}</strong><small>Participantes</small></div><div><CalendarDays size={19}/><strong>{room.scheduledAt?dateTime(room.scheduledAt):'Disponible ahora'}</strong><small>Inicio de la sesión</small></div></div><ErrorBox message={error}/><form onSubmit={join} className="form-stack">{room.privacy==='private'&&!room.myRole&&<label>Código de acceso<input name="code" required autoComplete="off"/></label>}<button className="button primary full" disabled={busy||['closed','cancelled'].includes(room.status)||(!room.myRole&&(room.participantCount>=room.capacity||!!room.scheduledAt&&new Date(room.scheduledAt)>new Date()))}>{busy?'Entrando…':room.myRole?'Volver a la sala':room.participantCount>=room.capacity?'La sala está llena':room.status==='scheduled'?'Disponible al iniciar':'Unirme a la sala'}<ArrowRight size={18}/></button></form></Modal>}
-export function ExplorePage(){const{profile}=useAuth();const[q,setQ]=useState(''),[subject,setSubject]=useState(''),[level,setLevel]=useState(''),[modality,setModality]=useState(''),[sort,setSort]=useState('relevance'),[tab,setTab]=useState('all'),[filters,setFilters]=useState(false),[create,setCreate]=useState(false),[selected,setSelected]=useState<StudyRoom|null>(null);const client=useQueryClient();const toast=useToast();const query=new URLSearchParams({q,subject,level,modality,sort:tab==='scheduled'?'scheduled':sort,...(tab==='recommended'?{recommended:'true'}:{})});const{data:rooms=[],isPending,error,refetch}=useQuery({queryKey:['rooms',query.toString()],queryFn:({signal})=>api<StudyRoom[]>(`/rooms?${query}`,{signal})});const displayRooms=tab==='scheduled'?rooms.filter(r=>r.status==='scheduled'):rooms;
- return <div className="page explore-page"><section className="welcome-row"><div><span className="eyebrow">CONECTA · COMPARTE · APRENDE</span><h1>Hola, {profile?.displayName?.split(' ')[0]||'estudiante'} <span className="wave">✳</span></h1><p className="page-intro">¿Qué te gustaría aprender hoy?</p></div><button className="button primary" onClick={()=>setCreate(true)}><Plus size={18}/>Crear sala</button></section>{!profile?.onboarded&&<Link className="onboarding-banner" to="/perfil"><Sparkles size={21}/><span>Cuéntanos qué te interesa para descubrir salas para ti.</span><ArrowRight size={19}/></Link>}<section className="discovery-banner"><div><span className="eyebrow">JUNTOS LLEGAMOS MÁS LEJOS</span><h2>Encuentra tu ritmo.<br/>Y tu grupo de estudio.</h2><p>Un buen espacio, una meta en común<br/>y personas con ganas de aprender.</p></div><div className="banner-drawing" aria-hidden="true"><div className="drawing-circle"/><div className="book book-back"/><div className="book book-front"><BookOpen size={76} strokeWidth={1}/></div><span className="floating-star">✦</span><span className="floating-leaf"><Sparkles size={27}/></span><span className="drawing-caption">una idea compartida<br/>puede cambiarlo todo</span></div></section><section className="catalog"><div className="section-heading"><h2>Tu próxima sala</h2><span className="muted">Espacios para avanzar a tu manera</span></div><div className="catalog-toolbar"><div className="tabs" role="tablist" aria-label="Categoría de salas">{[['all','Explorar'],['recommended','Para ti'],['scheduled','Programadas']].map(([v,label])=><button key={v} role="tab" aria-selected={tab===v} className={tab===v?'active':''} onClick={()=>setTab(v)}>{v==='recommended'&&<Sparkles size={15}/>} {label}</button>)}</div><label className="search-field"><Search size={18}/><input aria-label="Buscar salas" placeholder="Busca una materia o tema…" value={q} onChange={e=>setQ(e.target.value)}/></label><button className={`button secondary filter-button ${filters?'selected':''}`} onClick={()=>setFilters(!filters)} aria-expanded={filters}><SlidersHorizontal size={17}/>Filtros</button></div>{filters&&<div className="filter-panel"><label>Materia<input value={subject} onChange={e=>setSubject(e.target.value)} placeholder="Todas las materias"/></label><label>Nivel<select value={level} onChange={e=>setLevel(e.target.value)}><option value="">Todos</option><option value="secundaria">Secundaria</option><option value="universitario">Universitario</option><option value="avanzado">Avanzado</option></select></label><label>Modalidad<select value={modality} onChange={e=>setModality(e.target.value)}><option value="">Todas</option><option value="colaborativo">Colaborativo</option><option value="enfoque">Enfoque</option><option value="repaso">Repaso</option></select></label><label>Ordenar<select value={sort} onChange={e=>setSort(e.target.value)}><option value="relevance">Relevancia</option><option value="activity">Más actividad</option><option value="scheduled">Próximas fechas</option></select></label><button className="text-button" onClick={()=>{setSubject('');setLevel('');setModality('');setQ('');setSort('relevance');}}>Limpiar filtros</button></div>}<ErrorBox message={error?errorText(error):''} retry={()=>void refetch()}/>{isPending?<Spinner label="Buscando tu próximo espacio…"/>:!error&&displayRooms.length===0?<Empty title="Tu próxima sala puede empezar contigo" action={<button className="button secondary" onClick={()=>setCreate(true)}><Plus size={17}/>Crear una sala</button>}>{q||subject||level||modality?'Prueba con otros filtros o busca un tema más general.':'Todavía no hay salas en esta sección. Comparte lo que quieres estudiar e invita a tu grupo.'}</Empty>:<div className="room-grid">{displayRooms.map(room=><RoomCard key={room.id} room={room} onSelect={setSelected}/>)}</div>}</section><div className="learning-note"><span>✦</span><p>Pequeñas sesiones. Grandes descubrimientos.</p><span>Aprende a tu ritmo</span></div>{create&&<RoomForm onClose={()=>setCreate(false)} onSaved={room=>{setCreate(false);void client.invalidateQueries({queryKey:['rooms']});setSelected(room);toast('Tu sala está lista');}}/>}{selected&&<RoomDetails room={selected} onClose={()=>setSelected(null)}/>}</div>
+export function RoomCard({
+  room,
+  onSelect,
+}: {
+  room: StudyRoom;
+  onSelect: (room: StudyRoom) => void;
+}) {
+  const scheduled = room.status === "scheduled";
+  return (
+    <article className="room-card">
+      <div className={`room-card-art subject-${room.subject.length % 4}`}>
+        <span className="subject-label">
+          <BookOpen size={15} />
+          {room.subject}
+        </span>
+        <BookOpen className="card-art-icon" size={75} strokeWidth={1} />
+        <span className="room-state">
+          <span className={scheduled ? "scheduled-dot" : "live-dot"} />
+          {scheduled
+            ? "Programada"
+            : room.status === "open"
+              ? "En vivo"
+              : "Finalizada"}
+        </span>
+      </div>
+      <div className="room-card-body">
+        <div className="card-badges">
+          <Badge>{room.level}</Badge>
+          {room.privacy === "private" && (
+            <LockKeyhole size={14} aria-label="Sala privada" />
+          )}
+        </div>
+        <button className="room-title" onClick={() => onSelect(room)}>
+          <h3>{room.title}</h3>
+        </button>
+        <p className="room-description">{room.description}</p>
+        <div className="room-meta">
+          <span>
+            <Users size={15} />
+            {room.participantCount} / {room.capacity}
+          </span>
+          <span>
+            {scheduled ? <CalendarDays size={15} /> : <Clock3 size={15} />}{" "}
+            {scheduled
+              ? dateTime(room.scheduledAt)
+              : `${room.durationMinutes || 60} min`}
+          </span>
+        </div>
+        <div className="card-bottom">
+          <span>{room.modality}</span>
+          <button className="text-button" onClick={() => onSelect(room)}>
+            Ver sala
+            <ArrowUpRight size={16} />
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+export function RoomDetails({
+  room,
+  onClose,
+}: {
+  room: StudyRoom;
+  onClose: () => void;
+}) {
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const navigate = useNavigate();
+  async function join(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (room.myRole) {
+      navigate(`/salas/${room.id}`);
+      return;
+    }
+    setBusy(true);
+    try {
+      await api(
+        `/rooms/${room.id}/join`,
+        json("POST", {
+          code: new FormData(e.currentTarget).get("code") || undefined,
+        }),
+      );
+      navigate(`/salas/${room.id}`);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <Modal title={room.title} onClose={onClose}>
+      <div className="detail-tags">
+        <Badge tone="green">{room.subject}</Badge>
+        <Badge>{room.level}</Badge>
+        <Badge>{room.modality}</Badge>
+      </div>
+      <p className="preserve-lines">{room.description}</p>
+      <div className="detail-grid">
+        <div>
+          <Users size={19} />
+          <strong>
+            {room.participantCount} de {room.capacity}
+          </strong>
+          <small>Participantes</small>
+        </div>
+        <div>
+          <CalendarDays size={19} />
+          <strong>
+            {room.scheduledAt ? dateTime(room.scheduledAt) : "Disponible ahora"}
+          </strong>
+          <small>Inicio de la sesión</small>
+        </div>
+      </div>
+      <ErrorBox message={error} />
+      <form onSubmit={join} className="form-stack">
+        {room.privacy === "private" && !room.myRole && (
+          <label>
+            Código de acceso
+            <input name="code" required autoComplete="off" />
+          </label>
+        )}
+        <button
+          className="button primary full"
+          disabled={
+            busy ||
+            ["closed", "cancelled"].includes(room.status) ||
+            (!room.myRole &&
+              (room.participantCount >= room.capacity ||
+                (!!room.scheduledAt &&
+                  new Date(room.scheduledAt) > new Date())))
+          }
+        >
+          {busy
+            ? "Entrando…"
+            : room.myRole
+              ? "Volver a la sala"
+              : room.participantCount >= room.capacity
+                ? "La sala está llena"
+                : room.status === "scheduled"
+                  ? "Disponible al iniciar"
+                  : "Unirme a la sala"}
+          <ArrowRight size={18} />
+        </button>
+      </form>
+    </Modal>
+  );
+}
+export function ExplorePage() {
+  const { profile } = useAuth();
+  const [q, setQ] = useState(""),
+    [subject, setSubject] = useState(""),
+    [level, setLevel] = useState(""),
+    [modality, setModality] = useState(""),
+    [sort, setSort] = useState("relevance"),
+    [tab, setTab] = useState("all"),
+    [filters, setFilters] = useState(false),
+    [create, setCreate] = useState(false),
+    [selected, setSelected] = useState<StudyRoom | null>(null);
+  const client = useQueryClient();
+  const toast = useToast();
+  const query = new URLSearchParams({
+    q,
+    subject,
+    level,
+    modality,
+    sort: tab === "scheduled" ? "scheduled" : sort,
+    ...(tab === "recommended" ? { recommended: "true" } : {}),
+  });
+  const {
+    data: rooms = [],
+    isPending,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["rooms", query.toString()],
+    queryFn: ({ signal }) => api<StudyRoom[]>(`/rooms?${query}`, { signal }),
+  });
+  const displayRooms =
+    tab === "scheduled" ? rooms.filter((r) => r.status === "scheduled") : rooms;
+  return (
+    <div className="page explore-page">
+      <section className="welcome-row">
+        <div>
+          <span className="eyebrow">CONECTA · COMPARTE · APRENDE</span>
+          <h1>
+            Hola, {profile?.displayName?.split(" ")[0] || "estudiante"}{" "}
+            <span className="wave">✳</span>
+          </h1>
+          <p className="page-intro">¿Qué te gustaría aprender hoy?</p>
+        </div>
+        <button className="button primary" onClick={() => setCreate(true)}>
+          <Plus size={18} />
+          Crear sala
+        </button>
+      </section>
+      {!profile?.onboarded && (
+        <Link className="onboarding-banner" to="/perfil">
+          <Sparkles size={21} />
+          <span>Cuéntanos qué te interesa para descubrir salas para ti.</span>
+          <ArrowRight size={19} />
+        </Link>
+      )}
+      <section className="discovery-banner">
+        <div>
+          <span className="eyebrow">JUNTOS LLEGAMOS MÁS LEJOS</span>
+          <h2>
+            Encuentra tu ritmo.
+            <br />Y tu grupo de estudio.
+          </h2>
+          <p>
+            Un buen espacio, una meta en común
+            <br />y personas con ganas de aprender.
+          </p>
+        </div>
+        <div className="banner-drawing" aria-hidden="true">
+          <div className="drawing-circle" />
+          <div className="book book-back" />
+          <div className="book book-front">
+            <BookOpen size={76} strokeWidth={1} />
+          </div>
+          <span className="floating-star">✦</span>
+          <span className="floating-leaf">
+            <Sparkles size={27} />
+          </span>
+          <span className="drawing-caption">
+            una idea compartida
+            <br />
+            puede cambiarlo todo
+          </span>
+        </div>
+      </section>
+      <section className="catalog">
+        <div className="section-heading">
+          <h2>Tu próxima sala</h2>
+          <span className="muted">Espacios para avanzar a tu manera</span>
+        </div>
+        <div className="catalog-toolbar">
+          <div className="tabs" role="tablist" aria-label="Categoría de salas">
+            {[
+              ["all", "Explorar"],
+              ["recommended", "Para ti"],
+              ["scheduled", "Programadas"],
+            ].map(([v, label]) => (
+              <button
+                key={v}
+                role="tab"
+                aria-selected={tab === v}
+                className={tab === v ? "active" : ""}
+                onClick={() => setTab(v)}
+              >
+                {v === "recommended" && <Sparkles size={15} />} {label}
+              </button>
+            ))}
+          </div>
+          <label className="search-field">
+            <Search size={18} />
+            <input
+              aria-label="Buscar salas"
+              placeholder="Busca una materia o tema…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </label>
+          <button
+            className={`button secondary filter-button ${filters ? "selected" : ""}`}
+            onClick={() => setFilters(!filters)}
+            aria-expanded={filters}
+          >
+            <SlidersHorizontal size={17} />
+            Filtros
+          </button>
+        </div>
+        {filters && (
+          <div className="filter-panel">
+            <label>
+              Materia
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Todas las materias"
+              />
+            </label>
+            <label>
+              Nivel
+              <select value={level} onChange={(e) => setLevel(e.target.value)}>
+                <option value="">Todos</option>
+                <option value="secundaria">Secundaria</option>
+                <option value="universitario">Universitario</option>
+                <option value="avanzado">Avanzado</option>
+              </select>
+            </label>
+            <label>
+              Modalidad
+              <select
+                value={modality}
+                onChange={(e) => setModality(e.target.value)}
+              >
+                <option value="">Todas</option>
+                <option value="colaborativo">Colaborativo</option>
+                <option value="enfoque">Enfoque</option>
+                <option value="repaso">Repaso</option>
+              </select>
+            </label>
+            <label>
+              Ordenar
+              <select value={sort} onChange={(e) => setSort(e.target.value)}>
+                <option value="relevance">Relevancia</option>
+                <option value="activity">Más actividad</option>
+                <option value="scheduled">Próximas fechas</option>
+              </select>
+            </label>
+            <button
+              className="text-button"
+              onClick={() => {
+                setSubject("");
+                setLevel("");
+                setModality("");
+                setQ("");
+                setSort("relevance");
+              }}
+            >
+              Limpiar filtros
+            </button>
+          </div>
+        )}
+        <ErrorBox
+          message={error ? errorText(error) : ""}
+          retry={() => void refetch()}
+        />
+        {isPending ? (
+          <Spinner label="Buscando tu próximo espacio…" />
+        ) : !error && displayRooms.length === 0 ? (
+          <Empty
+            title="Tu próxima sala puede empezar contigo"
+            action={
+              <button
+                className="button secondary"
+                onClick={() => setCreate(true)}
+              >
+                <Plus size={17} />
+                Crear una sala
+              </button>
+            }
+          >
+            {q || subject || level || modality
+              ? "Prueba con otros filtros o busca un tema más general."
+              : "Todavía no hay salas en esta sección. Comparte lo que quieres estudiar e invita a tu grupo."}
+          </Empty>
+        ) : (
+          <div className="room-grid">
+            {displayRooms.map((room) => (
+              <RoomCard key={room.id} room={room} onSelect={setSelected} />
+            ))}
+          </div>
+        )}
+      </section>
+      <div className="learning-note">
+        <span>✦</span>
+        <p>Pequeñas sesiones. Grandes descubrimientos.</p>
+        <span>Aprende a tu ritmo</span>
+      </div>
+      {create && (
+        <RoomForm
+          onClose={() => setCreate(false)}
+          onSaved={(room) => {
+            setCreate(false);
+            void client.invalidateQueries({ queryKey: ["rooms"] });
+            setSelected(room);
+            toast("Tu sala está lista");
+          }}
+        />
+      )}
+      {selected && (
+        <RoomDetails room={selected} onClose={() => setSelected(null)} />
+      )}
+    </div>
+  );
 }

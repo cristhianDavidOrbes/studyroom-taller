@@ -1,6 +1,6 @@
 # Trazabilidad de StudyRoom
 
-Generado 2026-10-02T05:36:34.680Z. Fuente: [inventario Jira](jira-requirements.json), SHA-256 `f1c015464517e42491eb4d8f84bb3cf6a3566f7bf4d38c6030140120a5131955`.
+Generado 2026-10-02T06:16:49.185Z. Fuente: [inventario Jira](jira-requirements.json), SHA-256 `f1c015464517e42491eb4d8f84bb3cf6a3566f7bf4d38c6030140120a5131955`.
 
 Se relacionan **657 incidencias: 7 épicas, 50 historias, 150 tareas y 450 actividades**. Cada historia tiene 3 tareas y 9 actividades; no hay claves duplicadas ni elementos huérfanos. El JSON conserva texto completo normalizado y hash de cada descripción original, relaciones Jira reales y relación semántica tarea→historia. No se redujo el alcance del inventario.
 
@@ -10,7 +10,7 @@ Se relacionan **657 incidencias: 7 épicas, 50 historias, 150 tareas y 450 activ
 
 ## Historias y estado de verificación
 
-Todas conservan como pendientes la validación del despliegue gratuito y la evaluación completa de accesibilidad. La tabla muestra además las puertas específicas.
+Todas conservan como pendientes la validación operacional completa del despliegue gratuito (incluidos cold start y cuotas) y la evaluación completa de accesibilidad. La publicación y varios flujos reales ya tienen evidencia separada. La tabla muestra además las puertas específicas.
 
 | Historia | Implementación | Verificación automática | Pendiente específico |
 |---|---|---|---|
@@ -47,8 +47,8 @@ Todas conservan como pendientes la validación del despliegue gratuito y la eval
 | [SUT-36](https://studyroomd.atlassian.net/browse/SUT-36) Chat grupal en tiempo real | Código presente | Parcial; ver escenarios JSON | collaboration |
 | [SUT-37](https://studyroomd.atlassian.net/browse/SUT-37) Reacciones y levantar la mano | Código presente | Sin prueba específica | collaboration |
 | [SUT-38](https://studyroomd.atlassian.net/browse/SUT-38) Videollamada grupal | Código presente | Parcial; ver escenarios JSON | media, recovery |
-| [SUT-39](https://studyroomd.atlassian.net/browse/SUT-39) Controles de micrófono, cámara y dispositivos | Código presente | Sin prueba específica | media, recovery |
-| [SUT-40](https://studyroomd.atlassian.net/browse/SUT-40) Compartir pantalla | Código presente | Sin prueba específica | media, recovery |
+| [SUT-39](https://studyroomd.atlassian.net/browse/SUT-39) Controles de micrófono, cámara y dispositivos | Código presente | Parcial; ver escenarios JSON | media, recovery |
+| [SUT-40](https://studyroomd.atlassian.net/browse/SUT-40) Compartir pantalla | Código presente | Parcial; ver escenarios JSON | media, recovery |
 | [SUT-41](https://studyroomd.atlassian.net/browse/SUT-41) Señalar en pantalla desde el menú de cámara | Código presente | Parcial; ver escenarios JSON | media, recovery, annotations |
 | [SUT-42](https://studyroomd.atlassian.net/browse/SUT-42) Compartir y consultar documentos | Código presente | Parcial; ver escenarios JSON | storage |
 | [SUT-43](https://studyroomd.atlassian.net/browse/SUT-43) Crear notas privadas durante la sesión | Código presente | Parcial; ver escenarios JSON | collaboration |
@@ -58,7 +58,7 @@ Todas conservan como pendientes la validación del despliegue gratuito y la eval
 | [SUT-48](https://studyroomd.atlassian.net/browse/SUT-48) Invocar la IA desde el chat con @IA | Código presente | Sin prueba específica | aiTunnel, aiQuality, aiRecovery |
 | [SUT-49](https://studyroomd.atlassian.net/browse/SUT-49) Enviar contexto autorizado de chat y documentos | Código presente | Parcial; ver escenarios JSON | storage, aiQuality |
 | [SUT-50](https://studyroomd.atlassian.net/browse/SUT-50) Controlar límites de uso, errores y costos de IA | Código presente | Parcial; ver escenarios JSON | aiTunnel, aiRecovery, media |
-| [SUT-51](https://studyroomd.atlassian.net/browse/SUT-51) Valorar y reportar respuestas de IA | Código presente | Sin prueba específica | feedback |
+| [SUT-51](https://studyroomd.atlassian.net/browse/SUT-51) Valorar y reportar respuestas de IA | Código presente | Parcial; ver escenarios JSON | feedback |
 | [SUT-53](https://studyroomd.atlassian.net/browse/SUT-53) Finalizar y almacenar una sesión | Código presente | Parcial; ver escenarios JSON | history |
 | [SUT-54](https://studyroomd.atlassian.net/browse/SUT-54) Generar resumen automático | Código presente | Parcial; ver escenarios JSON | aiQuality, aiTunnel, aiRecovery, history |
 | [SUT-55](https://studyroomd.atlassian.net/browse/SUT-55) Generar puntos clave y acuerdos | Código presente | Parcial; ver escenarios JSON | aiQuality, aiTunnel, aiRecovery, history |
@@ -74,20 +74,20 @@ Todas conservan como pendientes la validación del despliegue gratuito y la eval
 - **recovery:** MEDIA_RECOVERY: UDP bloqueado/TURN-TLS, Wi-Fi→datos, corte5s y recuperación≤10s; reinicio API conservando medios, chat y señales recuperan estado.
 - **annotations:** ANNOTATIONS_REAL: señalamientos visibles para otros participantes sobre la pantalla compartida, resoluciones distintas, teclado y permisos reales; no hay pizarra separada.
 - **storage:** STORAGE_REAL: subida/descarga/eliminación autorizadas en Supabase privado con dos usuarios, documento inválido, cuota y URL vencida; comprobar extracción de PDFs.
-- **restore:** RESTORE: restaurar un respaldo PostgreSQL en una base vacía y validar relaciones; la migración aplicada no sustituye una restauración.
-- **aiTunnel:** AI_TUNNEL: llamada desde Render por HTTPS ngrok al PC, 401 público sin secreto, PC suspendido/apagado y túnel caído; sin fallback facturable.
+- **restore:** RESTORE: recuperación operacional con datos representativos, objetos Storage e identidades. Se registra por separado la restauración lógica real de las 13 tablas y cinco filas existentes; no equivale a pg_dump ni a recuperación completa del proveedor.
+- **aiTunnel:** AI_TUNNEL: operación desde Render por HTTPS ngrok al PC, incluyendo PC suspendido/apagado y túnel caído; sin fallback facturable. Una solicitud exitosa acredita conexión, no todos los fallos operativos.
 - **aiQuality:** AI_QUALITY: evaluar español, fidelidad y quizzes con material real variado; tres muestras correctas no son una evaluación estadística.
 - **aiRecovery:** AI_DURABLE: reiniciar API durante trabajo y recuperar lease vencido sin duplicar resultado; validar cola y cancelación con motor real.
 - **roomFlows:** ROOM_FLOWS: completar positivo y negativo de cada filtro, recomendación, invitación, fecha y transición desde la interfaz con usuarios distintos.
 - **collaboration:** COLLABORATION_REAL: dos clientes de sala prueban presencia, reacciones, mano, chat, notas privadas y timer bajo desconexión/reconexión.
 - **ci:** CI_REMOTE: ejecutar el workflow en el repositorio conectado con límites gratuitos, retención y bloqueo de gasto; las pruebas locales no prueban GitHub Actions.
-- **feedback:** AI_FEEDBACK: usuario autorizado valora/reporta respuesta completa; comprobar persistencia, deduplicación, rechazo de valoración ajena e interfaz.
+- **feedback:** AI_FEEDBACK: completar reporte con motivo, deduplicación, rechazo de valoración ajena e interfaz. La valoración positiva guardada mediante API se registra por separado.
 - **history:** HISTORY_REAL: exportación JSON/Markdown, filtros/fechas, privacidad, intento de quiz y reporte coherente en sesiones y usuarios reales.
 
 ## Evidencias y límites
 
-El mapa incluye pruebas unitarias API, integración Firebase Auth emulator/PostgreSQL, navegador, coordenadas de pantalla y seguridad/cola del gateway. Los resultados de navegador se leen de su JSON real al regenerar, conservando un fallo si el último registro falló. La inferencia local se verifica contra su modelo/digest y muestras guardadas. Los resultados de API comunicados por el agente principal se identifican como tales; no se inventan ejecuciones de CI o de producción.
+El mapa incluye pruebas unitarias API, integración Firebase Auth emulator/PostgreSQL, navegador, coordenadas de pantalla y seguridad/cola del gateway. Lee los resultados durables de [API](verification/backend-unit.txt), [integración](verification/api-integration.txt), [navegador](../apps/web/test-results/browser-smoke.json) y [servicios reales](verification/cloud-smoke.json), [publicación](verification/deployment.json), [respaldo/restauración](verification/logical-restore.json) y [medios sintéticos entre navegadores](../apps/web/test-results/media-collaboration.json), conservando un fallo si el último registro falló. La [inferencia local](../apps/ai-gateway/model-verification.json) registra modelo, digest y tres muestras revisadas; la [prueba pública ngrok](../apps/ai-gateway/tunnel-verification.json) registra autenticación y streaming real. Cada evidencia indica qué acredita y qué queda fuera. No se inventan ejecuciones remotas de CI ni una llamada de aceptación.
 
-No existe aceptación automática de todos los criterios por aprobar una suite: faltan, según la historia, casos específicos de ranking, correo real, Storage, medios, valoración y resultados de cierre con motor real. Una llamada de 60 minutos con cuatro equipos/redes, recuperación/TURN y carga de IA requiere evidencia propia. La cuenta Free y sus cuotas deben comprobarse en cada proveedor.
+No existe aceptación automática de todos los criterios por aprobar una suite: faltan, según la historia, casos específicos de ranking, correo real, recuperación operacional completa, valoración e intentos de quiz, así como fallos, cuota y permisos adicionales de Storage. El cierre de sesión y una inferencia real no acreditan todos los resultados automáticos. La llamada de 60 minutos con cuatro equipos/redes, recuperación/TURN y carga simultánea de IA requiere evidencia propia. Verificar un plan gratuito tampoco acredita haber ensayado su cuota agotada; los paneles del proveedor son la referencia de consumo.
 
 Regenerar desde la raíz con `npm run traceability`. El script falla si cambia el inventario, encuentra huérfanos o deja una historia sin sus 3 tareas/9 actividades; actualizar el mapeo y conservar siempre los requisitos nuevos.

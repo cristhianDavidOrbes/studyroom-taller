@@ -1,0 +1,46 @@
+{
+  "observedAt": "2026-10-02T06:08:08.170Z",
+  "frontend": {
+    "url": "https://studyroom-sut.onrender.com",
+    "type": "static_site",
+    "serviceId": "srv-davk92lg1s2s73ardr2g",
+    "plan": "static-free",
+    "verified": {
+      "https": true,
+      "spaRewrite": true,
+      "registration": true,
+      "profileSave": true,
+      "privateRoomCreation": true
+    }
+  },
+  "backend": {
+    "url": "https://studyroom-sut-api.onrender.com",
+    "serviceId": "srv-davk8vtg1s2s73ardjtg",
+    "plan": "free",
+    "verifiedCloudIntegration": "cloud-smoke.json"
+  },
+  "firebase": {
+    "project": "studyroom-sut-2026",
+    "plan": "Spark",
+    "billing": "USD 0 per month - verified console"
+  },
+  "supabase": {
+    "project": "wyjngkxhylcczjoqalhj",
+    "plan": "Free",
+    "securityAdvisors": "No issues found"
+  },
+  "livekit": {
+    "project": "p_6are078fa3t",
+    "plan": "Build",
+    "nextInvoice": "USD 0.00 - verified console"
+  },
+  "renderWorkspace": {
+    "plan": "Hobby",
+    "cardOnFile": false,
+    "verifiedInDashboard": true
+  },
+  "limits": [
+    "Llamada real de 60 minutos con 4 dispositivos/redes no realizada.",
+    "Los planes gratuitos tienen cuotas y suspensión; la IA requiere el PC encendido."
+  ]
+}

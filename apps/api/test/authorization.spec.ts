@@ -13,12 +13,37 @@ describe("Autorización de salas", () => {
     email: "student@example.invalid",
     name: "Student",
   };
-  test('el anfitrión puede abrir una sala programada al llegar su fecha',async()=>{
-    const scheduled={id:'r',status:'scheduled',scheduledAt:new Date(Date.now()-1000)};
-    const db:any={membership:{findUnique:jest.fn().mockResolvedValue({active:true,banned:false,role:'host',room:scheduled})},room:{updateMany:jest.fn().mockResolvedValue({count:1}),findUniqueOrThrow:jest.fn().mockResolvedValue({...scheduled,status:'open'})}};
-    const rooms=new Rooms(db,new Events(),new RateLimiter());
-    expect((await rooms.member('r',identity.uid)).room.status).toBe('open');
-    expect(db.room.updateMany).toHaveBeenCalledWith(expect.objectContaining({where:expect.objectContaining({status:'scheduled'})}));
+  test("el anfitrión puede abrir una sala programada al llegar su fecha", async () => {
+    const scheduled = {
+      id: "r",
+      status: "scheduled",
+      scheduledAt: new Date(Date.now() - 1000),
+    };
+    const db: any = {
+      membership: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({
+            active: true,
+            banned: false,
+            role: "host",
+            room: scheduled,
+          }),
+      },
+      room: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest
+          .fn()
+          .mockResolvedValue({ ...scheduled, status: "open" }),
+      },
+    };
+    const rooms = new Rooms(db, new Events(), new RateLimiter());
+    expect((await rooms.member("r", identity.uid)).room.status).toBe("open");
+    expect(db.room.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: "scheduled" }),
+      }),
+    );
   });
   test("rechaza otra sala, retirada o expulsión aunque uid sea válido", async () => {
     for (const member of [

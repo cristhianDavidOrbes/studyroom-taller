@@ -150,7 +150,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
           }
         } catch { /* Report readiness without leaking local network errors. */ }
         const usage = meter.snapshot();
-        json(res, 200, { status: ready && !pauseMode() && !usage.exhausted ? 'ready' : 'unavailable', model: MODEL, baseModel: BASE_MODEL, modelDigest, ollamaReady: ready, pause: pauseMode(), queue: queue.state, usage, freeMemoryMb: Math.floor(freeMemory() / 1024 / 1024), contextTokens: CONTEXT_TOKENS, localOnly: true });
+        json(res, 200, { status: ready && !pauseMode() && !usage.exhausted && usage.persistenceHealthy ? 'ready' : 'unavailable', model: MODEL, baseModel: BASE_MODEL, modelDigest, ollamaReady: ready, pause: pauseMode(), queue: queue.state, usage, freeMemoryMb: Math.floor(freeMemory() / 1024 / 1024), contextTokens: CONTEXT_TOKENS, localOnly: true });
         return;
       }
       meter.assertQuota();

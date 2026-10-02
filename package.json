@@ -15,7 +15,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "test:e2e": "node apps/web/tests/browser-smoke.mjs",
-    "emulators": "npx -y firebase-tools@latest emulators:start --only auth --project demo-studyroom",
+    "emulators": "npx -y firebase-tools@15.32.1 emulators:start --only auth --project demo-studyroom",
     "traceability": "node scripts/traceability.mjs",
     "test:media": "node apps/web/tests/media-collaboration.mjs"
   },

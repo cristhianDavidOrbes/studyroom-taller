@@ -13,6 +13,7 @@ npm run build --workspace @studyroom/api
 npm run start --workspace @studyroom/api
 npm run test --workspace @studyroom/api
 node --test tests/api.integration.mjs
+node apps/api/scripts/verify-queue-timezone.cjs
 ```
 
 `apps/api/.env` contiene la configuración local y está ignorado por Git. `NODE_ENV=production` rechaza explícitamente `FIREBASE_AUTH_EMULATOR_HOST`. Los identificadores de proyecto deben coincidir con los tokens de Firebase. En Windows hay que detener la API antes de ejecutar `prisma generate`, porque Windows mantiene abierto su motor nativo.
@@ -56,6 +57,8 @@ Documentos aceptan PDF, texto UTF-8, PNG, JPEG o WebP, máximo 10 MB. Se verific
 
 La cola está en `AiJob`; se consume en el mismo proceso NestJS, con un bloqueo transaccional PostgreSQL global y una sola generación activa. La reserva de trabajo vence en cuatro minutos y se renueva cada 30 segundos. Una interrupción permite recuperar el trabajo después del vencimiento. Intentos y espera exponencial quedan guardados; después de cinco fallos se muestra un error y se permite solicitar otra vez. Cancelar detiene la lectura HTTP y conserva el estado cancelado.
 
+Las comparaciones y reservas SQL usan explícitamente UTC para coincidir con `DateTime` de Prisma, incluso cuando PostgreSQL está configurado con America/Bogota. Un cierre ordenado libera sus propios trabajos antes de desconectar la base; un cierre inesperado conserva la recuperación por vencimiento.
+
 Cerrar una sesión guarda su contexto y crea los trabajos idempotentes de resumen, puntos clave y quiz en la misma transacción. No se transcribe el audio ni se usan notas privadas. Se aceptan hasta 60 KB de contexto autorizado y se divide en fragmentos UTF-8 con reducción progresiva para mantener la ventana local de 4.096 tokens. Una pregunta admite como máximo 1.000 bytes. Si el modelo no logra reducir o produce un quiz inválido, el trabajo falla explícitamente.
 
 Las respuestas llegan en NDJSON y se muestran progresivamente. Solo se marca completado tras recibir el evento final; un corte no se presenta como respuesta terminada. Los quizzes se validan, sus soluciones no se transmiten por el progreso ni por las consultas públicas y solo se revelan después de responder. El gateway y Ollama se administran mediante `scripts/local-ai/`.
@@ -75,3 +78,25 @@ Las pruebas de `apps/api/test/` cubren autorización, códigos privados, límite
 El workflow usa un solo runner Ubuntu estándar y PostgreSQL efímero, sin claves cloud. Cancela ejecuciones anteriores, limita el trabajo a 15 minutos y conserva evidencia del navegador tres días. Los presupuestos y el bloqueo de gasto de la cuenta GitHub deben mantenerse configurados; al agotar minutos, las mismas pruebas se ejecutan localmente.
 
 La llamada de 60 minutos con cuatro dispositivos/redes, UDP/TURN, cambio de red, reinicio de backend y carga de IA requiere evidencia real adicional. Las pruebas automatizadas no sustituyen esa aceptación ni verifican por sí mismas la entrega de correo real de Firebase.
+### Registrar la migración inicial aplicada por administración
+
+El rol de ejecución `studyroom_api` no debe migrar ni recibir DDL. Para una conexión
+administrativa dedicada, el procedimiento preferido de Prisma 6 es
+`prisma migrate resolve --applied 20261002050007_studyroom_initial`, seguido de
+`prisma migrate status`; consultar la [guía oficial de baseline](https://www.prisma.io/docs/orm/prisma-migrate/workflows/baselining).
+Las migraciones posteriores se revisan y ejecutan con ese rol migrador antes de
+desplegar la API. Su contraseña no se instala en Render ni se confirma en Git.
+
+Para la instancia inicial cuyo SQL ya se aplicó mediante la API administrativa de
+Supabase, `apps/api/prisma/baseline-existing.sql` permite registrar ese mismo estado
+sin ejecutar de nuevo el DDL ni modificar filas de la aplicación. Lo genera
+`node apps/api/scripts/generate-prisma-baseline.cjs` a partir de los bytes LF
+confirmados de la migración; SHA256
+`216f3d6e06c4ff0fa1bc8732091645921b6fc3c689a1cd9847c502fe9ce08b25`.
+El script comprueba 13 tablas con RLS, 115 columnas con tipo y nulabilidad,
+28 restricciones y 22 índices. Rechaza historial conflictivo, es idempotente y
+revoca acceso público, `anon`, `authenticated` y `studyroom_api` al historial.
+La validación comprueba existencia de restricciones e índices; no reemplaza la
+revisión del SQL ya aplicado ni una comparación completa de deriva del esquema.
+Se probó en PostgreSQL real tanto con historial existente como ausente, repitiendo
+la operación y revirtiendo íntegramente cada ensayo.

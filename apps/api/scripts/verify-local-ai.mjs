@@ -19,11 +19,12 @@ while(!['completed','failed','cancelled'].includes(job.status)&&Date.now()-start
 assert.equal(job.status,'completed',job.error??'La cola no completó en cinco minutos');
 assert.match(job.result.text,/6|seis/i,'La respuesta debe ser fiel al contexto de seis elementos');
 assert.ok(job.result.sources.length>=1,'Debe conservar una fuente autorizada');
+for(const marker of job.result.text.matchAll(/\[((?:mensaje|documento):[^\]\r\n]+)\]/g))assert.ok(job.result.sources.includes(marker[1]),'Las citas publicadas deben pertenecer al contexto autorizado');
 await request(`/ai/answers/${job.id}/feedback`,'POST',{rating:1,reason:'Respuesta coincide con el dato de prueba.'});
 const before=await request('/usage');
 assert.ok(before.used.ngrokRequests>=1);
 assert.ok(before.used.ngrokBytes>0);
-const evidence={at:new Date().toISOString(),status:'passed',durationMs:Date.now()-started,transport:'API NestJS -> gateway loopback autenticado -> Ollama local; túnel público no incluido en esta prueba',job:{id:job.id,status:job.status,result:job.result},checks:['Firebase emulator real','Contexto de chat autorizado','Cola PostgreSQL real','Modelo local real','Fidelidad de respuesta','Fuente conservada','Feedback guardado','Consumo contabilizado']};
+const evidence={at:new Date().toISOString(),status:'passed',durationMs:Date.now()-started,transport:'API NestJS -> gateway loopback autenticado -> Ollama local; túnel público no incluido en esta prueba',job:{id:job.id,status:job.status,result:job.result},checks:['Firebase emulator real','Contexto de chat autorizado','Cola PostgreSQL real','Modelo local real','Respuesta coincide con dato de seis elementos','Fuentes autorizadas conservadas y marcadores inventados retirados','Feedback guardado','Consumo contabilizado']};
 const out=new URL('../../../docs/verification/',import.meta.url);await mkdir(out,{recursive:true});await writeFile(new URL('ai-api-local.json',out),JSON.stringify(evidence,null,2));
 await request(`/rooms/${room.id}/cancel`,'POST',{});
 console.log(JSON.stringify({status:'passed',durationMs:evidence.durationMs,evidence:'docs/verification/ai-api-local.json'}));

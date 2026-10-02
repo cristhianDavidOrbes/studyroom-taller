@@ -54,6 +54,7 @@ Una desconexión o cancelación aborta la solicitud a Ollama y libera la cola. S
 | QUOTA_EXCEEDED | 429 | Esperar/revisar cuota; ninguna API de pago |
 | AI_OFFLINE / MODEL_NOT_READY / AI_BUSY | 503 | Reintento limitado con espera progresiva |
 | AI_PAUSED / LOW_MEMORY | 503 | Esperar a liberar recursos del PC |
+| QUOTA_STORAGE_UNAVAILABLE | 503 | Revisar espacio/permisos del registro de cuotas; no se admite nueva inferencia sin persistencia |
 | AI_TIMEOUT | 504 | Ofrecer cancelación o reintento |
 | INVALID_UPSTREAM / OUTPUT_LIMIT | 502 | No publicar un resultado incompleto |
 
@@ -67,6 +68,7 @@ El backend mantiene la cola durable PostgreSQL. Esta cola local es solo un lími
 - 12 generaciones/minuto, 120 segundos máximos incluyendo cola, dos hilos CPU, memoria libre mínima de 2 GB, modelo descargado de memoria tras 60 segundos inactivo.
 - `pause.ps1 -Mode background` aplaza nuevas generaciones secundarias durante la llamada; `-Mode all` aplaza todas, `-Mode resume` reanuda. La escasez de RAM también impide nuevas generaciones. Una inferencia en curso se cancela desde la aplicación.
 - Contadores mensuales durables de solicitudes, entrada/salida y tokens; reserva de respuesta antes de admitir trabajo para impedir sobreasignación. Tras una caída, las reservas pendientes se cobran conservadoramente como bytes enviados. Nunca se registran prompts, respuestas ni secretos en logs.
+- El reemplazo atómico del registro reintenta bloqueos breves de archivo en Windows. Si persiste el fallo, la salud muestra `persistenceHealthy:false` y se rechazan nuevas generaciones; un fallo de limpieza de reserva no derriba el servidor. Al poder escribir nuevamente, se guardan los contadores acumulados antes de reanudar.
 - Umbral local máximo 18.000 solicitudes y 900 MB/mes, por debajo de 20.000 y 1 GB de ngrok Free. Alerta al 80%. Un vigilante local detiene el túnel al alcanzar el umbral sin consumir solicitudes HTTP adicionales.
 
 Los contadores incluyen tráfico que llega a esta puerta y una estimación de cabeceras; no son el sistema de facturación de ngrok ni cubren otros túneles o tráfico detenido antes del PC. Revisar el panel del proveedor y mantener el plan Free. Estos controles no prometen uso ilimitado. El PC debe seguir encendido, despierto y conectado; una suspensión interrumpe IA, mientras los medios LiveKit tienen su propia conexión.
@@ -76,6 +78,8 @@ Los contadores incluyen tráfico que llega a esta puerta y una estimación de ca
 `npm test -w @studyroom/ai-gateway` ejecuta pruebas de autenticación, validación, límites de modelo/contexto, streaming, caída del motor, respuesta inválida, timeout, cuota persistente, prioridad, cancelación y pausa.
 
 `scripts/local-ai/verify.ps1` ejecuta inferencia real y guarda muestras de español, resumen fiel, quiz, tiempos y GPU en `model-verification.json`. `verify.ps1 -PublicTunnel` repite por la URL pública y guarda `tunnel-verification.json`. La comprobación de español/fidelidad debe revisarse manualmente; tres muestras no constituyen una evaluación estadística.
+
+`node scripts/local-ai/verify-public.mjs` comprueba el túnel HTTPS público: acceso privado sin credencial rechazado (401), salud autenticada y respuesta NDJSON completa. Incluye reintento limitado frente a un fallo de DNS transitorio. Esta verificación pasó en el PC y quedó registrada en `tunnel-verification.json`.
 
 La aceptación de estabilidad exige además una llamada de 60 minutos con cuatro dispositivos/redes reales, IA trabajando, métricas WebRTC, reconexión y TURN/TLS. Las pruebas unitarias y la velocidad local no demuestran por sí solas la fluidez de esa llamada. Ver matriz de requisitos del proyecto.
 

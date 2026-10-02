@@ -1,0 +1,27 @@
+
+> @studyroom/ai-gateway@1.0.0 test
+> tsx --test test/*.test.ts
+
+✔ configuration fails closed for missing secret and paid-scale quotas (0.9136ms)
+✔ input rejects foreign/cloud model, token overflow and unbounded UTF8 context (0.2506ms)
+✔ requests require Bearer and route allowlist; public health reveals no model/secret (47.4929ms)
+✔ generation only contacts local chat with fixed model and resource limits (15.9084ms)
+✔ NDJSON streams deltas once, includes final usage and records bytes (13.9334ms)
+✔ offline, missing model, malformed upstream and timeout become explicit errors (72.231ms)
+✔ rate limit and paused background work prevent model calls (22.3326ms)
+✔ durable quota survives restart and reservations prevent oversubscription (6.8172ms)
+✔ single queue runs only one generation, prioritizes questions and removes cancelled work (0.6446ms)
+✔ client cancellation aborts local inference and frees the queue (70.2206ms)
+✔ token truncation emits stream error, never a successful final answer (9.9829ms)
+✔ readiness requires installed selected model; secrets are absent from health data (8.5685ms)
+✔ low memory, oversized body and exhausted free quota prevent inference (21.2438ms)
+✔ atomic quota replacement retries transient Windows locks without discarding the old ledger (0.288ms)
+✔ unavailable quota storage blocks new inference without throwing from reservation cleanup (1.1723ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 560.3343

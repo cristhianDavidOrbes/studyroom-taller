@@ -1,0 +1,124 @@
+{
+  "at": "2026-10-02T06:08:01.770Z",
+  "status": "passed",
+  "format": "StudyRoom logical JSON snapshot plus versioned SQL migration; not pg_dump",
+  "source": {
+    "provider": "Supabase",
+    "schema": "public",
+    "transaction": "REPEATABLE READ READ ONLY",
+    "rlsPreserved": true
+  },
+  "destination": {
+    "host": "127.0.0.1",
+    "port": 54322,
+    "database": "studyroom_restore_test"
+  },
+  "limitations": [
+    "Does not copy Supabase Storage object contents or Firebase accounts.",
+    "Does not replace a full database dump, provider-managed backup, PITR or production recovery exercise."
+  ],
+  "tables": [
+    {
+      "name": "User",
+      "sourceRows": 1,
+      "restoredRows": 1,
+      "sha256": "f9629c7d12b01fb86df99c4033ec9318f15090f191ed399c23f9d1399e65a7dd",
+      "matched": true
+    },
+    {
+      "name": "Room",
+      "sourceRows": 1,
+      "restoredRows": 1,
+      "sha256": "ef684801ca5e9adbf482945343f033f8172f3f858ea08523b36cd9dfd2c03407",
+      "matched": true
+    },
+    {
+      "name": "Membership",
+      "sourceRows": 1,
+      "restoredRows": 1,
+      "sha256": "d24ef10b1530d12eda51273d117dd047ff63adf3fa6bf728fb7b825753dfa2dd",
+      "matched": true
+    },
+    {
+      "name": "Message",
+      "sourceRows": 0,
+      "restoredRows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matched": true
+    },
+    {
+      "name": "Note",
+      "sourceRows": 0,
+      "restoredRows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matched": true
+    },
+    {
+      "name": "Document",
+      "sourceRows": 0,
+      "restoredRows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matched": true
+    },
+    {
+      "name": "Invite",
+      "sourceRows": 0,
+      "restoredRows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matched": true
+    },
+    {
+      "name": "Session",
+      "sourceRows": 1,
+      "restoredRows": 1,
+      "sha256": "f6b7c292aa0ce96ac4d58aafa8774507b23a7c8d990bf5c002972777a13e76e1",
+      "matched": true
+    },
+    {
+      "name": "AiJob",
+      "sourceRows": 0,
+      "restoredRows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matched": true
+    },
+    {
+      "name": "Feedback",
+      "sourceRows": 0,
+      "restoredRows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matched": true
+    },
+    {
+      "name": "QuizAttempt",
+      "sourceRows": 0,
+      "restoredRows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matched": true
+    },
+    {
+      "name": "Usage",
+      "sourceRows": 1,
+      "restoredRows": 1,
+      "sha256": "b0a30277c357d01b34e372839ff2d111919c91a7480a16ffffa86b3c14755e0c",
+      "matched": true
+    },
+    {
+      "name": "MediaGrant",
+      "sourceRows": 0,
+      "restoredRows": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matched": true
+    }
+  ],
+  "backup": {
+    "localPath": ".local/backups/2026-10-02T06-08-01-770Z",
+    "private": true,
+    "schemaSha256": "216f3d6e06c4ff0fa1bc8732091645921b6fc3c689a1cd9847c502fe9ce08b25"
+  },
+  "foreignKeys": {
+    "count": 8,
+    "validated": true
+  },
+  "restoredRlsEnabled": true,
+  "sourceRoleBypassesRls": false
+}

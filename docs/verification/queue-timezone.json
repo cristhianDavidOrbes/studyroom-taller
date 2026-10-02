@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-02T05:55:24.805Z",
+  "status": "passed",
+  "database": "PostgreSQL real",
+  "results": [
+    {
+      "zone": "America/Bogota",
+      "due": true,
+      "leaseSeconds": 240
+    },
+    {
+      "zone": "UTC",
+      "due": true,
+      "leaseSeconds": 240
+    }
+  ]
+}

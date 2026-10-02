@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { setTimeout as delay } from 'node:timers/promises';
 import { readConfig, type GatewayConfig } from '../src/config.js';
-import { parseInput, SingleQueue, UsageMeter, GatewayError } from '../src/core.js';
+import { parseInput, persistLedger, SingleQueue, UsageMeter, GatewayError } from '../src/core.js';
 import { createGateway } from '../src/server.js';
 
 const secret = '1234567890abcdef'.repeat(4);
@@ -212,4 +212,35 @@ test('low memory, oversized body and exhausted free quota prevent inference', as
   const quota=await harness(noCalls,{monthlyByteLimit:16_384});
   try { assert.equal((await (await quota.request()).json()).code,'QUOTA_EXCEEDED'); } finally { await quota.close(); }
   assert.equal(calls,0);
+});
+
+test('atomic quota replacement retries transient Windows locks without discarding the old ledger', () => {
+  let attempts=0, writes=0;
+  const pauses:number[]=[];
+  persistLedger('quota.json','{}',{
+    writeFileSync: (()=>{writes++;}) as typeof writeFileSync,
+    renameSync: (()=>{if(++attempts<3)throw Object.assign(new Error('locked'),{code:'EPERM'});}) as typeof import('node:fs').renameSync,
+  },ms=>{pauses.push(ms);});
+  assert.equal(writes,1);
+  assert.equal(attempts,3);
+  assert.deepEqual(pauses,[10,20]);
+});
+
+test('unavailable quota storage blocks new inference without throwing from reservation cleanup', () => {
+  const settings=config();
+  let blocked=false;
+  const meter=new UsageMeter(settings,()=>new Date('2026-10-02T00:00:00Z'),()=>{if(blocked)throw Object.assign(new Error('locked'),{code:'EPERM'});});
+  try {
+    const release=meter.reserve(200000);
+    blocked=true;
+    assert.doesNotThrow(()=>meter.sent(100));
+    assert.doesNotThrow(release);
+    assert.equal(meter.snapshot().persistenceHealthy,false);
+    assert.throws(()=>meter.assertQuota(),(error:unknown)=>error instanceof GatewayError&&error.code==='QUOTA_STORAGE_UNAVAILABLE');
+    blocked=false;
+    meter.recordRequest();
+    assert.equal(meter.snapshot().persistenceHealthy,true);
+    assert.equal(meter.snapshot().sentBytes,100);
+    assert.doesNotThrow(()=>meter.assertQuota());
+  } finally {rmSync(settings.stateDir,{recursive:true,force:true});}
 });

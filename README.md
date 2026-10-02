@@ -2,6 +2,8 @@
 
 StudyRoom reúne salas de estudio, videollamada, chat, documentos, notas privadas, temporizador y ayuda de IA ejecutada en tu PC. La interfaz está en español. El alcance original está conservado en las **657 incidencias Jira**: 7 épicas, 50 historias, 150 tareas y 450 actividades.
 
+**Abrir la aplicación:** [studyroom-sut.onrender.com](https://studyroom-sut.onrender.com). La interfaz y la API están publicadas en Render; la IA depende de que este PC y su túnel sigan encendidos.
+
 El proyecto contiene la aplicación y sus pruebas. La aceptación de todas las incidencias requiere además completar las validaciones de servicios y dispositivos reales: no se consideran terminadas por existir código. Consulta el [mapa de trazabilidad](docs/traceability.md), su [detalle por incidencia](docs/traceability.json) y el [protocolo de aceptación](docs/acceptance-manual.md).
 
 ## Arquitectura
@@ -71,6 +73,8 @@ Para documentos y videollamada, completar las variables de Supabase Storage y Li
 
 ## Conectar la IA del PC
 
+En este PC puedes hacer doble clic en [Iniciar-IA.cmd](Iniciar-IA.cmd) para arrancar el modelo y su conexión. [Detener-IA.cmd](Detener-IA.cmd) detiene los procesos de StudyRoom. La consola indica cuándo la IA está lista; mantener el PC despierto mientras se use.
+
 ```powershell
 npm run build -w @studyroom/ai-gateway
 .\scripts\local-ai\setup.ps1
@@ -111,11 +115,13 @@ La integración necesita API, PostgreSQL y Firebase emulator activos. El navegad
 
 La [configuración CI](.github/workflows/ci.yml) ejecuta build, tipos, pruebas y auditoría, usa PostgreSQL efímero y el emulador, limita duración y conserva evidencia por tres días. Una ejecución local verde no acredita la ejecución remota del workflow. Mantener el presupuesto de GitHub en cero y ejecutar localmente si se agota el cupo gratuito.
 
-La trazabilidad relaciona las 657 incidencias, sus fuentes, archivos y escenarios. Conserva como pendientes la llamada de 60 minutos con cuatro equipos/redes, TURN y reconexión, carga simultánea de IA, correo real, restauración de respaldo y cuotas reales. Los resultados automáticos no cierran Jira por sí solos.
+La trazabilidad relaciona las 657 incidencias, sus fuentes, archivos y escenarios. Conserva como pendientes la llamada de 60 minutos con cuatro equipos/redes, TURN y reconexión, carga simultánea de IA, correo real, recuperación operacional completa y cuotas reales. Se probó un [respaldo lógico y restauración aislada](docs/backup-restore.md) de las 13 tablas, con cinco filas existentes y hashes coincidentes; no incluye objetos Storage ni cuentas Firebase. Los resultados automáticos no cierran Jira por sí solos.
 
 ## Publicar en Render
 
-[render.yaml](render.yaml) define un Web Service Free para la API y un Static Site para React. Configurar sus secretos en Render; ninguna credencial está incluida en la plantilla. La URL final y sus verificaciones deben registrarse tras el despliegue real.
+La API ya está desplegada en [Render](https://studyroom-sut-api.onrender.com/api/health). La prueba registrada el **2 de octubre de 2026 a las 05:46 UTC** aprobó siete comprobaciones con Firebase, Supabase, Storage privado, token LiveKit, cierre de sesión y **Render → ngrok público → IA de este PC**, con respuesta guardada. Ver [evidencia del backend desplegado](docs/verification/cloud-smoke.json). Esta prueba no acredita una llamada prolongada ni todos los escenarios de la interfaz.
+
+[La interfaz publicada](https://studyroom-sut.onrender.com) tiene HTTPS, rutas de aplicación y registro, perfil y creación de sala privada verificados en el navegador. Ver [evidencia de publicación y planes](docs/verification/deployment.json). [render.yaml](render.yaml) define el Web Service Free y el Static Site. El smoke test de navegador local se registra por separado y no acredita automáticamente todos los flujos del sitio publicado. Configurar los secretos en Render; ninguna credencial está incluida en la plantilla.
 
 - Migrar la base con la conexión administrativa y arrancar API con el rol restringido. Supabase Storage usa un bucket privado.
 - Configurar Firebase Spark sin emulador y autorizar el dominio real del sitio. Las variables `VITE_FIREBASE_*` son configuración del cliente; las credenciales de servicio son exclusivas de la API.

@@ -36,6 +36,7 @@ import { Prisma } from "@prisma/client";
 @Injectable()
 export class Rooms implements OnModuleInit, OnModuleDestroy {
   private maintenance?: NodeJS.Timeout;
+  private mediaSweepActive = false;
   onModuleInit() {
     this.maintenance = setInterval(() => void this.expireMedia(), 15000);
     this.maintenance.unref();
@@ -45,7 +46,8 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
     if (this.maintenance) clearInterval(this.maintenance);
   }
   async expireMedia() {
-    if (!process.env.LIVEKIT_URL) return;
+    if (!process.env.LIVEKIT_URL || this.mediaSweepActive) return;
+    this.mediaSweepActive = true;
     try {
       const expired = await this.db.mediaGrant.findMany({
         orderBy: { expiresAt: "asc" },
@@ -64,10 +66,24 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
             membership.banned ||
             membership.room.status !== "open";
           if (!revoked && grant.expiresAt > new Date()) continue;
-          await this.mediaClient().removeParticipant(
-            grant.roomId,
-            grant.userId,
-          );
+          if (revoked && grant.expiresAt > new Date()) {
+            const expiresAt = new Date();
+            await this.db.mediaGrant.updateMany({
+              where: { id: grant.id, expiresAt: grant.expiresAt },
+              data: { expiresAt },
+            });
+            grant.expiresAt = expiresAt;
+          }
+          try {
+            await this.mediaClient().removeParticipant(
+              grant.roomId,
+              grant.userId,
+            );
+          } catch (error) {
+            // A deleted room or absent participant already satisfies eviction.
+            const absent = error as { status?: number; code?: string };
+            if (absent.status !== 404 && absent.code !== "not_found") throw error;
+          }
           // Keep monitoring through the one-minute join-token lifetime to prevent replay.
           if (grant.expiresAt.getTime() < Date.now() - 60000)
             await this.db.mediaGrant.deleteMany({
@@ -83,7 +99,9 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
           });
         } catch {}
       }
-    } catch {}
+    } catch {} finally {
+      this.mediaSweepActive = false;
+    }
   }
   constructor(
     readonly db: Db,
@@ -97,9 +115,20 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
     });
     if (!m || m.banned || (!history && !m.active))
       throw new ForbiddenException("No tienes acceso a esta sala");
-    if(m.room.status==='scheduled'&&m.room.scheduledAt&&m.room.scheduledAt<=new Date()){
-      await this.db.room.updateMany({where:{id:roomId,status:'scheduled',scheduledAt:{lte:new Date()}},data:{status:'open'}});
-      m.room=await this.db.room.findUniqueOrThrow({where:{id:roomId}});
+    if (
+      m.room.status === "scheduled" &&
+      m.room.scheduledAt &&
+      m.room.scheduledAt <= new Date()
+    ) {
+      await this.db.room.updateMany({
+        where: {
+          id: roomId,
+          status: "scheduled",
+          scheduledAt: { lte: new Date() },
+        },
+        data: { status: "open" },
+      });
+      m.room = await this.db.room.findUniqueOrThrow({ where: { id: roomId } });
     }
     if (roles && !roles.includes(m.role))
       throw new ForbiddenException("No tienes permiso para esta acción");
@@ -139,7 +168,10 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
     };
   }
   async list(i: Identity, q: Record<string, string>) {
-    await this.db.room.updateMany({where:{status:'scheduled',scheduledAt:{lte:new Date()}},data:{status:'open'}});
+    await this.db.room.updateMany({
+      where: { status: "scheduled", scheduledAt: { lte: new Date() } },
+      data: { status: "open" },
+    });
     q = parse(
       z
         .object({
@@ -201,9 +233,16 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
   async get(id: string, i: Identity) {
     let r = await this.db.room.findUnique({ where: { id } });
     if (!r) throw new NotFoundException("Sala no encontrada");
-    if(r.status==='scheduled'&&r.scheduledAt&&r.scheduledAt<=new Date()){
-      await this.db.room.updateMany({where:{id,status:'scheduled',scheduledAt:{lte:new Date()}},data:{status:'open'}});
-      r=await this.db.room.findUniqueOrThrow({where:{id}});
+    if (
+      r.status === "scheduled" &&
+      r.scheduledAt &&
+      r.scheduledAt <= new Date()
+    ) {
+      await this.db.room.updateMany({
+        where: { id, status: "scheduled", scheduledAt: { lte: new Date() } },
+        data: { status: "open" },
+      });
+      r = await this.db.room.findUniqueOrThrow({ where: { id } });
     }
     return this.format(r, i.uid);
   }
@@ -300,8 +339,13 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       });
       if (old?.banned)
         throw new ForbiddenException("El anfitrión retiró tu acceso");
-      if (old?.active){
-        if(r.status==='scheduled'&&r.scheduledAt&&r.scheduledAt<=new Date())await tx.room.update({where:{id},data:{status:'open'}});
+      if (old?.active) {
+        if (
+          r.status === "scheduled" &&
+          r.scheduledAt &&
+          r.scheduledAt <= new Date()
+        )
+          await tx.room.update({ where: { id }, data: { status: "open" } });
         return;
       }
       if (r.scheduledAt && r.scheduledAt > new Date())
@@ -508,7 +552,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       process.env.LIVEKIT_URL.replace(/^ws/, "http"),
       process.env.LIVEKIT_API_KEY,
       process.env.LIVEKIT_API_SECRET,
-      {requestTimeout:8},
+      { requestTimeout: 8 },
     );
   }
   async mediaToken(id: string, i: Identity) {
@@ -565,12 +609,18 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
         },
       });
     });
-    try{await client.createRoom({
-      name: id,
-      maxParticipants: m.room.capacity,
-      emptyTimeout: 60,
-      departureTimeout: 20,
-    });}catch{throw new ServiceUnavailableException('No se pudo conectar con la videollamada. La sala y el chat siguen disponibles; vuelve a intentarlo.');}
+    try {
+      await client.createRoom({
+        name: id,
+        maxParticipants: m.room.capacity,
+        emptyTimeout: 60,
+        departureTimeout: 20,
+      });
+    } catch {
+      throw new ServiceUnavailableException(
+        "No se pudo conectar con la videollamada. La sala y el chat siguen disponibles; vuelve a intentarlo.",
+      );
+    }
     const token = new AccessToken(
       process.env.LIVEKIT_API_KEY,
       process.env.LIVEKIT_API_SECRET,
@@ -602,7 +652,13 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
     this.limiter.check(`annotation:${i.uid}`, 20, 1000);
     const d = parse(annotationSchema, body);
     let participants;
-    try{participants = await this.mediaClient().listParticipants(id);}catch{throw new ServiceUnavailableException('No se pudo comprobar la pantalla compartida. Intenta de nuevo.');}
+    try {
+      participants = await this.mediaClient().listParticipants(id);
+    } catch {
+      throw new ServiceUnavailableException(
+        "No se pudo comprobar la pantalla compartida. Intenta de nuevo.",
+      );
+    }
     const owner = participants.find((p) =>
       p.tracks.some(
         (t) => t.sid === d.screenId && Number(t.source) === 3 && !t.muted,
@@ -710,7 +766,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
           .concat(
             docs.map(
               (d) =>
-                "[documento:" + d.id + " " + d.name + "] " + d.extractedText,
+                "[documento:" + d.id + "] " + d.name + ": " + d.extractedText,
             ),
           )
           .join("\n");

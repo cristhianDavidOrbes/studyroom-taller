@@ -1,0 +1,27 @@
+{
+  "at": "2026-10-02T06:14:04.193Z",
+  "status": "passed",
+  "durationMs": 2126,
+  "transport": "API NestJS -> gateway loopback autenticado -> Ollama local; túnel público no incluido en esta prueba",
+  "job": {
+    "id": "b6182fe8-0a76-4275-a90a-9b5858dee561",
+    "status": "completed",
+    "result": {
+      "text": "La matriz descrita tiene 6 elementos. [mensaje:b3659647-96d3-43a8-9fc5-f3519d94a35a]",
+      "sources": [
+        "mensaje:b3659647-96d3-43a8-9fc5-f3519d94a35a"
+      ],
+      "contextFragments": 1
+    }
+  },
+  "checks": [
+    "Firebase emulator real",
+    "Contexto de chat autorizado",
+    "Cola PostgreSQL real",
+    "Modelo local real",
+    "Respuesta coincide con dato de seis elementos",
+    "Fuentes autorizadas conservadas y marcadores inventados retirados",
+    "Feedback guardado",
+    "Consumo contabilizado"
+  ]
+}

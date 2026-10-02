@@ -83,11 +83,26 @@ export class SingleQueue {
 
 export interface Ledger { month: string; requests: number; receivedBytes: number; sentBytes: number; reservedBytes: number; generations: number; inputTokens: number; outputTokens: number; updatedAt: string }
 
+export function persistLedger(path: string, content: string, io = { writeFileSync, renameSync }, pause = (ms: number) => { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms); }) {
+  const tmp = `${path}.tmp`;
+  io.writeFileSync(tmp, content, { mode: 0o600 });
+  // Windows readers/antivirus can briefly hold the destination without delete sharing.
+  // Preserve the old atomic file and retry; never unlink it or fall back to a torn write.
+  for (let attempt = 0; ; attempt++) {
+    try { io.renameSync(tmp, path); return; }
+    catch (error) {
+      if (attempt >= 4 || !['EPERM', 'EBUSY', 'EACCES'].includes((error as NodeJS.ErrnoException).code ?? '')) throw error;
+      pause((attempt + 1) * 10);
+    }
+  }
+}
+
 export class UsageMeter {
   private data: Ledger;
   private path: string;
   private timestamps: number[] = [];
-  constructor(private config: GatewayConfig, private now: () => Date = () => new Date()) {
+  private persistenceHealthy = true;
+  constructor(private config: GatewayConfig, private now: () => Date = () => new Date(), private persist: (path: string, content: string) => void = persistLedger) {
     mkdirSync(config.stateDir, { recursive: true, mode: 0o700 });
     this.path = join(config.stateDir, 'usage.json');
     this.data = this.fresh();
@@ -102,21 +117,28 @@ export class UsageMeter {
       this.data.reservedBytes = 0;
     }
     this.rollover();
-    this.save();
+    if (!this.save()) throw new Error('No se puede guardar el registro de cuotas local. Revisa permisos y espacio disponible.');
   }
   private fresh(): Ledger { return { month: this.now().toISOString().slice(0, 7), requests: 0, receivedBytes: 0, sentBytes: 0, reservedBytes: 0, generations: 0, inputTokens: 0, outputTokens: 0, updatedAt: this.now().toISOString() }; }
   private rollover() { if (this.data.month !== this.now().toISOString().slice(0, 7)) this.data = this.fresh(); }
   private save() {
     this.data.updatedAt = this.now().toISOString();
-    const tmp = `${this.path}.tmp`;
-    writeFileSync(tmp, JSON.stringify(this.data), { mode: 0o600 });
-    renameSync(tmp, this.path);
+    try {
+      this.persist(this.path, JSON.stringify(this.data));
+      this.persistenceHealthy = true;
+    } catch {
+      // Reject new generation when durable accounting is unavailable. Existing durable
+      // reservations remain conservatively charged; cleanup must never crash the server.
+      this.persistenceHealthy = false;
+    }
+    return this.persistenceHealthy;
   }
   recordRequest() { this.rollover(); this.data.requests++; this.data.receivedBytes += 1024; this.save(); }
   received(bytes: number) { this.data.receivedBytes += bytes; this.save(); }
   sent(bytes: number) { this.data.sentBytes += bytes; this.save(); }
   assertQuota(reservation = 0) {
     this.rollover();
+    if (!this.persistenceHealthy) throw new GatewayError(503, 'QUOTA_STORAGE_UNAVAILABLE', 'No se pueden guardar las cuotas del PC. Revisa permisos y espacio disponible.', 30);
     if (this.data.requests > this.config.monthlyRequestLimit || this.data.receivedBytes + this.data.sentBytes + this.data.reservedBytes + reservation > this.config.monthlyByteLimit) {
       throw new GatewayError(429, 'QUOTA_EXCEEDED', 'Cupo gratuito local agotado. El túnel debe permanecer detenido hasta revisar el panel de ngrok.', 3600);
     }
@@ -127,11 +149,11 @@ export class UsageMeter {
     if (this.timestamps.length >= this.config.requestsPerMinute) throw new GatewayError(429, 'RATE_LIMIT', 'Espera antes de enviar más consultas.', 60);
     this.timestamps.push(now);
   }
-  reserve(bytes: number) { this.assertQuota(bytes); this.data.reservedBytes += bytes; this.save(); return () => { this.data.reservedBytes = Math.max(0, this.data.reservedBytes - bytes); this.save(); }; }
+  reserve(bytes: number) { this.assertQuota(bytes); this.data.reservedBytes += bytes; if (!this.save()) this.assertQuota(); return () => { this.data.reservedBytes = Math.max(0, this.data.reservedBytes - bytes); this.save(); }; }
   generation(inputTokens: number, outputTokens: number) { this.data.generations++; this.data.inputTokens += inputTokens; this.data.outputTokens += outputTokens; this.save(); }
   snapshot() {
     this.rollover();
     const bytes = this.data.receivedBytes + this.data.sentBytes;
-    return { ...this.data, limits: { requests: this.config.monthlyRequestLimit, bytes: this.config.monthlyByteLimit }, warning: this.data.requests >= this.config.monthlyRequestLimit * .8 || bytes >= this.config.monthlyByteLimit * .8, exhausted: this.data.requests >= this.config.monthlyRequestLimit || bytes >= this.config.monthlyByteLimit, approximate: true };
+    return { ...this.data, persistenceHealthy: this.persistenceHealthy, limits: { requests: this.config.monthlyRequestLimit, bytes: this.config.monthlyByteLimit }, warning: !this.persistenceHealthy || this.data.requests >= this.config.monthlyRequestLimit * .8 || bytes >= this.config.monthlyByteLimit * .8, exhausted: this.data.requests >= this.config.monthlyRequestLimit || bytes >= this.config.monthlyByteLimit, approximate: true };
   }
 }

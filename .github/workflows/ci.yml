@@ -58,6 +58,7 @@ jobs:
           npm run build
           npm run typecheck
           npm test
+          node apps/api/scripts/verify-queue-timezone.cjs
           npm audit --audit-level=high
       - name: Migrate isolated PostgreSQL
         run: npm run db:migrate --workspace @studyroom/api

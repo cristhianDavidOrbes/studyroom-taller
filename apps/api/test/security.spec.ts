@@ -12,7 +12,7 @@ import {
   quizSchema,
 } from "../src/validation";
 import { validateFile } from "../src/documents";
-import { publicJob, utf8Chunks } from "../src/ai";
+import { publicJob, utf8Chunks, validatedCitations } from "../src/ai";
 describe("Seguridad y contratos", () => {
   test("los códigos privados usan salt y nunca aceptan otro código", () => {
     const one = hashCode("secreto-123");
@@ -84,6 +84,14 @@ describe("Seguridad y contratos", () => {
     const chunks = utf8Chunks(input, 511);
     expect(chunks.join("")).toBe(input);
     expect(chunks.every((x) => Buffer.byteLength(x) <= 511)).toBe(true);
+  });
+  test("el modelo no puede publicar identificadores de citas inventados", () => {
+    const valid = "mensaje:c9a88be4-92b1-4957-b7a3-022ee0588877";
+    const invented = "mensaje:c9a88be4-92b1-4957-b7a3-072ee0588877";
+    expect(validatedCitations(`Hay seis. [${valid}] [${invented}] [documento:ajeno]`, [valid]))
+      .toBe(`Hay seis. [${valid}]`);
+    expect(validatedCitations("Sin contexto [mensaje:inventado]", []))
+      .toBe("Sin contexto");
   });
   test("los resultados públicos no revelan prompts, secretos ni soluciones del quiz", () => {
     const pub = publicJob({

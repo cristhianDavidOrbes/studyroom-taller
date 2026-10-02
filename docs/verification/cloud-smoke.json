@@ -1,6 +1,6 @@
 {
-  "date": "2026-10-02T05:38:51.642Z",
-  "api": "http://127.0.0.1:3001/api",
+  "date": "2026-10-02T05:46:35.872Z",
+  "api": "https://studyroom-sut-api.onrender.com/api",
   "checks": [
     {
       "name": "PostgreSQL Supabase mediante Prisma y TLS estricto",
