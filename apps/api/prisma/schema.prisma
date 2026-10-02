@@ -1,0 +1,184 @@
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+ directUrl = env("DIRECT_URL")
+}
+model User {
+ id String @id
+ email String
+ displayName String
+ bio String @default("")
+ interests String[] @default([])
+ level String @default("principiante")
+ notifications Json @default("{\"inApp\":true,\"email\":false}")
+ onboarded Boolean @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ memberships Membership[]
+}
+model Room {
+ id String @id @default(uuid())
+ title String
+ description String @default("")
+ subject String
+ modality String @default("colaborativa")
+ level String @default("principiante")
+ privacy String @default("public")
+ accessHash String?
+ capacity Int @default(4)
+ scheduledAt DateTime?
+ durationMinutes Int @default(60)
+ status String @default("open")
+ hostId String
+ timer Json @default("{\"running\":false,\"remainingSeconds\":1500,\"mode\":\"focus\"}")
+ annotations Json @default("[]")
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ memberships Membership[]
+ messages Message[]
+ documents Document[]
+ sessions Session[]
+ @@index([status,scheduledAt])
+ @@index([subject,level,modality])
+ @@index([hostId])
+}
+model Membership {
+ id String @id @default(uuid())
+ roomId String
+ userId String
+ role String @default("participant")
+ active Boolean @default(true)
+ banned Boolean @default(false)
+ handRaised Boolean @default(false)
+ joinedAt DateTime @default(now())
+ leftAt DateTime?
+ room Room @relation(fields:[roomId],references:[id],onDelete:Cascade)
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ @@unique([roomId,userId])
+ @@index([userId,active])
+ @@index([roomId,active])
+}
+model Message {
+ id String @id @default(uuid())
+ roomId String
+ userId String
+ displayName String
+ text String
+ kind String @default("user")
+ clientId String
+ createdAt DateTime @default(now())
+ room Room @relation(fields:[roomId],references:[id],onDelete:Cascade)
+ @@unique([roomId,userId,clientId])
+ @@index([roomId,createdAt])
+}
+model Note {
+ id String @id @default(uuid())
+ roomId String
+ userId String
+ text String @default("")
+ updatedAt DateTime @updatedAt
+ @@unique([roomId,userId])
+}
+model Document {
+ id String @id @default(uuid())
+ roomId String
+ name String
+ mimeType String
+ size Int
+ path String @unique
+ uploadedBy String
+ extractedText String @default("")
+ createdAt DateTime @default(now())
+ room Room @relation(fields:[roomId],references:[id],onDelete:Cascade)
+ @@index([roomId,createdAt])
+}
+model Invite {
+ id String @id @default(uuid())
+ roomId String
+ tokenHash String @unique
+ expiresAt DateTime
+ createdAt DateTime @default(now())
+ @@index([roomId])
+}
+model Session {
+ id String @id @default(uuid())
+ roomId String
+ title String
+ startedAt DateTime @default(now())
+ endedAt DateTime?
+ participantIds String[] @default([])
+ context Json @default("{}")
+ room Room @relation(fields:[roomId],references:[id],onDelete:Cascade)
+ jobs AiJob[]
+ attempts QuizAttempt[]
+ @@index([roomId])
+}
+model AiJob {
+ id String @id @default(uuid())
+ roomId String
+ sessionId String?
+ userId String
+ kind String
+ status String @default("queued")
+ priority Int @default(10)
+ payload Json
+ result Json?
+ error String?
+ attempts Int @default(0)
+ availableAt DateTime @default(now())
+ leaseUntil DateTime?
+ leaseOwner String?
+ idempotencyKey String @unique
+ shared Boolean @default(false)
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ session Session? @relation(fields:[sessionId],references:[id],onDelete:Cascade)
+ feedback Feedback[]
+ @@index([status,availableAt,priority])
+ @@index([userId,createdAt])
+ @@index([roomId])
+}
+model Feedback {
+ id String @id @default(uuid())
+ jobId String
+ userId String
+ rating Int
+ reason String?
+ createdAt DateTime @default(now())
+ job AiJob @relation(fields:[jobId],references:[id],onDelete:Cascade)
+ @@unique([jobId,userId])
+}
+model QuizAttempt {
+ id String @id @default(uuid())
+ sessionId String
+ userId String
+ answers Json
+ score Int
+ total Int
+ createdAt DateTime @default(now())
+ session Session @relation(fields:[sessionId],references:[id],onDelete:Cascade)
+ @@index([userId,sessionId])
+}
+model Usage {
+ id String @id
+ ngrokRequests Int @default(0)
+ ngrokBytes BigInt @default(0)
+ participantMinutes Int @default(0)
+ mediaBytes BigInt @default(0)
+ storageEgress BigInt @default(0)
+ updatedAt DateTime @updatedAt
+}
+model MediaGrant {
+ id String @id @default(uuid())
+ roomId String
+ userId String
+ reservedMinutes Int
+ reservedBytes BigInt
+ startedAt DateTime @default(now())
+ expiresAt DateTime
+ @@unique([roomId,userId])
+ @@index([expiresAt])
+}

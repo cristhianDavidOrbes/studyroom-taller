@@ -1,0 +1,90 @@
+name: StudyRoom verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studyroom-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17.10
+        env:
+          POSTGRES_USER: studyroom_test
+          POSTGRES_PASSWORD: isolated_ci_only
+          POSTGRES_DB: studyroom_test
+        ports: ["54322:5432"]
+        options: >-
+          --health-cmd "pg_isready -U studyroom_test -d studyroom_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      CI: "true"
+      NODE_ENV: test
+      DATABASE_URL: postgresql://studyroom_test:isolated_ci_only@127.0.0.1:54322/studyroom_test?schema=public
+      DIRECT_URL: postgresql://studyroom_test:isolated_ci_only@127.0.0.1:54322/studyroom_test?schema=public
+      FIREBASE_PROJECT_ID: demo-studyroom
+      FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      WEB_ORIGIN: http://localhost:5173,http://127.0.0.1:5173
+      VITE_API_URL: http://127.0.0.1:3000/api
+      VITE_FIREBASE_PROJECT_ID: demo-studyroom
+      VITE_FIREBASE_API_KEY: demo-api-key
+      VITE_FIREBASE_AUTH_DOMAIN: demo-studyroom.firebaseapp.com
+      VITE_FIREBASE_APP_ID: demo-studyroom
+      VITE_USE_FIREBASE_EMULATOR: "true"
+      VITE_FIREBASE_AUTH_EMULATOR_URL: http://127.0.0.1:9099
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - name: Install pinned dependencies
+        run: npm ci
+      - name: Build, types and unit tests
+        run: |
+          npm run build
+          npm run typecheck
+          npm test
+          npm audit --audit-level=high
+      - name: Migrate isolated PostgreSQL
+        run: npm run db:migrate --workspace @studyroom/api
+      - name: Start Firebase emulator and API
+        run: |
+          npx --yes firebase-tools@15.32.1 emulators:start --only auth --project demo-studyroom > /tmp/studyroom-auth.log 2>&1 &
+          npm run start --workspace @studyroom/api > /tmp/studyroom-api.log 2>&1 &
+          node --input-type=module <<'JS'
+          const urls=['http://127.0.0.1:9099','http://127.0.0.1:3000/api/health'];
+          for(const url of urls){let ready=false;for(let attempt=0;attempt<60;attempt++){try{const r=await fetch(url);if(r.status<500){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,1000));}if(!ready)throw new Error('Service did not become ready: '+url);}
+          JS
+      - name: Test real API, identity, concurrency and reconnect
+        run: node --test tests/api.integration.mjs
+      - name: Install browser and start frontend
+        run: |
+          npx playwright install --with-deps chromium
+          npm run dev --workspace @studyroom/web -- --host 127.0.0.1 > /tmp/studyroom-web.log 2>&1 &
+          node --input-type=module <<'JS'
+          let ready=false;for(let attempt=0;attempt<30;attempt++){try{if((await fetch('http://127.0.0.1:5173')).ok){ready=true;break;}}catch{}await new Promise(resolve=>setTimeout(resolve,1000));}if(!ready)throw new Error('Frontend did not become ready');
+          JS
+      - name: Test browser flows
+        run: node apps/web/tests/browser-smoke.mjs
+      - name: Preserve bounded browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-evidence
+          path: apps/web/test-results/
+          retention-days: 3
+          if-no-files-found: ignore

@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-02T05:38:51.642Z",
+  "api": "http://127.0.0.1:3001/api",
+  "checks": [
+    {
+      "name": "PostgreSQL Supabase mediante Prisma y TLS estricto",
+      "passed": true
+    },
+    {
+      "name": "Firebase real autentica y API verifica usuario",
+      "passed": true
+    },
+    {
+      "name": "Documento privado Supabase, subida y descarga firmada",
+      "passed": true
+    },
+    {
+      "name": "Bucket impide descarga pública",
+      "passed": true
+    },
+    {
+      "name": "Token LiveKit real con sala autorizada",
+      "passed": true
+    },
+    {
+      "name": "IA local por ngrok público, cola y respuesta persistida",
+      "passed": true
+    },
+    {
+      "name": "Cierre y sesión guardada en PostgreSQL real",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "No certifica estabilidad de 60 minutos en 4 dispositivos o redes reales."
+  ],
+  "passed": true
+}

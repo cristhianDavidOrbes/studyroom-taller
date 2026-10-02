@@ -1,0 +1,9 @@
+{
+  "limitation": "La sesión del agente ngrok está establecida; DNS del PC no resolvió ngrok-free.dev durante la verificación. No se alteró DNS del equipo.",
+  "publicDnsResolvesFromPc": false,
+  "observedAt": "2026-10-02T05:29:49.7461674Z",
+  "ngrokAgentConnected": true,
+  "localPrivateRoute401Verified": true,
+  "publicUrl": "https://appetite-tuesday-empty.ngrok-free.dev",
+  "publicInferenceVerified": false
+}

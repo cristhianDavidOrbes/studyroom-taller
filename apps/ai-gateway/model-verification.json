@@ -1,0 +1,126 @@
+{
+  "unauthorizedStatus": 401,
+  "license": [
+    "                                 Apache License",
+    "                           Version 2.0, January 2004",
+    "                        http://www.apache.org/licenses/",
+    ""
+  ],
+  "qualityAssessment": "Revisar manualmente fidelidad, idioma y respuesta correcta de las muestras guardadas; no es una evaluación estadística.",
+  "observedAt": "2026-10-02T05:28:43.1712669Z",
+  "livekitCallTestExecuted": false,
+  "endpoint": "http://127.0.0.1:8787",
+  "model": {
+    "name": "qwen3:4b-instruct",
+    "model": "qwen3:4b-instruct",
+    "modified_at": "2026-10-02T00:26:57.7376289-05:00",
+    "size": 2497293803,
+    "digest": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+    "details": {
+      "parent_model": "",
+      "format": "gguf",
+      "family": "qwen3",
+      "families": [
+        "qwen3"
+      ],
+      "parameter_size": "4.0B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 2560
+    },
+    "capabilities": [
+      "completion",
+      "tools"
+    ]
+  },
+  "tests": [
+    {
+      "prompt": "Explica en dos frases qué es la fotosíntesis y por qué las plantas necesitan luz.",
+      "name": "espanol",
+      "response": {
+        "text": "La fotosíntesis es el proceso mediante el cual las plantas convierten la luz solar, el dióxido de carbono y el agua en glucosa (un tipo de azúcar) y oxígeno. Las plantas necesitan luz porque es la fuente de energía que les permite realizar esta reacción, ya que la luz solar proporciona la energía necesaria para convertir los componentes inorgánicos en moléculas orgánicas que alimentan la planta.",
+        "model": "qwen3:4b-instruct",
+        "usage": {
+          "inputTokens": 52,
+          "outputTokens": 105,
+          "totalDurationMs": 3755,
+          "firstTokenMs": 2466,
+          "tokensPerSecond": 81.82
+        }
+      }
+    },
+    {
+      "prompt": "Resume únicamente estos hechos en español: Ana y Luis estudiaron ecuaciones lineales. Resolvieron 2x + 4 = 10 y obtuvieron x = 3. Acordaron practicar cinco ejercicios mañana. No se discutieron otros temas.",
+      "name": "resumen_fiel",
+      "response": {
+        "text": "Ana y Luis estudiaron ecuaciones lineales y resolvieron la ecuación 2x + 4 = 10, obteniendo x = 3. Acordaron practicar cinco ejercicios mañana. No se trataron otros temas.",
+        "model": "qwen3:4b-instruct",
+        "usage": {
+          "inputTokens": 93,
+          "outputTokens": 58,
+          "totalDurationMs": 997,
+          "firstTokenMs": 310,
+          "tokensPerSecond": 85.22
+        }
+      }
+    },
+    {
+      "prompt": "Crea una pregunta de opción múltiple sobre este contexto: En 2x + 4 = 10, primero restamos 4 a ambos lados y luego dividimos por 2: x = 3. Devuelve JSON con question, options de cuatro textos, correctIndex (base cero), explanation.",
+      "name": "quiz",
+      "response": {
+        "text": "{\n  \"question\": \"¿Cuál es el valor de x en la ecuación 2x + 4 = 10? ¿Cómo se resuelve paso a paso?\",\n  \"options\": [\n    \"x = 2\",\n    \"x = 3\",\n    \"x = 4\",\n    \"x = 5\"\n  ],\n  \"correctIndex\": 1,\n  \"explanation\": \"Para resolver la ecuación 2x + 4 = 10, primero se resta 4 de ambos lados: 2x + 4 - 4 = 10 - 4, lo que da 2x = 6. Luego, se divide ambos lados por 2: 2x / 2 = 6 / 2, resultando en x = 3.\"\n}",
+        "model": "qwen3:4b-instruct",
+        "usage": {
+          "inputTokens": 99,
+          "outputTokens": 177,
+          "totalDurationMs": 2466,
+          "firstTokenMs": 289,
+          "tokensPerSecond": 81.55
+        }
+      }
+    }
+  ],
+  "streamEvents": [
+    {
+      "type": "delta",
+      "text": "Study"
+    },
+    {
+      "type": "delta",
+      "text": "Room"
+    },
+    {
+      "type": "delta",
+      "text": " conect"
+    },
+    {
+      "type": "delta",
+      "text": "ado"
+    },
+    {
+      "type": "delta",
+      "text": "."
+    },
+    {
+      "type": "done",
+      "model": "qwen3:4b-instruct",
+      "usage": {
+        "inputTokens": 29,
+        "outputTokens": 6,
+        "totalDurationMs": 394,
+        "firstTokenMs": 325,
+        "tokensPerSecond": 95.79
+      }
+    }
+  ],
+  "gpu": "NVIDIA GeForce RTX 5060 Laptop GPU, 8151 MiB, 3148 MiB, 94 %",
+  "publicTunnelTestExecuted": false,
+  "manualSampleReview": {
+    "quiz": "JSON válido, cuatro opciones, índice1 corresponde a x=3 y explicación algebraica correcta.",
+    "reviewedAt": "2026-10-02T05:29:49.6037984Z",
+    "summary": "Conserva participantes, ecuación x=3 y acuerdo de cinco ejercicios sin añadir hechos.",
+    "limitation": "Muestras pequeñas, no evaluación estadística; llamada simultánea no probada.",
+    "spanish": "Muestra en español, explicación científica correcta en dos frases."
+  },
+  "totalRamGiB": 31.31
+}
