@@ -16,6 +16,7 @@ Copy `.env.example` to `.env.local`, set Firebase web configuration and API URL,
 | `src/media.tsx`, `shared-screen.tsx`, `annotation-toolbar.tsx`, `annotation-graphic.tsx`, `annotations.ts` | SUT-38–41: separate LiveKit media connection, camera/microphone/devices, adaptive video, screen sharing, compact camera menu, normalized shared pointer/pen/line/arrow/rectangle/ellipse/text, sizes/colors, per-mark eraser and clearing |
 | `src/ai.tsx`, `usage.tsx` | SUT-46–51: server AI jobs, selected authorized context, streaming updates, cancellation, offline states, usage, feedback |
 | `src/history.tsx` | SUT-53–57: authorized session history, artifacts, quiz attempts, date filters and export |
+| `src/use-transcription.ts`, `transcription-audio.ts`, `transcription-panel.tsx`, `session-report.tsx` | Explicit personal voice consent, continuous existing-microphone capture, literal recognized transcript, authorized session resources and report questions |
 
 Corresponding frontend activities are implemented with shared loading, success/error, empty-state, keyboard and responsive primitives. The repository-wide Jira matrix retains every one of the 657 issues. The table above is code mapping; it does **not** assert every acceptance test has passed.
 
@@ -35,6 +36,12 @@ The automated browser tests do not establish 60-minute stability with four physi
 Media uses LiveKit directly. Restarting the application API can interrupt chat/state while the independent media connection continues. Socket rejoin requests a room snapshot; refresh of a Firebase token does not unmount the media component. Messages retain their idempotency key across retries. Notes are private, saved after a short typing pause or explicitly, saved before in-app exit/remote session closure, available in session history, and protected by an unsaved-change warning on browser unload.
 
 An application error boundary handles failed deferred view downloads without leaving a blank page. Recovery reloads only after the user's explicit action; there is no automatic reload loop. Automated accessibility checks are limited to the inspected states and do not replace screen-reader and complete keyboard review.
+
+## Voice and session reports
+
+**Voz → Transcribir mi voz** is an explicit per-user opt-in. Connecting media or enabling a microphone alone never starts transcription. Capture taps the existing LiveKit microphone track through a static same-origin AudioWorklet, produces mono PCM16 WAV at 16 kHz in contiguous 15-second chunks, and has zero audio output. It never calls `getUserMedia`, stops/clones the shared microphone, records other participants' audio, or waits for STT before connecting the call. Each participant enables their own voice. Silences are skipped, fragments remain bounded to one upload and five queued items, and model/network failures persist visible coverage gaps. Microphone off, user opt-out, session close and page exit flush the partial chunk best effort; unresolved uploads expire. A reload or browser crash can lose voice that has not reached the server.
+
+The session report separates recognized original words from AI synthesis and preserves authorized chat, images and documents. Search and speaker filtering operate on the original transcript, with bounded initial rendering and more-items controls. Resource links are fetched on demand through the authenticated session document endpoint; expiring private links are excluded from exports. Questions use the report's session context, existing durable AI jobs and private per-user answer history. Private notes remain separate from the shared report context. Recognition can contain mistakes; the UI never promises a complete/perfect transcript for users who did not opt in or for missing audio.
 
 ## Windows desktop menu
 

@@ -1,0 +1,14 @@
+{
+  "date": "2026-10-02T16:14:56.567Z",
+  "bucket": "studyroom-files",
+  "private": true,
+  "fileSizeLimit": 10000000,
+  "allowedMimeTypes": [
+    "application/pdf",
+    "text/plain",
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ]
+}

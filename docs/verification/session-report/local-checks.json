@@ -1,0 +1,31 @@
+{
+  "observedAt": "2026-10-02T21:47:16.813Z",
+  "build": "passed",
+  "typecheck": "passed",
+  "nodeUnitTests": {
+    "gateway": 24,
+    "api": 84,
+    "web": 28,
+    "failed": 0
+  },
+  "pythonWorkerTests": {
+    "passed": 2,
+    "failed": 0
+  },
+  "apiIntegration": {
+    "passed": 18,
+    "failed": 0
+  },
+  "queueTimezones": [
+    "UTC",
+    "America/Bogota"
+  ],
+  "secretScan": {
+    "checkedFiles": 217,
+    "secretValuesChecked": 7,
+    "failures": 0
+  },
+  "limitations": [
+    "Local synthetic fixtures; does not certify all physical devices or speech accuracy."
+  ]
+}

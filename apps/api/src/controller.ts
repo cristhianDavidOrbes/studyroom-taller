@@ -29,6 +29,8 @@ import { Rooms } from "./rooms";
 import { Documents } from "./documents";
 import { Ai } from "./ai";
 import { StorageGuard } from "./storage-guard";
+import { Transcription, AUDIO_MAX_BYTES } from "./transcription";
+import { reportMarkdown } from "./report-context";
 type Authed = Request & { identity: Identity };
 @Controller()
 export class HealthController {
@@ -61,6 +63,7 @@ export class AppController {
     private documents: Documents,
     private ai: Ai,
     private rate: RateLimiter,
+    private transcription: Transcription,
   ) {}
   @Get("me") me(@Req() r: Authed) {
     return this.rooms.profile(r.identity);
@@ -243,6 +246,25 @@ export class AppController {
   @Get("rooms/:id/state") state(@Req() r: Authed, @Param("id") id: string) {
     return this.rooms.state(id, r.identity);
   }
+  @Post("rooms/:id/transcription/consent") consent(@Req() r: Authed, @Param("id") id: string, @Body() b: unknown) {
+    return this.transcription.consent(id, r.identity, b);
+  }
+  @Get("rooms/:id/transcription") transcript(@Req() r: Authed, @Param("id") id: string, @Query() q: unknown) {
+    return this.transcription.room(id, r.identity, q);
+  }
+  @Post("rooms/:id/transcription/audio")
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Transcribe tu micrófono con consentimiento previo; WAV PCM16 mono16k hasta30s. Guarda texto y huecos, nunca el audio." })
+  @ApiBody({ schema: { type: "object", additionalProperties: false, required: ["audio", "clientId", "sessionId", "startMs", "endMs"], properties: {
+    audio: { type: "string", format: "binary", description: "WAV canónico (cabecera44bytes), máximo960044bytes." }, clientId: { type: "string", format: "uuid" }, sessionId: { type: "string", format: "uuid" }, startMs: { type: "integer", minimum: 0, description: "Milisegundos desde session.startedAt" }, endMs: { type: "integer", minimum: 1 },
+  } } })
+  @UseInterceptors(FileInterceptor("audio", { limits: { fileSize: AUDIO_MAX_BYTES, files: 1, fields: 4, fieldSize: 100, parts: 5 } }))
+  transcribe(@Req() r: Authed, @Param("id") id: string, @Body() b: unknown, @UploadedFile() audio: Express.Multer.File) {
+    return this.transcription.audio(id, r.identity, b, audio);
+  }
+  @Post("rooms/:id/transcription/gaps") transcriptionGap(@Req() r: Authed, @Param("id") id: string, @Body() b: unknown) {
+    return this.transcription.gap(id, r.identity, b);
+  }
   @Post("rooms/:id/annotations") annotate(
     @Req() r: Authed,
     @Param("id") id: string,
@@ -282,26 +304,28 @@ export class AppController {
   @Get("sessions/:id") session(@Req() r: Authed, @Param("id") id: string) {
     return this.ai.detail(id, r.identity);
   }
+  @Get("sessions/:id/report") report(@Req() r: Authed, @Param("id") id: string) {
+    return this.ai.report(id, r.identity);
+  }
+  @Post("sessions/:id/questions") reportQuestion(@Req() r: Authed, @Param("id") id: string, @Body() b: unknown) {
+    return this.ai.reportQuestion(id, r.identity, b);
+  }
+  @Get("sessions/:id/documents/:docId/url") reportDocument(@Req() r: Authed, @Param("id") id: string, @Param("docId") docId: string) {
+    return this.documents.sessionUrl(id, docId, r.identity);
+  }
   @Get("sessions/:id/export") async export(
     @Req() r: Authed,
     @Param("id") id: string,
     @Query("format") format: string,
     @Res() res: Response,
   ) {
-    const data = await this.ai.detail(id, r.identity);
+    const data = await this.ai.report(id, r.identity);
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="studyroom-${data.id}.${format === "markdown" ? "md" : "json"}"`,
     );
     if (format === "markdown") {
-      const text =
-        `# ${data.title}\n\nInicio: ${data.startedAt.toISOString()}\nFin: ${data.endedAt?.toISOString() ?? "Pendiente"}\n\n` +
-        data.jobs
-          .map(
-            (j) =>
-              `## ${j.kind} — ${j.status}\n\n${(j.result as any)?.text ?? JSON.stringify(j.result ?? { error: j.error })}`,
-          )
-          .join("\n\n");
+      const text = reportMarkdown(data);
       res.type("text/markdown").send(text);
     } else res.json(data);
   }

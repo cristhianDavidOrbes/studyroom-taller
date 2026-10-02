@@ -16,12 +16,10 @@ import {
 } from "lucide-react";
 import { api, API_URL, errorText, json } from "./api";
 import { auth } from "./firebase";
-import type { Job, Session } from "./types";
+import type { Job, Session, SessionReport } from "./types";
+import { ReportArchive, ReportQuestions } from "./session-report";
 import { JobCard } from "./ai";
 import { Badge, dateTime, Empty, ErrorBox, Spinner, useToast } from "./ui";
-type Detail = Session & {
-  attempts?: { score: number; total: number; createdAt: string }[];
-};
 interface QuizQuestion {
   question: string;
   options: string[];
@@ -297,9 +295,9 @@ export function SessionPage() {
     refetch,
   } = useQuery({
     queryKey: ["session", id],
-    queryFn: () => api<Detail>(`/sessions/${id}`),
+    queryFn: () => api<SessionReport>(`/sessions/${id}/report`),
     refetchInterval: (query) =>
-      query.state.data?.jobs?.some((j) =>
+      query.state.data?.transcription?.coverage.pendingBatches || query.state.data?.jobs?.some((j) =>
         ["running", "queued"].includes(j.status),
       )
         ? 4000
@@ -362,7 +360,7 @@ export function SessionPage() {
       </Link>
       <div className="welcome-row">
         <div>
-          <span className="eyebrow">UNA SESIÓN, MUCHAS IDEAS</span>
+          <span className="eyebrow">EL REPORTE DE TU SESIÓN</span>
           <h1>{session.title || session.room?.title || "Sesión de estudio"}</h1>
           <p className="page-intro">
             {dateTime(session.startedAt)}{" "}
@@ -383,6 +381,9 @@ export function SessionPage() {
         </details>
       </div>
       <ErrorBox message={error} />
+      <ReportArchive key={session.id} session={session} />
+      <section id="report-learning" className="report-learning-section">
+      <div className="section-heading"><h2><Sparkles size={23} /> Lo aprendido, con ayuda de la IA</h2></div>
       <div className="artifact-actions">
         {[
           ["summary", "Resumen de la sesión", FileText],
@@ -415,9 +416,8 @@ export function SessionPage() {
         })}
       </div>
       <p className="muted">
-        Los resultados se generan con el chat y los recursos autorizados de la
-        sesión. No se incluyen notas privadas ni se inventa una transcripción de
-        la llamada.
+        El resumen y el repaso usan la voz registrada, el chat y los recursos
+        autorizados de la sesión. Revisa los resultados junto con las fuentes.
       </p>
       {jobs.length === 0 && (
         <Empty
@@ -434,7 +434,7 @@ export function SessionPage() {
       )}
       <div className="artifact-list">
         {jobs
-          .filter((j) => j.kind !== "quiz" || j.status !== "completed")
+          .filter((j) => j.kind !== "answer" && (j.kind !== "quiz" || j.status !== "completed"))
           .map((job) => (
             <section key={job.id}>
               <h2 className="artifact-heading">
@@ -450,7 +450,9 @@ export function SessionPage() {
             </section>
           ))}
       </div>
-      {quiz && <Quiz key={quiz.id} sessionId={id!} job={quiz} />}{" "}
+      {quiz && <Quiz key={quiz.id} sessionId={id!} job={quiz} />}
+      </section>
+      <ReportQuestions key={session.id} sessionId={session.id} jobs={jobs} onRefresh={() => void refetch()} />
       {privateNotes?.text && (
         <section className="panel attempts">
           <h2>Mis notas privadas</h2>

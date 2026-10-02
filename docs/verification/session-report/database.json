@@ -1,0 +1,23 @@
+{
+  "observedAt": "2026-10-02T16:13:17Z",
+  "provider": "Supabase Free",
+  "migration": "20261002160049_session_reports_and_transcription",
+  "migrationSha256": "fcd626d942cac20c2e53a2a7d65694c514aa21364afb46f7fc366e3b64af290b",
+  "indexesMigration": "20261002162056_session_report_indexes",
+  "indexesMigrationSha256": "1491d7f830749142d2e7a0ee8baf36848dbdde14e5c093d1af093218baddddfc",
+  "unindexedForeignKeysAfterMigration": 0,
+  "tables": ["SessionDocument", "TranscriptSegment", "TranscriptionBatch", "TranscriptionConsent"],
+  "checks": {
+    "migrationApplied": true,
+    "prismaHistoryRecordedWithMatchingChecksum": true,
+    "allNewTablesRlsEnabled": true,
+    "anonymousSelectDenied": true,
+    "signedClientSelectDenied": true,
+    "restrictedBackendCrudAllowed": true
+  },
+  "securityAdvisor": {
+    "newTableWarnings": 0,
+    "existingInfo": "RLS enabled without policy on _prisma_migrations is intentional: public clients and the runtime role cannot read migration history.",
+    "reference": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy"
+  }
+}

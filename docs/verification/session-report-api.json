@@ -1,0 +1,66 @@
+{
+  "verifiedAt": "2026-10-02T21:41:30.098Z",
+  "scope": "API local: consentimiento, transcripción persistente, reportes e integración de archivos/IA",
+  "unit": {
+    "command": "npm run test -w @studyroom/api",
+    "suites": 9,
+    "passed": 84,
+    "failed": 0
+  },
+  "integration": {
+    "command": "node --test tests/api.integration.mjs",
+    "passed": 18,
+    "failed": 0,
+    "services": "Firebase Auth emulator + PostgreSQL + API reales",
+    "speechScope": "El lote sintético de silencio verificó autorización/formato/idempotencia/estado; las palabras reales se verifican por separado en el navegador con Whisper."
+  },
+  "build": {
+    "typescript": "passed"
+  },
+  "checks": [
+    "WAV PCM16 mono16k bounded",
+    "server derived speaker",
+    "own consent and session authorization",
+    "same clientId/hash idempotence; repeated phrases retained",
+    "failed batch and capture gap visible without stored audio",
+    "closing grace/clamp and pending artifacts wait",
+    "report/document IDOR and signed URL provenance",
+    "private answers and original question serialization",
+    "complete transcript/chat/file exports; personal notes excluded",
+    "DOCX raw text and encrypted/oversize/traversal ZIP rejection",
+    "OCR truncation marks partial; failure still stores attachment",
+    "RAG questions up to 6KB with authorized source citations",
+    "Dynamic RAG budget fits model context; small questions generate directly",
+    "Long report summaries condense with explicit word/reference limits",
+    "Output/context limits are terminal scope errors instead of identical disconnect retries"
+  ],
+  "limitations": [
+    "ASR accuracy is not guaranteed. Uncaptured audio cannot be reconstructed.",
+    "ngrok/PC availability and free quotas can leave visible missing intervals.",
+    "PDF extraction limited to first100 pages, marked partial; original available whole.",
+    "OCR extracts text rather than interpreting visual content; truncated OCR is partial.",
+    "API integration does not itself certify real ASR words; browser evidence provides that check."
+  ],
+  "sourceHashes": {
+    "apps/api/src/transcription.ts": "df814855f1f457d7a3d8a9af62180e595803e1cae65225d067e18e7eff76dfef",
+    "apps/api/src/report-context.ts": "65b89fc750ac9b3fc4dfec1a8b519dbb010ea75f3f1e7b758324d0866c94f8e5",
+    "apps/api/src/ai.ts": "9a53c00b9af84613e5a7f8cf499ed1ed9917026370b84248ff32eb420cb1acf9",
+    "apps/api/src/documents.ts": "16c29454d205e525befc061a0fce16d53aa561fde8784c869e87a51e8f0ba6c6",
+    "apps/api/src/rooms.ts": "c2aab3d2a9e3e9b2351837c5f383ac1ecf0dd50261d6f56a55bca8219d0daef9",
+    "apps/api/src/controller.ts": "3562f126168c8294fda4236d2f2b64dc71b9172d79cc0badff8c1363d9be687d",
+    "apps/api/prisma/schema.prisma": "16c9e4aa6c394f85d66dec3797082a9cbe964cacb356763f7dbd7030cb964eca",
+    "tests/api.integration.mjs": "de9aa1742250eb7d52d113e1c549a9b265f1d31c4e9ccb1e87a4fa734a3da982"
+  },
+  "queueRegression": {
+    "cause": "Gateway OUTPUT_LIMIT on an unnecessary intermediate384token summary; repeated5times",
+    "fix": "Direct generation when context fits; dynamic retrieval window and bounded summaries; permanent scope error classification",
+    "realModelDiagnostic": {
+      "model": "qwen3:4b-instruct",
+      "sameSyntheticQuestionPayload": true,
+      "generations": 1,
+      "latencyMs": 12799,
+      "responseBytes": 687,
+      "scope": "Direct real generation; browser/production evidence separately verifies durable queue completion"
+    }
+  }
+}

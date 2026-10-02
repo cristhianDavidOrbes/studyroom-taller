@@ -7,7 +7,7 @@ import { Ai, publicJob } from "../src/ai";
 import { Rooms } from "../src/rooms";
 import { Db, RateLimiter } from "../src/core";
 import { Events } from "../src/events";
-import { ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 describe("Cola durable y límites", () => {
   beforeEach(() => {
     process.env.AI_GATEWAY_URL = "http://127.0.0.1:8787";
@@ -75,6 +75,13 @@ describe("Cola durable y límites", () => {
     jest.spyOn(ai, "run").mockRejectedValue(new Error("AI_UNAUTHORIZED"));
     await ai.tick();
     expect(db.aiJob.update.mock.calls[0][0].data.status).toBe("failed");
+  });
+  test("un límite de alcance termina una vez y preserva la explicación", async () => {
+    const { ai, db } = fixture();
+    jest.spyOn(ai, "run").mockRejectedValue(new BadRequestException("Acota la pregunta; el reporte permanece íntegro."));
+    await ai.tick();
+    expect(db.aiJob.update.mock.calls[0][0].data.status).toBe("failed");
+    expect(db.aiJob.update.mock.calls[0][0].data.error).toBe("Acota la pregunta; el reporte permanece íntegro.");
   });
   test("un usuario no puede leer una generación privada ajena", async () => {
     const { ai, job } = fixture();

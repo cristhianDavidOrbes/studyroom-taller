@@ -34,12 +34,14 @@ export function MediaStage({
   annotations,
   onAnnotation,
   collaborationConnected,
+  onMicrophone,
 }: {
   roomId: string;
   role?: string;
   annotations: Annotation[];
   onAnnotation: (a: Annotation) => Promise<void>;
   collaborationConnected: boolean;
+  onMicrophone?: (track: MediaStreamTrack | null) => void;
 }) {
   const [room] = useState(
     () =>
@@ -86,6 +88,7 @@ export function MediaStage({
       RoomEvent.TrackMuted,
       RoomEvent.TrackUnmuted,
       RoomEvent.ConnectionQualityChanged,
+      RoomEvent.ActiveDeviceChanged,
     ];
     events.forEach((e) => room.on(e, update));
     room.on(RoomEvent.ConnectionStateChanged, setState);
@@ -164,6 +167,11 @@ export function MediaStage({
       screens.find((s) => s.publication.trackSid === selectedScreen) ||
       screens[0];
   const localScreen = screens.find((source) => source.participant.isLocal);
+  const localMicrophone = all.find((source) => source.participant.isLocal && source.publication.source === Track.Source.Microphone)?.track.mediaStreamTrack;
+  useEffect(() => {
+    onMicrophone?.(state === ConnectionState.Connected ? localMicrophone || null : null);
+    return () => onMicrophone?.(null);
+  }, [localMicrophone, state, onMicrophone]);
   const desktopStatus = useDesktopSharing(
     localScreen?.publication.trackSid,
     localScreen?.track.mediaStreamTrack,

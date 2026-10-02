@@ -166,6 +166,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
         })),
       myRole: membership?.active ? membership.role : undefined,
       sessionId: session?.id,
+      sessionStartedAt: session?.startedAt,
     };
   }
   async list(i: Identity, q: Record<string, string>) {
@@ -472,7 +473,11 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       throw new ConflictException("La sala no está abierta");
     this.limiter.check(`chat:${i.uid}`, 30);
     const d = parse(messageSchema, body);
-    const value = await this.db.message.upsert({
+    const value = await this.db.serial(async tx => {
+      const current = await tx.membership.findUnique({ where: { roomId_userId: { roomId: id, userId: i.uid } }, include: { room: true, user: true } });
+      if (!current?.active || current.banned) throw new ForbiddenException("Ya no tienes acceso activo al chat");
+      if (current.room.status !== "open") throw new ConflictException("La sala dejó de estar abierta");
+      return tx.message.upsert({
       where: {
         roomId_userId_clientId: {
           roomId: id,
@@ -483,10 +488,11 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       create: {
         roomId: id,
         userId: i.uid,
-        displayName: m.user.displayName,
+        displayName: current.user.displayName,
         ...d,
       },
       update: {},
+      });
     });
     this.events.emit(id, "chat:message", value);
     return value;
@@ -750,21 +756,23 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       });
       if (!session) return null;
       const messages = await tx.message.findMany({
-        where: { roomId: id, kind: "user" },
+        where: { roomId: id, createdAt: { gte: session.startedAt } },
         orderBy: { createdAt: "asc" },
-        take: 1000,
       });
       const docs = await tx.document.findMany({
         where: { roomId: id },
-        select: { id: true, name: true, extractedText: true },
+      });
+      for (const doc of docs) await tx.sessionDocument.upsert({
+        where: { sessionId_documentId: { sessionId: session.id, documentId: doc.id } },
+        create: { sessionId: session.id, documentId: doc.id, name: doc.name, mimeType: doc.mimeType, size: doc.size, uploadedBy: doc.uploadedBy, extractedText: doc.extractedText, extractionStatus: doc.extractionStatus, extractionError: doc.extractionError, createdAt: doc.createdAt }, update: {},
       });
       const saved = await tx.session.update({
         where: { id: session.id },
         data: {
           endedAt: new Date(),
           context: {
-            messages: messages.map((m) => ({ id: m.id, text: m.text })),
-            documents: docs,
+            messages: messages.map((m) => ({ id: m.id, text: m.text, displayName: m.displayName, userId: m.userId, kind: m.kind, createdAt: m.createdAt.toISOString() })),
+            documents: docs.map(d => ({ id: d.id, name: d.name })),
           },
           participantIds: {
             set: (
@@ -776,19 +784,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
           },
         },
       });
-      if (!cancel && (messages.length || docs.length)) {
-        const context = messages
-          .map((m) => "[mensaje:" + m.id + "] " + m.text)
-          .concat(
-            docs.map(
-              (d) =>
-                "[documento:" + d.id + "] " + d.name + ": " + d.extractedText,
-            ),
-          )
-          .join("\n");
-        const sources = messages
-          .map((m) => "mensaje:" + m.id)
-          .concat(docs.map((d) => "documento:" + d.id));
+      if (!cancel && (messages.length || docs.length || await tx.transcriptionConsent.count({ where: { sessionId: session.id } }))) {
         for (const kind of ["summary", "keypoints", "quiz"])
           await tx.aiJob.upsert({
             where: { idempotencyKey: "artifact:" + saved.id + ":" + kind },
@@ -800,14 +796,8 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
               priority: 10,
               shared: true,
               idempotencyKey: "artifact:" + saved.id + ":" + kind,
-              payload: { context, sources },
-              ...(Buffer.byteLength(context) > 60000
-                ? {
-                    status: "failed",
-                    error:
-                      "El contexto supera 60 KB. Divide el material en sesiones más cortas.",
-                  }
-                : {}),
+              payload: { reportArtifact: true },
+              availableAt: new Date(saved.endedAt!.getTime() + 60000),
             },
             update: {},
           });
@@ -817,7 +807,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
     try {
       await this.mediaClient().deleteRoom(id);
     } catch {}
-    this.events.emit(id, "room:closed", { roomId: id });
+    this.events.emit(id, "room:closed", { roomId: id, sessionId: session?.id, endedAt: session?.endedAt, serverTime: new Date() });
     return session;
   }
   async usage() {

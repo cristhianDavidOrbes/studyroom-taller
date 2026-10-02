@@ -61,6 +61,12 @@ jobs:
         with:
           node-version: "22"
           package-manager-cache: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Test private speech worker boundaries without downloading models
+        working-directory: apps/ai-gateway/speech
+        run: python -m unittest test_worker.py
       - name: Install pinned dependencies
         run: npm ci
       - name: Build, types and unit tests

@@ -5,22 +5,25 @@ import { join } from 'node:path';
 import { once } from 'node:events';
 import { BASE_MODEL, CONTEXT_TOKENS, MAX_BODY_BYTES, MAX_RESPONSE_BYTES, MODEL, type GatewayConfig } from './config.js';
 import { authorized, GatewayError, parseInput, SingleQueue, UsageMeter, type GenerateInput } from './core.js';
+import { ASR_MODEL, ASR_URL, MAX_AUDIO_BODY_BYTES, MAX_TRANSCRIPT_BYTES, parseSpeechInput, transcribe } from './speech.js';
+import { createImageExtractor, MAX_IMAGE_BODY_BYTES, MAX_OCR_RESPONSE_BYTES, parseImageInput } from './image-extraction.js';
 
 export interface Usage { inputTokens: number; outputTokens: number; totalDurationMs: number; tokensPerSecond: number; firstTokenMs: number | null }
 interface OllamaPart { error?: string; done?: boolean; done_reason?: string; message?: { content?: string }; prompt_eval_count?: number; eval_count?: number; total_duration?: number; eval_duration?: number; }
 interface Dependencies { fetch?: typeof fetch; freeMemory?: () => number; now?: () => Date; log?: (event: Record<string, unknown>) => void; }
 
-async function readBody(req: IncomingMessage, meter: UsageMeter): Promise<unknown> {
+async function readBody(req: IncomingMessage, meter: UsageMeter, limit = MAX_BODY_BYTES): Promise<unknown> {
   if (!req.headers['content-type']?.toLowerCase().startsWith('application/json')) throw new GatewayError(415, 'INVALID_CONTENT_TYPE', 'Usa application/json.');
   const declared = Number(req.headers['content-length'] ?? 0);
-  if (!Number.isFinite(declared) || declared > MAX_BODY_BYTES) throw new GatewayError(413, 'BODY_TOO_LARGE', 'La petición es demasiado grande.');
+  if (!Number.isFinite(declared) || declared < 0 || declared > limit) throw new GatewayError(413, 'BODY_TOO_LARGE', 'La petición es demasiado grande.');
   const chunks: Buffer[] = [];
   let count = 0;
   for await (const part of req) {
     const bytes = Buffer.isBuffer(part) ? part : Buffer.from(part);
     count += bytes.length;
     meter.received(bytes.length);
-    if (count > MAX_BODY_BYTES) throw new GatewayError(413, 'BODY_TOO_LARGE', 'La petición es demasiado grande.');
+    meter.assertQuota();
+    if (count > limit) throw new GatewayError(413, 'BODY_TOO_LARGE', 'La petición es demasiado grande.');
     chunks.push(bytes);
   }
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
@@ -33,15 +36,18 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
   const log = dependencies.log ?? (event => console.info(JSON.stringify(event)));
   const meter = new UsageMeter(config, dependencies.now);
   const queue = new SingleQueue(config.queueLimit);
+  const images = createImageExtractor(config.stateDir);
   const controllers = new Set<AbortController>();
   let stopped = false;
+  let speechPending = 0;
+  let imagePending = false;
 
   function pauseMode() {
     const path = join(config.stateDir, 'pause');
     if (!existsSync(path)) return null;
     return readFileSync(path, 'utf8').trim() === 'background' ? 'background' : 'all';
   }
-  function ensureResources(input: GenerateInput) {
+  function ensureResources(input: Pick<GenerateInput, 'priority'>) {
     if (stopped) throw new GatewayError(503, 'AI_OFFLINE', 'La IA se está apagando.', 30);
     const pause = pauseMode();
     if (pause === 'all' || (pause === 'background' && input.priority === 'background')) throw new GatewayError(503, 'AI_PAUSED', 'La IA está en pausa para reservar recursos a la llamada.', 60);
@@ -130,6 +136,10 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
     let release: (() => void) | undefined;
     let streamOpened = false;
     let streamedBytes = 0;
+    let speechRequest = false;
+    let speechReserved = false;
+    let imageRequest = false;
+    let imageReserved = false;
     const disconnected = () => { if (!res.writableEnded) controller.abort(); };
     req.on('aborted', disconnected);
     res.on('close', disconnected);
@@ -139,6 +149,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
       if (!authorized(req.headers.authorization, config.secret)) throw new GatewayError(401, 'UNAUTHORIZED', 'Credencial no válida.');
       if (req.method === 'GET' && req.url === '/v1/health') {
         let ready = false;
+        let speechReady = false;
         let modelDigest: string | null = null;
         try {
           const tags = await fetcher('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(3000), redirect: 'error' });
@@ -149,13 +160,50 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
             modelDigest = model?.digest ?? null;
           }
         } catch { /* Report readiness without leaking local network errors. */ }
+        try {
+          const speechHealth = await fetcher(`${ASR_URL}/health`, { headers: { Authorization: `Bearer ${config.secret}` }, signal: AbortSignal.timeout(3000), redirect: 'error' });
+          if (speechHealth.ok) speechReady = (await speechHealth.json() as {status?: string}).status === 'ready';
+        } catch { /* ASR remains explicitly unavailable until its local model is ready. */ }
         const usage = meter.snapshot();
-        json(res, 200, { status: ready && !pauseMode() && !usage.exhausted && usage.persistenceHealthy ? 'ready' : 'unavailable', model: MODEL, baseModel: BASE_MODEL, modelDigest, ollamaReady: ready, pause: pauseMode(), queue: queue.state, usage, freeMemoryMb: Math.floor(freeMemory() / 1024 / 1024), contextTokens: CONTEXT_TOKENS, localOnly: true });
+        json(res, 200, { status: ready && !pauseMode() && !usage.exhausted && usage.persistenceHealthy ? 'ready' : 'unavailable', model: MODEL, baseModel: BASE_MODEL, modelDigest, ollamaReady: ready, speech: { ready: speechReady && pauseMode() !== 'all' && !usage.exhausted && usage.persistenceHealthy, model: ASR_MODEL, pending: speechPending, maxDurationMs: 30000 }, ocr: { ready: images.ready() && !pauseMode() && !usage.exhausted && usage.persistenceHealthy, model: 'tesseract', pending: imagePending }, pause: pauseMode(), queue: queue.state, usage, freeMemoryMb: Math.floor(freeMemory() / 1024 / 1024), contextTokens: CONTEXT_TOKENS, localOnly: true });
         return;
       }
       meter.assertQuota();
-      if (req.method !== 'POST' || req.url !== '/v1/generate') throw new GatewayError(404, 'NOT_FOUND', 'Ruta no disponible.');
+      if (req.method !== 'POST' || !['/v1/generate', '/v1/transcribe', '/v1/extract-image'].includes(req.url ?? '')) throw new GatewayError(404, 'NOT_FOUND', 'Ruta no disponible.');
       meter.assertRate();
+      if (req.url === '/v1/extract-image') {
+        imageRequest = true;
+        if (imagePending) throw new GatewayError(429, 'OCR_BUSY', 'El PC está leyendo otra imagen. Intenta después.', 10);
+        imagePending = true; imageReserved = true;
+        const input = parseImageInput(await readBody(req, meter, MAX_IMAGE_BODY_BYTES));
+        const resources = { priority: 'background' } as const;
+        ensureResources(resources);
+        release = meter.reserve(MAX_OCR_RESPONSE_BYTES);
+        timeout = setTimeout(() => { timedOut = true; controller.abort(); }, Math.min(config.timeoutMs, 45_000));
+        const result = await queue.add('background', controller.signal, async () => { ensureResources(resources); return images.extract(input, controller.signal); });
+        log({ event: 'image_extraction', model: 'tesseract', truncated: result.truncated });
+        json(res, 200, result);
+        return;
+      }
+      if (req.url === '/v1/transcribe') {
+        speechRequest = true;
+        if (speechPending >= 3) throw new GatewayError(429, 'ASR_BUSY', 'La transcripción espera al PC. Reintenta en unos segundos.', 10);
+        speechPending++; speechReserved = true;
+        const input = parseSpeechInput(await readBody(req, meter, MAX_AUDIO_BODY_BYTES));
+        const resources = { priority: 'interactive' } as const;
+        ensureResources(resources);
+        release = meter.reserve(MAX_TRANSCRIPT_BYTES);
+        timeout = setTimeout(() => { timedOut = true; controller.abort(); }, config.timeoutMs);
+        // Speech and Qwen share one inference slot; simultaneous callers never start
+        // multiple models on the PC. At most three speech chunks are retained.
+        const result = await queue.add('interactive', controller.signal, async () => {
+          ensureResources(resources);
+          return transcribe(fetcher, input, config.secret, controller.signal);
+        });
+        log({ event: 'transcription', model: ASR_MODEL, durationMs: result.durationMs, segments: result.segments.length });
+        json(res, 200, result);
+        return;
+      }
       const input = parseInput(await readBody(req, meter));
       ensureResources(input);
       // Reserve worst-case response + NDJSON overhead before allowing generation.
@@ -179,7 +227,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
       } else json(res, 200, result);
     } catch (error) {
       let safe = error instanceof GatewayError ? error : new GatewayError(503, 'AI_OFFLINE', 'El PC o el motor de IA no está disponible.', 30);
-      if (timedOut) safe = new GatewayError(504, 'AI_TIMEOUT', 'La consulta excedió el tiempo máximo. Puedes volver a intentarlo.', 10);
+      if (timedOut) safe = new GatewayError(504, speechRequest ? 'ASR_TIMEOUT' : imageRequest ? 'OCR_TIMEOUT' : 'AI_TIMEOUT', 'La consulta excedió el tiempo máximo. Puedes volver a intentarlo.', 10);
       else if (controller.signal.aborted) safe = new GatewayError(499, 'CANCELLED', 'La consulta fue cancelada.');
       log({ event: 'request_error', code: safe.code, status: safe.status });
       if (res.destroyed || res.writableEnded) return;
@@ -195,6 +243,8 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
     } finally {
       if (timeout) clearTimeout(timeout);
       release?.();
+      if (speechReserved) speechPending--;
+      if (imageReserved) imagePending = false;
       controllers.delete(controller);
       req.off('aborted', disconnected);
       res.off('close', disconnected);
@@ -209,6 +259,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
     async shutdown() {
       stopped = true;
       controllers.forEach(controller => controller.abort());
+      await images.shutdown();
       server.closeAllConnections();
       await new Promise<void>(resolve => server.close(() => resolve()));
     },

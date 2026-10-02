@@ -1,0 +1,28 @@
+# Reportes de sesión y transcripción
+
+Todos los endpoints requieren Firebase Bearer y autorización de membresía o historial. Las tablas de transcripción/proveniencia tienen RLS y solo el rol del backend puede consultarlas. El cliente nunca recibe el secreto de ngrok, prompts, rutas privadas de storage ni audio de otros participantes.
+
+## Captura personal
+
+- `POST /api/rooms/:id/transcription/consent` con `{enabled:boolean}` habilita o revoca únicamente al usuario autenticado en la sesión abierta.
+- `GET /api/rooms/:id/transcription?limit=200&cursor=<segment.id>` devuelve reloj/fecha inicial, segmentos, lotes, consentimiento de participantes y cobertura. El cursor es opcional, pertenece a la sesión y avanza por inserción para incluir lotes antiguos que terminaron tarde. `nextCursor` permite paginar; el cliente puede conservar el último ID y pedir posteriores. Máximo1000segmentosporpágina. El reporte y exportación contienen todos los segmentos sin este límite.
+- `POST /api/rooms/:id/transcription/audio`, multipart con campo `audio` y campos `clientId`UUID,`sessionId`UUID,`startMs`,`endMs`. Audio WAV PCM16 mono a16kHz, cabecera44bytes, hasta30segundos/960044bytes. Los tiempos son relativos a `session.startedAt` y se comprueban con el reloj y consentimiento del servidor. Identidad/nombre se derivan en el servidor. Los reintentos del mismo ID/contenido devuelven el lote existente; reutilizarlo con otro contenido devuelve409. Frases iguales en lotes diferentes se conservan.
+- `POST /api/rooms/:id/transcription/gaps` recibe los mismos cuatro campos y `reason:capture_failed|queue_overflow|upload_failed`. Registra una pérdida local; no reemplaza un lote aceptado cuya respuesta HTTP se haya perdido.
+
+El WAV permanece solo en memoria durante la petición autenticada al transcriptor local. PostgreSQL guarda el estado y el texto reconocido con hablante, intervalos y palabras/tiempos/confianza. Un lote fallido conserva su intervalo y un error visible, sin inventar una transcripción. Las peticiones/bytes de STT y OCR descuentan la misma reserva mensual gratuita de ngrok que el resto de IA. Hay límites de tamaño, tiempo, concurrencia y solicitudes por participante.
+
+Al cerrar se aceptan últimos lotes durante60segundos, con final acotado a la hora de cierre. Los lotes ya aceptados pueden terminar después. La síntesis espera esa ventana y los pendientes; un pendiente interrumpido vence a los180segundos y queda como hueco. No se transcribe audio previo a habilitar la captura ni de personas que no la activan. Silencios, micrófono apagado, red, cuota y precisión de ASR pueden limitar la cobertura. La API informa intervalos perdidos y participantes no cubiertos; `available` significa disponibilidad reconocida, no garantiza exactitud lingüística.
+
+## Reporte y consultas
+
+- `GET /api/sessions/:id/report`: sesión, trabajos de IA autorizados, intentos de quiz propios, chat completo, transcripción completa y archivos/imágenes con metadatos/texto/statusdeextracción y disponibilidad. Excluye notas personales y respuestas privadas ajenas.
+- `GET /api/sessions/:id/documents/:docId/url`: requiere que el archivo figure en esa sesión y que el usuario pertenezca a su historial, aunque la sala esté cerrada. La URL privada vence en60segundos y se contabiliza la descarga. No se guarda en el reporte. Un archivo borrado mantiene su proveniencia/texto ya extraído y marca el original como no disponible.
+- `POST /api/sessions/:id/questions` con `{question,clientId?}` crea una respuesta privada sobre transcripción, chat, texto de archivos y síntesis compartida de ese reporte. La selección de fuentes se ajusta a la ventana disponible después de la pregunta y los avisos de cobertura, con un máximo de 6 KB. Informa si la selección es parcial y filtra citas no autorizadas (`transcripcion:`, `mensaje:`, `documento:`, `sintesis:`). El reporte original permanece íntegro. Si el contexto seleccionado cabe, se envía directamente al modelo; no se resume de nuevo.
+- `POST /api/sessions/:id/artifacts` sigue generando resumen, puntos clave y quiz. Lee las fuentes actuales al procesar para incluir el último lote. Reduce contextos grandes por fragmentos con resúmenes breves y citas acotadas, sujeto a cuotas, sin recortar el reporte original. Un límite de contexto o salida se presenta como un error de alcance; no se repite cinco veces la misma generación que ya alcanzó su límite.
+- `GET /api/sessions/:id/export?format=json|markdown`: exporta el reporte completo, con todas las palabras reconocidas, chat, archivos y trabajos permitidos.
+
+## Documentos
+
+Se aceptan PDF, DOCX, texto UTF8, PNG,JPEG,WebP de hasta10MB con comprobación del formato real. DOCX se valida antes de extraer texto: hasta200entradas ZIP/25MB descomprimidos, sin entradas cifradas, sin extracción al disco ni HTML. PDF extrae hasta100páginas y declara `partial` si hay más; el original sigue disponible completo. Imágenes usan OCR local en español/inglés. OCR extrae texto; no interpreta fotos ni fabrica descripciones visuales. Si el equipo de IA no está disponible, se guarda el archivo con `extractionStatus:unavailable` y explicación visible. El archivo original sigue accesible bajo autorización.
+
+Los reportes anteriores a esta función no pueden recuperar conversaciones que nunca fueron grabadas/transcritas. La migración conserva las referencias de archivos existentes y marca las imágenes antiguas sin OCR, sin fabricar contenido.

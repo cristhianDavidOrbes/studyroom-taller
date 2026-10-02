@@ -117,3 +117,40 @@ export interface RoomState {
   timer: Timer;
   annotations: Annotation[];
 }
+export interface TranscriptSegment {
+  id: string;
+  speakerId: string;
+  speakerName: string;
+  text: string;
+  startMs: number;
+  endMs: number;
+  words?: { word: string; startMs: number; endMs: number; probability?: number }[];
+}
+export interface TranscriptionState {
+  sessionId: string;
+  startedAt: string;
+  serverTime?: string;
+  nextCursor?: string | null;
+  segments: TranscriptSegment[];
+  batches: {
+    id: string; clientId: string; speakerId: string;
+    status: string; startMs: number; endMs: number; error?: string;
+  }[];
+  participants: { userId: string; displayName: string; enabled: boolean; updatedAt?: string }[];
+  coverage: {
+    status: "pending" | "partial" | "available" | "none";
+    pendingBatches: number; failedBatches: number; completedBatches: number;
+    consentingParticipants: number; totalParticipants: number;
+  };
+}
+export interface SessionReport extends Session {
+  attempts?: { score: number; total: number; createdAt: string }[];
+  messages: Message[];
+  documents: (StudyDocument & {
+    available: boolean;
+    extractedText?: string;
+    extractionStatus?: string;
+    extractionError?: string;
+  })[];
+  transcription: TranscriptionState;
+}

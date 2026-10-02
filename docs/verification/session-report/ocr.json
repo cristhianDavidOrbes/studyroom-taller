@@ -1,0 +1,10 @@
+{
+  "recordedAt": "2026-10-02T16:06:05.927Z",
+  "status": "passed",
+  "scope": "Local gateway, generated PNG with known text; no user image or screen capture",
+  "model": "tesseract",
+  "language": "spa+eng",
+  "text": "Informe de StudyRoom\nEl area es base por altura.",
+  "truncated": false,
+  "bytes": 6363
+}

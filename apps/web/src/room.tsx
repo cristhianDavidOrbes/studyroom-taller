@@ -38,6 +38,7 @@ import {
   Flag,
   Shield,
   Download,
+  AudioLines,
 } from "lucide-react";
 import { auth } from "./firebase";
 import { api, SOCKET_URL, errorText, json } from "./api";
@@ -45,6 +46,8 @@ import { useAuth } from "./auth";
 import { RoomForm } from "./explore";
 import { AIPanel } from "./ai";
 import { MediaStage } from "./media";
+import { useTranscription } from "./use-transcription";
+import { TranscriptionPanel } from "./transcription-panel";
 import type {
   StudyRoom,
   Member,
@@ -213,6 +216,9 @@ export function RoomPage() {
       query.state.data?.status === "scheduled" ? 5000 : false,
   });
   const joined = !!room?.myRole;
+  const transcription = useTranscription(id, joined, user?.uid);
+  const finishTranscription = useRef(transcription.stopForClose);
+  finishTranscription.current = transcription.stopForClose;
   const role =
     members.find((m) => m.userId === user?.uid)?.role || room?.myRole;
   const manage = role === "host" || role === "moderator";
@@ -375,6 +381,7 @@ export function RoomPage() {
       });
       socket.on("room:closed", async (event: { roomId: string }) => {
         if (event.roomId !== id) return;
+        void finishTranscription.current();
         try {
           if (notesDirtyRef.current)
             await api(
@@ -406,6 +413,7 @@ export function RoomPage() {
       );
       socket.on("room:removed", (event: { roomId: string }) => {
         if (event.roomId !== id) return;
+        void finishTranscription.current();
         toast("Ya no eres miembro de esta sala.");
         navigate("/");
       });
@@ -547,6 +555,7 @@ export function RoomPage() {
   async function finish() {
     if (!confirm) return;
     await action(async () => {
+      await finishTranscription.current();
       if (!noteSaved)
         await api(`/rooms/${id}/notes`, json("PUT", { text: notes }));
       await api(`/rooms/${id}/${confirm}`, json("POST"));
@@ -619,6 +628,7 @@ export function RoomPage() {
     ["documents", "Archivos", FileText],
     ["notes", "Notas", NotebookPen],
     ["ai", "Asistente", Bot],
+    ["transcription", "Voz", AudioLines],
   ] as const;
   return (
     <div className="room-page">
@@ -694,11 +704,13 @@ export function RoomPage() {
       <div className="room-workspace" id="room-main">
         <section className="room-main-column">
           <MediaStage
+            key={id}
             roomId={id!}
             role={role}
             annotations={annotations}
             onAnnotation={onAnnotation}
             collaborationConnected={connected}
+            onMicrophone={transcription.setMicrophone}
           />
           <div className="room-bottom-tools">
             <TimerWidget
@@ -948,7 +960,7 @@ export function RoomPage() {
                     ref={fileRef}
                     type="file"
                     className="sr-only"
-                    accept="application/pdf,text/plain,text/markdown,image/png,image/jpeg,image/webp"
+                    accept="application/pdf,text/plain,text/markdown,image/png,image/jpeg,image/webp,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx"
                     onChange={(e) => {
                       void upload(e.target.files?.[0]);
                       e.target.value = "";
@@ -963,7 +975,7 @@ export function RoomPage() {
                     Compartir archivo
                   </button>
                   <p className="muted small-text">
-                    PDF, texto o imágenes · hasta 10 MB por archivo
+                    PDF, Word, texto o imágenes · hasta 10 MB por archivo
                   </p>
                   {documents.length === 0 ? (
                     <Empty title="Un espacio para tus recursos">
@@ -1075,6 +1087,7 @@ export function RoomPage() {
                 </div>
               </div>
             )}
+            {tab === "transcription" && <TranscriptionPanel {...transcription} />}
             {tab === "ai" && (
               <AIPanel
                 roomId={id!}

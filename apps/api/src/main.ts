@@ -20,6 +20,7 @@ import { Realtime } from "./realtime";
 import { StorageGuard } from "./storage-guard";
 import { HealthController, AppController } from "./controller";
 import { documentContracts } from "./openapi";
+import { Transcription } from "./transcription";
 @Module({
   controllers: [HealthController, AppController],
   providers: [
@@ -32,6 +33,7 @@ import { documentContracts } from "./openapi";
     Rooms,
     Documents,
     Ai,
+    Transcription,
     Realtime,
   ],
 })

@@ -1,0 +1,41 @@
+{
+  "observedAt": "2026-10-02T16:04:48.9877179Z",
+  "recognizedText": "Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación.",
+  "expectedPhrase": "Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación.",
+  "durationMs": 7005,
+  "elapsedMs": 2951,
+  "language": "es",
+  "model": "faster-whisper-small",
+  "limitations": [
+    "synthetic voice only",
+    "does not certify perfect recognition of human conversations"
+  ],
+  "fixtureSha256": "f6e5f4b272c273850e20bb44899e494bd44793ffe26235a00ad793b258575e3e",
+  "words": 12,
+  "route": "http://127.0.0.1:8787/v1/transcribe",
+  "source": "Windows SAPI synthetic voice; no user microphone",
+  "publicTunnel": {
+    "wordCount": 12,
+    "status": "passed",
+    "recognizedText": "Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación.",
+    "url": "https://appetite-tuesday-empty.ngrok-free.dev",
+    "observedAt": "2026-10-02T16:06:49.4606295Z",
+    "elapsedMs": 6193
+  },
+  "tests": {
+    "workerPythonPassed": 2,
+    "actualWorkerSynthetic": "passed",
+    "gatewayNodePassed": 24,
+    "authenticatedPublicTunnelSynthetic": "passed",
+    "authenticatedGatewaySynthetic": "passed"
+  },
+  "modelRevision": "536b0662742c02347bc0e980a01041f333bce120",
+  "modelFileSha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+  "sourceHashes": {
+    "apps/ai-gateway/speech/worker.py": "f73b28c6a4c567f92e324b3a52807d77d9ceaed0a549c23e0105a954a90985fe",
+    "apps/ai-gateway/src/speech.ts": "33faeea31ff873e1d10be5ee5788a3632443f4e747c80d22ebfeee041ca79d23",
+    "apps/ai-gateway/speech/requirements.txt": "d7ff64f6c6c548bf804140ea7a65c748ae15545e0198f8bd68a48417b7c793bb",
+    "apps/ai-gateway/speech/setup.py": "7bc415a70568946b15e058cbc74944c3d983f60fc46875dbf1ec454aa7234c1f",
+    "apps/ai-gateway/src/server.ts": "8aa53f458f98f492d124c04ef1ff43d75ccec11dde9367d5ab16ea90af9f1aa0"
+  }
+}

@@ -16,9 +16,10 @@ El proyecto contiene la aplicación y sus pruebas. La aceptación de todas las i
 | Datos y archivos | PostgreSQL/Prisma y Storage privado de Supabase Free |
 | Cámara, audio y pantalla | WebRTC mediante LiveKit Cloud Build Free |
 | IA | Render → HTTPS ngrok Free → gateway autenticado del PC → Ollama local |
+| Voz y lectura de imágenes | Whisper small local con palabras y tiempos; OCR Tesseract en español e inglés |
 | Trabajos de IA | Cola durable PostgreSQL, un consumidor dentro de la API |
 
-El modelo local seleccionado tras probarlo es **qwen3:4b-instruct Q4_K_M**, aproximadamente 2,5 GB, Apache 2.0. Solo se procesa una generación simultánea con contexto 4096. Audio, cámara y pantalla compartida viajan por LiveKit; Render y ngrok no transportan los medios de la llamada.
+El modelo local seleccionado tras probarlo es **qwen3:4b-instruct Q4_K_M**, aproximadamente 2,5 GB, Apache 2.0. Solo se procesa una inferencia simultánea con contexto de texto 4096. Audio, cámara y pantalla compartida de la llamada viajan por LiveKit. Si un participante activa la transcripción, fragmentos separados de su propio micrófono pasan por la API y ngrok a Whisper local; la llamada sigue funcionando mientras se procesan.
 
 Las señales se abren desde el **menú pequeño arriba a la derecha de la cámara**. Puntero, trazos y borrado se muestran sobre la pantalla compartida a los participantes autorizados. No hay una pizarra independiente.
 
@@ -100,7 +101,10 @@ La [guía de IA](apps/ai-gateway/local-ai.md) documenta autenticación, NDJSON, 
 4. Compartir pantalla. En el menú de la cámara, quien comparte o modera puede activar el puntero/lápiz y borrar señales. Las señales aparecen sobre ese mismo contenido para los demás.
 5. Usar chat, levantar la mano, reaccionar, consultar documentos, guardar notas privadas y coordinar el timer de enfoque/descanso. Los anfitriones administran roles y expulsiones.
 6. Preguntar en la pestaña del asistente seleccionando qué chat/documentos incluir. `@IA` en el chat solicita ayuda compartida. Las notas privadas no se envían al asistente. Las solicitudes muestran espera, progreso, error o cancelación según el estado real.
-7. Finalizar la sesión para conservar historial y solicitar resumen, puntos clave y quiz. Revisar las respuestas de IA con las fuentes; no se inventa una transcripción de la llamada. Consultar intentos, valorar respuestas y exportar la sesión desde Mi aprendizaje.
+7. En **Voz → Transcribir mi voz**, cada participante puede habilitar el reconocimiento de su micrófono. La transcripción conserva las palabras reconocidas, su hablante y tiempos; muestra errores y cobertura parcial. No se captura automáticamente la voz de quien no lo active.
+8. Finalizar la sesión y abrir **Mi aprendizaje → Reporte** para consultar y exportar la transcripción, chat, imágenes y documentos compartidos, resumen, puntos clave y quiz. En **Consultar este reporte** puedes hacer preguntas privadas sobre esas fuentes. Las notas privadas no forman parte del reporte compartido.
+
+La [revisión de copias anteriores](docs/legacy-studyroom-review.md) documenta qué se encontró y qué se aprovechó. La voz que nunca se capturó en sesiones antiguas no puede reconstruirse. El reconocimiento automático puede equivocarse; los fallos no se sustituyen por texto inventado. Consulta [el contrato de reportes y voz](docs/session-report-api.md).
 
 ## Pruebas y trazabilidad
 

@@ -1,6 +1,6 @@
 # IA local de StudyRoom
 
-React solicita la ayuda al backend. El backend valida usuario, sala y contexto, crea el trabajo durable y llama por HTTPS al túnel ngrok. El túnel termina en esta puerta autenticada, que escucha únicamente en `127.0.0.1:8787`. Ollama permanece en `127.0.0.1:11434`. Audio, cámara y pantalla continúan por LiveKit; no atraviesan esta ruta.
+React solicita la ayuda al backend. El backend valida usuario, sala y contexto, crea el trabajo durable y llama por HTTPS al túnel ngrok. El túnel termina en esta puerta autenticada, que escucha únicamente en `127.0.0.1:8787`. Ollama permanece en `127.0.0.1:11434`. La llamada, cámara y pantalla continúan por LiveKit. Para la transcripción consentida se envían fragmentos del micrófono propio por la API al reconocimiento de voz local; el navegador nunca recibe el secreto del túnel.
 
 El modelo aprobado para la implementación es **qwen3:4b-instruct**, Q4_K_M, aproximadamente 2,5 GB, Apache 2.0. Se eligió la variante instruct tras comprobar que el alias inicial `qwen3:4b` generaba razonamiento interno y agotaba la salida antes de responder con la versión instalada. La elección conserva la familia/tamaño y el presupuesto local. El modelo y su digest medido quedan en `model-verification.json`; no se altera ningún modelo preexistente del usuario.
 
@@ -11,6 +11,7 @@ Desde la raíz del proyecto, con Node 22 o superior y dependencias instaladas:
 ```powershell
 npm run build -w @studyroom/ai-gateway
 .\scripts\local-ai\setup.ps1
+.\scripts\local-ai\setup-speech.ps1
 .\scripts\local-ai\start.ps1 -Tunnel
 .\scripts\local-ai\check.ps1
 ```
@@ -21,7 +22,33 @@ ngrok se instaló desde Microsoft Store en el PC de esta implementación. En otr
 
 `start.ps1 -Tunnel` muestra la URL HTTPS y la guarda en `.local/public-url.json`. Guardar esa URL como `AI_GATEWAY_URL` en Render y copiar allí el valor de `AI_GATEWAY_SECRET` de `.env`, **solo en el backend**. El navegador no recibe el secreto. Los archivos `.env`, `.local`, credenciales y logs están excluidos de Git. El script aplica permisos de archivo restringidos al usuario Windows actual.
 
-Para detener: `scripts/local-ai/stop.ps1`. Para detener solamente el túnel: añadir `-TunnelOnly`. Se verifica identificador, ruta y hora de inicio antes de parar cada proceso. No se eliminan modelos ni datos.
+Para detener: `scripts/local-ai/stop.ps1`. Para detener solamente el túnel: añadir `-TunnelOnly`. Se verifica identificador, ruta y hora de inicio antes de parar cada proceso, incluido el reconocedor de voz. No se eliminan modelos ni datos.
+
+## Speech-to-text local
+
+`setup-speech.ps1` crea un entorno Python aislado en `.local/speech/venv`, instala `faster-whisper==1.2.1` y descarga el modelo MIT `Systran/faster-whisper-small`, revisión `536b0662742c02347bc0e980a01041f333bce120`, una sola vez. Esta instalación fijada requiere **Python 3.12 de 64 bits en Windows**, la combinación comprobada en este PC. Aunque faster-whisper admite versiones anteriores, NumPy 2.5.3 y PyAV 19.0.0 exigen Python 3.12 o posterior; no se prometen otras versiones sin verificar sus paquetes binarios. El script comprueba la versión antes de crear el entorno y vuelve a comprobarla si ya existe, antes de instalar paquetes. Un entorno incompatible no se borra automáticamente; debe recrearse con Python 3.12, conservando el modelo que reside en otra carpeta. El modelo multilingüe usa CPU int8 con dos hilos. La instalación consulta PyPI/Hugging Face; el reconocimiento posterior funciona con archivos locales y modo offline. No instala CUDA ni solicita suscripciones.
+
+`Iniciar-IA.cmd` inicia también el trabajador en `127.0.0.1:8788`, oculto y autenticado. Este puerto no se publica: ngrok expone únicamente la puerta `8787`. Si la instalación falta, la IA de texto puede continuar y la transcripción devuelve indisponibilidad explícita. Ni audio ni texto reconocido se guardan en archivos temporales o registros de este trabajador; la API decide la persistencia autorizada de la transcripción.
+
+`POST /v1/transcribe` requiere Bearer y `application/json`:
+
+```json
+{"audioBase64":"<WAV base64>","mimeType":"audio/wav","language":"es"}
+```
+
+Solo acepta WAV PCM16 mono a 16000 Hz, de 0,1 a 30 segundos (máximo 960256 bytes binarios, 1281000 bytes JSON). `language` puede ser `es`, `en` o `auto`; por defecto es `es`. Se rechazan URLs, formatos comprimidos, campos de modelo, instrucciones y muestras malformadas. El backend remite audio validado del participante autorizado, sin claves ni nombres al reconocedor.
+
+La respuesta contiene `{text,language,durationMs,model:"faster-whisper-small",segments:[{startMs,endMs,text,words:[{startMs,endMs,word,probability}]}]}`. Estos tiempos se refieren al fragmento y la API los sitúa en la sesión. `task:"transcribe"` conserva el idioma original: no resume, traduce ni crea una intervención ficticia. La voz es reconocimiento automático y puede contener errores, especialmente con solapamiento, ruido o palabras técnicas; la probabilidad no garantiza exactitud. Un fragmento sin voz produce texto vacío y ningún segmento. La transcripción no contiene identificación automática de hablantes: la API atribuye cada micrófono al participante autenticado.
+
+La transcripción y Qwen comparten una sola ranura de inferencia; como máximo se conservan tres solicitudes de voz entre activas y pendientes. El trabajador también rechaza inferencia simultánea. Las pausas y memoria mínima existentes se aplican al reconocimiento. El tiempo máximo de puerta es 120 s; un timeout/desconexión deja el resultado fallido, sin texto inventado. El trabajador conserva su bloqueo hasta terminar la operación nativa que ya comenzó; no ofrece una cancelación inmediata del cálculo CTranslate2.
+
+Los fragmentos cuentan en los mismos límites gratuitos de transferencia y solicitudes de ngrok. El audio PCM consume más transferencia que el texto: el plan gratuito no ofrece transcripción ilimitada. Se omite silencio en el cliente y se respeta el cupo, sin subir a un plan de pago. La conversación por LiveKit no espera al reconocimiento y continúa si el PC, modelo o túnel están apagados.
+
+Errores adicionales: `ASR_OFFLINE` (503), `ASR_BUSY` (429 o 503), `ASR_TIMEOUT` (504), `INVALID_AUDIO` (400), `INVALID_ASR_RESULT` (502). La API debe conservar estado fallido/pendiente y distinguir cobertura parcial de una transcripción completa. `GET /v1/health` incluye `speech.ready`, modelo, pendientes y duración máxima; sigue siendo privado.
+
+Prueba real sin acceder al micrófono: `scripts/local-ai/verify-speech.ps1` sintetiza una frase de comprobación con la voz de Windows en un WAV local, llama a la puerta autenticada y exige palabras y tiempos. Las pruebas unitarias del gateway y `python -m unittest discover -s apps/ai-gateway/speech -p test_worker.py` cubren formatos, límites, autenticación, Host/Origin, cola, fallos y resultado inválido. La voz sintética solo acredita el camino técnico; no certifica fidelidad en toda conversación humana.
+
+Fuentes: [faster-whisper oficial](https://github.com/SYSTRAN/faster-whisper), [modelo small y licencia](https://huggingface.co/Systran/faster-whisper-small), [paquete publicado](https://pypi.org/project/faster-whisper/1.2.1/).
 
 ## Contrato de integración
 

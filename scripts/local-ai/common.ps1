@@ -24,7 +24,16 @@ function Get-OwnedProcess([string]$Name) {
 }
 
 function Save-OwnedProcess([string]$Name, $Process) {
-  @{ id = $Process.Id; name = $Name; startedAt = $Process.StartTime.ToUniversalTime().ToString('o'); path = $Process.Path } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $GatewayState ($Name + '-process.json'))
+  # Windows can return a Process before its executable metadata is available.
+  # Never write a path:null ownership record that cannot be checked on restart.
+  $verifiedProcess = $null
+  for ($attempt = 0; $attempt -lt 10; $attempt++) {
+    $verifiedProcess = Get-Process -Id $Process.Id -ErrorAction SilentlyContinue
+    if ($verifiedProcess -and $verifiedProcess.Path) { break }
+    Start-Sleep -Milliseconds 100
+  }
+  if (!$verifiedProcess -or !$verifiedProcess.Path) { throw ('No se puede verificar la identidad del proceso ' + $Name + '. No se registrará un proceso sin ruta.') }
+  @{ id = $verifiedProcess.Id; name = $Name; startedAt = $verifiedProcess.StartTime.ToUniversalTime().ToString('o'); path = $verifiedProcess.Path } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $GatewayState ($Name + '-process.json'))
 }
 
 function Find-Ollama {

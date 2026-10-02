@@ -29,6 +29,12 @@ if ($PullModel -or !($tags.models | Where-Object name -eq 'qwen3:4b-instruct')) 
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo completar la descarga del modelo.' }
 }
 
+& (Join-Path $PSScriptRoot 'start-speech.ps1')
+if (!(Test-Path -LiteralPath (Join-Path $GatewayState 'ocr-data/spa.traineddata')) -or !(Test-Path -LiteralPath (Join-Path $GatewayState 'ocr-data/eng.traineddata'))) {
+  try { & (Join-Path $PSScriptRoot 'setup-ocr.ps1') }
+  catch { Write-Output 'El lector de imágenes no está preparado. La IA de texto puede continuar; vuelve a ejecutar setup-ocr.ps1.' }
+}
+
 if (!(Test-Path -LiteralPath (Join-Path $GatewayDir 'dist/index.js'))) {
   Push-Location $StudyroomRoot
   try { & npm.cmd run build -w '@studyroom/ai-gateway'; if ($LASTEXITCODE -ne 0) { throw 'Compila primero las dependencias con npm ci.' } } finally { Pop-Location }
