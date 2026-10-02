@@ -3738,6 +3738,7 @@ textarea::placeholder {
 
 /* Small text retains AA contrast on the pale backgrounds used across views. */
 .study-card > span,
+.empty > p,
 .auth-switch,
 .grow-card a,
 .eyebrow,
