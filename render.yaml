@@ -4,7 +4,7 @@ services:
     runtime: node
     plan: free
     region: virginia
-    buildCommand: npm ci && npm run build -w @studyroom/api
+    buildCommand: npm ci --include=dev && npm run build -w @studyroom/api
     startCommand: npm run start -w @studyroom/api
     healthCheckPath: /api/health
     autoDeployTrigger: off
@@ -42,7 +42,7 @@ services:
   - type: web
     name: studyroom-sut
     runtime: static
-    buildCommand: npm ci && npm run build -w @studyroom/web
+    buildCommand: npm ci --include=dev && npm run build -w @studyroom/web
     staticPublishPath: apps/web/dist
     autoDeployTrigger: off
     routes:
