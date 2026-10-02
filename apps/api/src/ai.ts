@@ -66,8 +66,21 @@ export function utf8Chunks(text: string, max = 1500) {
 export function validatedCitations(text: string, sources: string[]) {
   const allowed = new Set(sources);
   const prefixes = new Set(["mensaje", "documento", "transcripcion", "sintesis"]);
-  return text.replace(/\[([\p{L}\p{M}]{1,40}):([^\]\r\n]{1,200})\]/gu,
-    (marker, prefix: string, id: string) => {
+  const uuid = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
+  // A model may use parentheses or omit citation brackets. Match those only
+  // for namespaced UUIDs; ordinary notes and isolated identifiers stay intact.
+  const citations = new RegExp(
+    String.raw`\[([\p{L}\p{M}]{1,40})\s*:\s*([^\]\r\n]{1,200})\]` +
+    String.raw`|\(\s*([\p{L}\p{M}]{1,40})\s*:\s*(${uuid})\s*\)` +
+    String.raw`|(?<![\p{L}\p{M}\p{N}_])([\p{L}\p{M}]{1,40})\s*:\s*(${uuid})(?![\p{L}\p{M}\p{N}_-])`,
+    "gu",
+  );
+  return text.replace(citations,
+    (marker, bracketPrefix: string | undefined, bracketId: string | undefined,
+      parenthesisPrefix: string | undefined, parenthesisId: string | undefined,
+      barePrefix: string | undefined, bareId: string | undefined) => {
+      const prefix = bracketPrefix ?? parenthesisPrefix ?? barePrefix!;
+      const id = (bracketId ?? parenthesisId ?? bareId!).trim();
       const canonical = prefix.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
       if (!prefixes.has(canonical)) return marker;
       const source = `${canonical}:${id}`;

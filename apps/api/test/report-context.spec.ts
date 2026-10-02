@@ -27,6 +27,30 @@ describe("Contexto fiel del reporte", () => {
     expect(validatedCitations("Fuente [Transcripción:visible] [transcripcio\u0301n:ajena] [Síntesis:summary] [síntesis:privada]", ["transcripcion:visible", "sintesis:summary"]))
       .toBe("Fuente [transcripcion:visible]  [sintesis:summary]");
   });
+  test("normaliza citas entre paréntesis y texto libre con alias acentuados", () => {
+    const voice = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c50";
+    const document = "7483c2fa-d3c1-40fe-b569-83ba6e1a2309";
+    expect(validatedCitations(`Según ( Transcripcio\u0301n: ${voice} ) y DOCUMENTO:${document}.`, [`transcripcion:${voice}`, `documento:${document}`]))
+      .toBe(`Según [transcripcion:${voice}] y [documento:${document}].`);
+  });
+  test("rechaza una cita UUID extranjera en los tres formatos sin sustituir fuentes", () => {
+    const allowed = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c50";
+    const foreign = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c51";
+    const result = validatedCitations(`Respuesta [Mensaje:${foreign}] (mensaje:${foreign}) MENSAJE:${foreign}; (mensaje:${allowed}).`, [`mensaje:${allowed}`]);
+    expect(result).toBe(`Respuesta   ; [mensaje:${allowed}].`);
+    expect(result).not.toContain(foreign);
+    expect(result.match(/\[mensaje:/g)).toHaveLength(1);
+  });
+  test("autoriza el namespace y el ID exactos también sin corchetes", () => {
+    const id = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c50";
+    const result = validatedCitations(`documento:${id}, (síntesis:${id}) [transcripción:${id.toUpperCase()}] transcripción:${id}.`, [`transcripcion:${id}`]);
+    expect(result).toBe(`,   [transcripcion:${id}].`);
+  });
+  test("preserva notas ordinarias, UUID aisladas y namespaces desconocidos", () => {
+    const id = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c50";
+    const text = `Nota (documento: revisar mañana), (base por altura), identificador ${id}, (registro:${id}) y registro:${id}.`;
+    expect(validatedCitations(text, [])).toBe(text);
+  });
   test("exporta todos los segmentos, palabras, chat y archivos, sin URLfirmada", () => {
     const report: any = { title: "Repaso", startedAt: new Date(), endedAt: new Date(), transcription: { coverage: { notice: "Reconocimiento automático", status: "partial", pendingBatches: 0, failedBatches: 1 }, segments: [{ id: "one", speakerName: "Ana", startMs: 0, endMs: 1000, text: "Primero", words: [{ word: "Primero", startMs: 0, endMs: 1000 }] }, { id: "two", speakerName: "Luis", startMs: 1000, endMs: 2000, text: "Segundo", words: [] }], batches: [] }, messages: [{ id: "chat", displayName: "Ana", text: "Chat completo" }], documents: [{ id: "d", name: "Foto", mimeType: "image/png", size: 100, available: false, extractionStatus: "unavailable" }], jobs: [] };
     const text = reportMarkdown(report);
