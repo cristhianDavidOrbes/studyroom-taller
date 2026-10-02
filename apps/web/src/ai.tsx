@@ -11,6 +11,8 @@ import {
 import { api, errorText, json } from "./api";
 import type { Job, StudyDocument } from "./types";
 import { ErrorBox, Spinner, useToast } from "./ui";
+import { SourceText } from "./source-text";
+import type { ReportSourceMap } from "./report-sources";
 export const jobLabel: Record<Job["status"], string> = {
   queued: "En espera",
   running: "Preparando respuesta",
@@ -27,21 +29,24 @@ export function resultText(result: unknown): string {
       keypoints?: string[];
       points?: string[];
     };
-    if (o.text) return o.text;
-    if (o.summary) return o.summary;
-    if (o.keypoints) return o.keypoints.join("\n• ");
-    if (o.points) return o.points.join("\n• ");
+    if (typeof o.text === "string") return o.text;
+    if (typeof o.summary === "string") return o.summary;
+    if (Array.isArray(o.keypoints) && o.keypoints.every((point) => typeof point === "string")) return o.keypoints.join("\n• ");
+    if (Array.isArray(o.points) && o.points.every((point) => typeof point === "string")) return o.points.join("\n• ");
+    return "No hay texto de respuesta disponible.";
   }
-  return result ? JSON.stringify(result, null, 2) : "";
+  return result ? String(result) : "";
 }
 export function JobCard({
   job,
   onUpdated,
   retryQuestion,
+  sourceMap,
 }: {
   job: Job;
   onUpdated?: (job: Job) => void;
   retryQuestion?: (question: string) => void;
+  sourceMap?: ReportSourceMap;
 }) {
   const [error, setError] = useState(""),
     [rated, setRated] = useState<number | null>(null),
@@ -74,9 +79,8 @@ export function JobCard({
       )}
       {job.status === "running" || job.status === "queued" ? (
         <>
-          <p>
-            {job.partialText ||
-              "Tu solicitud está guardada. La respuesta aparecerá aquí cuando el equipo de IA esté disponible."}
+          <p className="preserve-lines">
+            <SourceText text={job.partialText || "Tu solicitud está guardada. La respuesta aparecerá aquí cuando el equipo de IA esté disponible."} result={job.result} sourceMap={sourceMap} pending />
           </p>
           <button
             className="text-button"
@@ -93,7 +97,7 @@ export function JobCard({
       ) : job.status === "completed" ? (
         <>
           <div className="ai-result preserve-lines">
-            {resultText(job.result)}
+            <SourceText text={resultText(job.result)} result={job.result} sourceMap={sourceMap} />
           </div>
           <p className="ai-disclaimer">
             Respuesta generada por IA. Comprueba los datos importantes con tus

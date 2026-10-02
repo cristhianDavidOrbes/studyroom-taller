@@ -2,7 +2,7 @@ jest.mock("firebase-admin/auth", () => ({ getAuth: jest.fn() }));
 jest.mock("livekit-server-sdk", () => ({ AccessToken: jest.fn(), RoomServiceClient: jest.fn() }));
 import { deflateRawSync } from "node:zlib";
 import mammoth from "mammoth";
-import { Documents, validateDocx } from "../src/documents";
+import { Documents, multipartFilename, validateDocx, validateFile } from "../src/documents";
 function zip(items: { name: string; text: string; declaredSize?: number; flags?: number }[]) {
   const locals: Buffer[] = [], central: Buffer[] = []; let offset = 0;
   for (const item of items) {
@@ -19,6 +19,21 @@ function zip(items: { name: string; text: string; declaredSize?: number; flags?:
 const types = { name: "[Content_Types].xml", text: '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>' };
 const word = { name: "word/document.xml", text: '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Álgebra y apuntes compartidos.</w:t></w:r></w:p></w:body></w:document>' };
 describe("Extracción segura de documentos de reporte", () => {
+  test("conserva nombres ya válidos con acentos, caracteres internacionales y emoji", () => {
+    for (const name of ["Apuntes de la sesión.txt", "Álgebra y raíces.docx", "学习笔记 🙂.txt", "Ângela y Ãngel.txt"])
+      expect(multipartFilename(name)).toBe(name);
+    expect(multipartFilename("sesiÃ³n y raíz.txt")).toBe("sesiÃ³n y raíz.txt"); // Whole sequence is not valid UTF-8 bytes.
+  });
+  test("recupera el filename UTF8 interpretado como Latin1 por multipart", () => {
+    for (const original of ["Apuntes de la sesión.txt", "Área — cálculo 🙂.txt", "学习笔记.txt"])
+      expect(multipartFilename(Buffer.from(original, "utf8").toString("latin1"))).toBe(original);
+  });
+  test("sanitiza el nombre después de reparar bytes y conserva el límite", () => {
+    const original = "../sesión\u0000:<archivo>.txt";
+    const file = { buffer: Buffer.from("Texto"), size: 5, mimetype: "text/plain", originalname: Buffer.from(original, "utf8").toString("latin1") } as Express.Multer.File;
+    expect(validateFile(file).name).toBe(".._sesión___archivo_.txt");
+    expect(validateFile({ ...file, originalname: "a".repeat(300) }).name).toHaveLength(180);
+  });
   test("DOCX real produce solo texto, sin HTML", async () => {
     const file = zip([types, word]); await validateDocx(file);
     expect((await mammoth.extractRawText({ buffer: file })).value).toContain("Álgebra y apuntes compartidos.");

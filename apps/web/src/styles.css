@@ -3924,6 +3924,11 @@ textarea::placeholder {
 .report-question-panel .job-list { margin-top: 24px; }
 .report-question-panel .button { align-self: flex-start; }
 .report-learning-section { scroll-margin-top: 24px; }
+.ai-source { display: inline; margin: 0 2px; padding: 2px 6px; border-radius: 5px; background: #e8f0df; color: #365b35; font-size: .88em; line-height: 1.8; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.ai-source:hover, .ai-source:focus-visible { background: #d6e5c9; }
+.ai-source.unavailable { color: #687462; background: #eef1e9; text-decoration: none; }
+[id^="report-source-"] { scroll-margin-top: 35px; }
+[id^="report-source-"]:focus-visible { outline: 2px solid #709959; outline-offset: 5px; border-radius: 8px; }
 .room-tabs { overflow-x: auto; justify-content: space-around; gap: 0; }
 .room-tabs button { min-width: 0; flex: 1; padding-inline: 6px; }
 @media (max-width: 780px) {

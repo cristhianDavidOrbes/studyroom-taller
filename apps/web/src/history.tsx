@@ -18,6 +18,8 @@ import { api, API_URL, errorText, json } from "./api";
 import { auth } from "./firebase";
 import type { Job, Session, SessionReport } from "./types";
 import { ReportArchive, ReportQuestions } from "./session-report";
+import { buildReportSources, reportSourceAnchor, type ReportSourceMap } from "./report-sources";
+import { SourceText } from "./source-text";
 import { JobCard } from "./ai";
 import { Badge, dateTime, Empty, ErrorBox, Spinner, useToast } from "./ui";
 interface QuizQuestion {
@@ -26,7 +28,7 @@ interface QuizQuestion {
   correctIndex?: number;
   explanation?: string;
 }
-function Quiz({ sessionId, job }: { sessionId: string; job: Job }) {
+function Quiz({ sessionId, job, sourceMap }: { sessionId: string; job: Job; sourceMap?: ReportSourceMap }) {
   const questions =
     (job.result as { questions?: QuizQuestion[] })?.questions || [];
   const [answers, setAnswers] = useState<number[]>(
@@ -67,7 +69,7 @@ function Quiz({ sessionId, job }: { sessionId: string; job: Job }) {
       {questions.map((q, i) => (
         <fieldset key={i}>
           <legend>
-            {i + 1}. {q.question}
+            {i + 1}. <SourceText text={q.question} result={job.result} sourceMap={sourceMap} />
           </legend>
           {q.options.map((option, j) => (
             <label
@@ -84,7 +86,7 @@ function Quiz({ sessionId, job }: { sessionId: string; job: Job }) {
                 }
                 required
               />
-              {option}
+              <SourceText text={option} result={job.result} sourceMap={sourceMap} />
             </label>
           ))}
         </fieldset>
@@ -99,7 +101,7 @@ function Quiz({ sessionId, job }: { sessionId: string; job: Job }) {
             result.feedback.map((f, i) => (
               <p key={i}>
                 {i + 1}.{" "}
-                {typeof f === "string"
+                <SourceText text={typeof f === "string"
                   ? f
                   : typeof f === "object" && f
                     ? String(
@@ -108,7 +110,7 @@ function Quiz({ sessionId, job }: { sessionId: string; job: Job }) {
                             ? "¡Correcto!"
                             : "Revisa esta respuesta."),
                       )
-                    : ""}
+                    : ""} result={job.result} sourceMap={sourceMap} />
               </p>
             ))}
         </div>
@@ -352,6 +354,7 @@ export function SessionPage() {
     );
   const jobs = session.jobs || [],
     quiz = jobs.find((j) => j.kind === "quiz" && j.status === "completed");
+  const sourceMap = buildReportSources(session);
   return (
     <div className="page session-page">
       <Link className="text-button" to="/historial">
@@ -436,7 +439,7 @@ export function SessionPage() {
         {jobs
           .filter((j) => j.kind !== "answer" && (j.kind !== "quiz" || j.status !== "completed"))
           .map((job) => (
-            <section key={job.id}>
+            <section key={job.id} id={reportSourceAnchor("sintesis", job.id)} tabIndex={-1}>
               <h2 className="artifact-heading">
                 {job.kind === "summary"
                   ? "Resumen"
@@ -446,13 +449,13 @@ export function SessionPage() {
                       ? "Quiz de repaso"
                       : "Preguntas y respuestas"}
               </h2>
-              <JobCard job={job} onUpdated={() => void refetch()} />
+              <JobCard job={job} sourceMap={sourceMap} onUpdated={() => void refetch()} />
             </section>
           ))}
       </div>
-      {quiz && <Quiz key={quiz.id} sessionId={id!} job={quiz} />}
+      {quiz && <Quiz key={quiz.id} sessionId={id!} job={quiz} sourceMap={sourceMap} />}
       </section>
-      <ReportQuestions key={session.id} sessionId={session.id} jobs={jobs} onRefresh={() => void refetch()} />
+      <ReportQuestions key={session.id} sessionId={session.id} jobs={jobs} sourceMap={sourceMap} onRefresh={() => void refetch()} />
       {privateNotes?.text && (
         <section className="panel attempts">
           <h2>Mis notas privadas</h2>

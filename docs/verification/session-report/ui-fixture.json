@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-02T22:07:24.471Z",
+  "kind": "Headless Chromium UI with real Firebase emulator login and test-only report/job/resource HTTP fixtures",
+  "limits": "Does not certify AI generation, stored document access or speech recognition. Those have separate real-service evidence.",
+  "checks": [
+    {
+      "name": "Original voice search, speaker filtering, chat and safe escaped transcript",
+      "status": "passed"
+    },
+    {
+      "name": "Authenticated image preview and honest partial/unavailable resource status",
+      "status": "passed"
+    },
+    {
+      "name": "Report question progress hides technical IDs before verified references are ready",
+      "status": "passed"
+    },
+    {
+      "name": "Readable authorized references reveal filtered and paginated original sources",
+      "status": "passed"
+    },
+    {
+      "name": "Report questions stay private and clear when navigating to another session",
+      "status": "passed"
+    },
+    {
+      "name": "Mobile report stays inside viewport with all sections accessible",
+      "status": "passed"
+    }
+  ],
+  "status": "passed"
+}

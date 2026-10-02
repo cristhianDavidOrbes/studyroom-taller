@@ -187,7 +187,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
       }
       if (req.url === '/v1/transcribe') {
         speechRequest = true;
-        if (speechPending >= 3) throw new GatewayError(429, 'ASR_BUSY', 'La transcripción espera al PC. Reintenta en unos segundos.', 10);
+        if (speechPending >= 4) throw new GatewayError(429, 'ASR_BUSY', 'La transcripción espera al PC. Reintenta en unos segundos.', 10);
         speechPending++; speechReserved = true;
         const input = parseSpeechInput(await readBody(req, meter, MAX_AUDIO_BODY_BYTES));
         const resources = { priority: 'interactive' } as const;
@@ -195,7 +195,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
         release = meter.reserve(MAX_TRANSCRIPT_BYTES);
         timeout = setTimeout(() => { timedOut = true; controller.abort(); }, config.timeoutMs);
         // Speech and Qwen share one inference slot; simultaneous callers never start
-        // multiple models on the PC. At most three speech chunks are retained.
+        // multiple models on the PC. Four chunks accommodate a full four-person room.
         const result = await queue.add('interactive', controller.signal, async () => {
           ensureResources(resources);
           return transcribe(fetcher, input, config.secret, controller.signal);

@@ -1,0 +1,42 @@
+{
+  "at": "2026-10-02T21:43:57.993Z",
+  "kind": "Two isolated Chromium contexts; real local API/Auth emulator, LiveKit SFU, Spanish SAPI synthetic microphone and canvas screen, local Whisper STT, authorized stored synthetic PNG/text and real local report AI",
+  "limits": "Only synthetic audio/video/documents; no physical microphone, desktop or long-duration network stability certified. Desktop bridge lifecycle uses HTTP204 fixture exclusively; STT/report/resources/AI are real services.",
+  "checks": [
+    {
+      "name": "Camera and microphone alone do not enable or record transcription",
+      "status": "passed"
+    },
+    {
+      "name": "Published microphone reaches real Whisper and literal words propagate to another participant",
+      "status": "passed"
+    },
+    {
+      "name": "STT uses only the existing microphone; screen/camera keep moving while it runs",
+      "status": "passed"
+    },
+    {
+      "name": "Revoking consent from another tab stops capture/uploads and preserves the call",
+      "status": "passed"
+    },
+    {
+      "name": "Opt-out flushes final chunk, stops capture and preserves media",
+      "status": "passed"
+    },
+    {
+      "name": "Historical report preserves actual voice and chat with speaker search",
+      "status": "passed"
+    },
+    {
+      "name": "Private questions use this report route and show durable progress/result",
+      "status": "passed"
+    },
+    {
+      "name": "Real authorized stored image/document previews and OCR appear in desktop/mobile report",
+      "status": "passed"
+    }
+  ],
+  "recognizedWords": 76,
+  "recognizedText": "de nuestra conversación. Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación. Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra... conversación. Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación. Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación. Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación. Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación. Hola.",
+  "status": "passed"
+}

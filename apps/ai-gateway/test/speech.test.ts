@@ -65,14 +65,20 @@ test('speech failures return explicit unavailable/timeout/result errors, never f
   }
 });
 
-test('speech bounds oversized input before calling worker and serializes concurrent inference', async () => {
-  let active=0,max=0;
-  const app=await harness(async()=>{active++;max=Math.max(max,active);await delay(35);active--;return Response.json(recognized);});
+test('speech admits all four room participants, bounds excess input and serializes inference', async () => {
+  let active=0,max=0,calls=0,releaseFirst=()=>{};
+  const first=new Promise<void>(resolve=>{releaseFirst=resolve;});
+  const app=await harness(async()=>{active++;max=Math.max(max,active);if(++calls===1)await first;active--;return Response.json(recognized);});
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     assert.equal((await app.request({audioBase64:'x'.repeat(MAX_AUDIO_BODY_BYTES)})).status,413);
-    const results=await Promise.all([app.request(),app.request(),app.request(),app.request()]);
-    assert.equal(max,1); assert.ok(results.some(response=>response.status===429)); assert.ok(results.filter(response=>response.status===200).length>=1);
-  } finally{await app.close();}
+    const requests=Array.from({length:5},()=>app.request());
+    const admitted=await Promise.race([Promise.race(requests),new Promise<Response>((_,reject)=>{timer=setTimeout(()=>reject(new Error('Expected bounded admission')),1000);})]);
+    assert.equal(admitted.status,429);
+    releaseFirst();
+    const results=await Promise.all(requests);
+    assert.equal(max,1); assert.equal(results.filter(response=>response.status===200).length,4);assert.equal(results.filter(response=>response.status===429).length,1);
+  } finally{if(timer)clearTimeout(timer);releaseFirst();await app.close();}
 });
 
 test('authenticated readiness checks the private speech worker and stays available during background-only pause', async () => {

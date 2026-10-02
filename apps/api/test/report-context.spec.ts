@@ -23,6 +23,10 @@ describe("Contexto fiel del reporte", () => {
   test("elimina citas a transcripciones ajenas", () => {
     expect(validatedCitations("Sí [transcripcion:visible] [transcripcion:ajena] [documento:otro]", ["transcripcion:visible"])).toBe("Sí [transcripcion:visible]");
   });
+  test("normaliza citas acentuadas antes de verificar autorización", () => {
+    expect(validatedCitations("Fuente [Transcripción:visible] [transcripcio\u0301n:ajena] [Síntesis:summary] [síntesis:privada]", ["transcripcion:visible", "sintesis:summary"]))
+      .toBe("Fuente [transcripcion:visible]  [sintesis:summary]");
+  });
   test("exporta todos los segmentos, palabras, chat y archivos, sin URLfirmada", () => {
     const report: any = { title: "Repaso", startedAt: new Date(), endedAt: new Date(), transcription: { coverage: { notice: "Reconocimiento automático", status: "partial", pendingBatches: 0, failedBatches: 1 }, segments: [{ id: "one", speakerName: "Ana", startMs: 0, endMs: 1000, text: "Primero", words: [{ word: "Primero", startMs: 0, endMs: 1000 }] }, { id: "two", speakerName: "Luis", startMs: 1000, endMs: 2000, text: "Segundo", words: [] }], batches: [] }, messages: [{ id: "chat", displayName: "Ana", text: "Chat completo" }], documents: [{ id: "d", name: "Foto", mimeType: "image/png", size: 100, available: false, extractionStatus: "unavailable" }], jobs: [] };
     const text = reportMarkdown(report);

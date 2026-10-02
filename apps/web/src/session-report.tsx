@@ -5,6 +5,8 @@ import { JobCard } from "./ai";
 import type { Job, SessionReport } from "./types";
 import { Badge, Empty, ErrorBox, Modal, prettyBytes, shortTime } from "./ui";
 import { CoverageNotice, TranscriptList } from "./transcription-panel";
+import { reportSourceAnchor, type ReportSourceMap } from "./report-sources";
+import { useSourceNavigation } from "./source-text";
 
 function ReportDocument({ sessionId, document }: { sessionId: string; document: SessionReport["documents"][number] }) {
   const [url, setUrl] = useState("");
@@ -33,7 +35,7 @@ function ReportDocument({ sessionId, document }: { sessionId: string; document: 
     } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   }
-  return <article className="report-document">
+  return <article className="report-document" id={reportSourceAnchor("documento", document.id)} tabIndex={-1}>
     {image && url ? <button className="report-image" aria-label={`Ampliar ${document.name}`} onClick={() => void open()}><img src={url} alt={document.name} loading="lazy" onError={() => setUrl("")} /></button> : <div className="report-document-icon">{image ? <Image size={30} /> : <FileText size={30} />}</div>}
     <div className="report-document-info"><strong>{document.name}</strong><small>{prettyBytes(document.size)} · {shortTime(document.createdAt)}</small><Badge tone={document.available ? "green" : ""}>{document.available ? "Disponible" : "Ya no disponible"}</Badge></div>
     <button className="button secondary" disabled={busy || !document.available} onClick={() => void open()}><Download size={15} />{busy ? "Abriendo…" : image ? "Ver imagen" : "Abrir archivo"}</button>
@@ -50,6 +52,8 @@ export function ReportArchive({ session }: { session: SessionReport }) {
   const segments = session.transcription?.segments || [];
   const documents = session.documents || [];
   const messages = session.messages || [];
+  useSourceNavigation("mensaje", messages.map((message) => message.id), (index) => setChatLimit((value) => Math.max(value, index + 1)));
+  useSourceNavigation("documento", documents.map((document) => document.id), (index) => setDocumentLimit((value) => Math.max(value, index + 1)));
   return <>
     <div className="report-overview">
       <div><AudioLines size={20} /><strong>{segments.length}</strong><span>Intervenciones de voz</span></div>
@@ -60,7 +64,7 @@ export function ReportArchive({ session }: { session: SessionReport }) {
     <nav className="report-section-links" aria-label="Secciones del reporte"><a href="#report-voice">Voz de la sesión</a><a href="#report-chat">Conversación escrita</a><a href="#report-files">Imágenes y archivos</a><a href="#report-learning">Resumen y repaso</a><a href="#report-questions">Preguntar al reporte</a></nav>
     <section className="panel report-section" id="report-voice"><div className="section-heading"><h2><AudioLines size={23} /> Lo que se habló</h2><Badge>{segments.length} intervenciones</Badge></div><p className="muted">Transcripción original, por participante y momento de la sesión. El texto se conserva como lo reconoció el servicio de voz.</p><CoverageNotice data={session.transcription} /><TranscriptList segments={segments} searchable /></section>
     <section className="panel report-section" id="report-chat"><div className="section-heading"><h2><MessageSquare size={23} /> La conversación escrita</h2><Badge>{messages.length} mensajes</Badge></div>
-      {messages.length ? <ol className="report-chat-log">{messages.slice(0, chatLimit).map((message) => <li key={message.id}><div className="transcript-byline"><strong>{message.displayName || (message.kind === "ai" ? "Asistente" : "Participante")}</strong><time>{shortTime(message.createdAt)}</time></div><p className="preserve-lines">{message.text}</p></li>)}</ol> : <Empty title="No hubo mensajes compartidos">La conversación de voz se consulta en la sección anterior.</Empty>}
+      {messages.length ? <ol className="report-chat-log">{messages.slice(0, chatLimit).map((message) => <li key={message.id} id={reportSourceAnchor("mensaje", message.id)} tabIndex={-1}><div className="transcript-byline"><strong>{message.displayName || (message.kind === "ai" ? "Asistente" : "Participante")}</strong><time>{shortTime(message.createdAt)}</time></div><p className="preserve-lines">{message.text}</p></li>)}</ol> : <Empty title="No hubo mensajes compartidos">La conversación de voz se consulta en la sección anterior.</Empty>}
       {messages.length > chatLimit && <button className="button secondary" onClick={() => setChatLimit((value) => value + 100)}>Mostrar más mensajes</button>}
     </section>
     <section className="panel report-section" id="report-files"><div className="section-heading"><h2><FileText size={23} /> Imágenes y archivos compartidos</h2><Badge>{documents.length} recursos</Badge></div><p className="muted">Los participantes de la sesión pueden volver a consultar los recursos que siguen disponibles.</p>
@@ -70,7 +74,7 @@ export function ReportArchive({ session }: { session: SessionReport }) {
   </>;
 }
 
-export function ReportQuestions({ sessionId, jobs, onRefresh }: { sessionId: string; jobs: Job[]; onRefresh: () => void }) {
+export function ReportQuestions({ sessionId, jobs, onRefresh, sourceMap }: { sessionId: string; jobs: Job[]; onRefresh: () => void; sourceMap?: ReportSourceMap }) {
   const [question, setQuestion] = useState("");
   const [answers, setAnswers] = useState<Job[]>([]);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
@@ -104,5 +108,5 @@ export function ReportQuestions({ sessionId, jobs, onRefresh }: { sessionId: str
     } catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   }
-  return <section className="panel report-section report-question-panel" id="report-questions"><div className="section-heading"><h2><Bot size={24} /> Pregúntale a este reporte</h2><Badge tone="green">Conversación privada</Badge></div><p className="muted">El asistente consulta la voz registrada, el chat y el texto reconocido de los archivos de esta sesión para ayudarte a repasar.</p><ErrorBox message={error} /><form className="form-stack" onSubmit={send}><label htmlFor="report-question">¿Qué te gustaría entender?</label><textarea id="report-question" required minLength={3} maxLength={1500} rows={3} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="¿Qué explicó cada participante sobre este tema?" /><button className="button primary" disabled={busy || question.trim().length < 3}><Send size={17} />{busy ? "Guardando tu pregunta…" : "Consultar este reporte"}</button></form><p className="local-ai-note">La respuesta aparecerá aquí cuando el equipo de IA esté disponible. Solo tú ves tus preguntas y respuestas.</p><div className="job-list">{answers.map((job) => <JobCard key={job.id} job={job} onUpdated={(updated) => { setAnswers((old) => old.map((entry) => entry.id === updated.id ? { ...entry, ...updated } : entry)); onRefresh(); }} retryQuestion={(value) => { setQuestion(value); window.document.getElementById("report-question")?.focus(); }} />)}</div></section>;
+  return <section className="panel report-section report-question-panel" id="report-questions"><div className="section-heading"><h2><Bot size={24} /> Pregúntale a este reporte</h2><Badge tone="green">Conversación privada</Badge></div><p className="muted">El asistente consulta la voz registrada, el chat y el texto reconocido de los archivos de esta sesión para ayudarte a repasar.</p><ErrorBox message={error} /><form className="form-stack" onSubmit={send}><label htmlFor="report-question">¿Qué te gustaría entender?</label><textarea id="report-question" required minLength={3} maxLength={1500} rows={3} value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="¿Qué explicó cada participante sobre este tema?" /><button className="button primary" disabled={busy || question.trim().length < 3}><Send size={17} />{busy ? "Guardando tu pregunta…" : "Consultar este reporte"}</button></form><p className="local-ai-note">La respuesta aparecerá aquí cuando el equipo de IA esté disponible. Solo tú ves tus preguntas y respuestas.</p><div className="job-list">{answers.map((job) => <JobCard key={job.id} job={job} sourceMap={sourceMap} onUpdated={(updated) => { setAnswers((old) => old.map((entry) => entry.id === updated.id ? { ...entry, ...updated } : entry)); onRefresh(); }} retryQuestion={(value) => { setQuestion(value); window.document.getElementById("report-question")?.focus(); }} />)}</div></section>;
 }

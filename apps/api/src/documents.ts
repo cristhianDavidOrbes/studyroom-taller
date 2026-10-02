@@ -14,6 +14,17 @@ import * as yauzl from "yauzl";
 import { Db, Identity, CAPS, denyQuota, monthKey } from "./core";
 import { Rooms } from "./rooms";
 
+export function multipartFilename(name: string) {
+  // Busboy can decode a UTF-8 multipart filename as Latin-1. Repair only a
+  // recognizable byte sequence that has a lossless, valid UTF-8 round trip.
+  if (!/(?:[\u00c2-\u00df][\u0080-\u00bf]|[\u00e0-\u00ef][\u0080-\u00bf]{2}|[\u00f0-\u00f4][\u0080-\u00bf]{3})/.test(name) ||
+      [...name].some(c => c.codePointAt(0)! > 255)) return name;
+  const bytes = Buffer.from(name, "latin1");
+  try {
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return Buffer.from(decoded, "utf8").equals(bytes) ? decoded : name;
+  } catch { return name; }
+}
 export function validateFile(file: Express.Multer.File | undefined) {
   if (!file || !file.buffer.length || file.size > 10_000_000)
     throw new BadRequestException("Selecciona un documento de hasta 10 MB");
@@ -45,7 +56,7 @@ export function validateFile(file: Express.Multer.File | undefined) {
       "Se permiten PDF, DOCX, texto UTF-8, PNG, JPEG y WebP",
     );
   const name =
-    file.originalname.replace(/[\x00-\x1f<>:"/\\|?*]/g, "_").slice(0, 180) ||
+    multipartFilename(file.originalname).replace(/[\x00-\x1f<>:"/\\|?*]/g, "_").slice(0, 180) ||
     "documento";
   return { mime, name };
 }

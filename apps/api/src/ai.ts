@@ -65,8 +65,14 @@ export function utf8Chunks(text: string, max = 1500) {
 }
 export function validatedCitations(text: string, sources: string[]) {
   const allowed = new Set(sources);
-  return text.replace(/\[((?:mensaje|documento|transcripcion|sintesis):[^\]\r\n]{1,200})\]/g,
-    (marker, source: string) => allowed.has(source) ? marker : "").trim();
+  const prefixes = new Set(["mensaje", "documento", "transcripcion", "sintesis"]);
+  return text.replace(/\[([\p{L}\p{M}]{1,40}):([^\]\r\n]{1,200})\]/gu,
+    (marker, prefix: string, id: string) => {
+      const canonical = prefix.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+      if (!prefixes.has(canonical)) return marker;
+      const source = `${canonical}:${id}`;
+      return allowed.has(source) ? `[${source}]` : "";
+    }).trim();
 }
 export function publicJob(job: AiJob) {
   const {

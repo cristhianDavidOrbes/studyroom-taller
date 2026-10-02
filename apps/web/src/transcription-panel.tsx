@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { AudioLines, Mic, Search, Square, Users } from "lucide-react";
 import type { TranscriptSegment, TranscriptionState } from "./types";
 import { Badge, Empty, ErrorBox, initials } from "./ui";
+import { reportSourceAnchor } from "./report-sources";
+import { useSourceNavigation } from "./source-text";
 
 export const elapsedTime = (milliseconds: number) => {
   const seconds = Math.max(0, Math.floor(milliseconds / 1000));
@@ -11,17 +13,19 @@ export function TranscriptList({ segments, searchable = false }: { segments: Tra
   const [search, setSearch] = useState("");
   const [speaker, setSpeaker] = useState("");
   const [limit, setLimit] = useState(100);
-  const filtered = useMemo(() => [...segments].sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id)).filter((segment) =>
+  const ordered = useMemo(() => [...segments].sort((a, b) => a.startMs - b.startMs || a.id.localeCompare(b.id)), [segments]);
+  const filtered = useMemo(() => ordered.filter((segment) =>
     (!speaker || segment.speakerId === speaker) &&
     `${segment.speakerName} ${segment.text}`.toLocaleLowerCase("es").includes(search.toLocaleLowerCase("es")),
-  ), [segments, speaker, search]);
+  ), [ordered, speaker, search]);
+  useSourceNavigation("transcripcion", ordered.map((segment) => segment.id), (index) => { setSearch(""); setSpeaker(""); setLimit((value) => Math.max(value, index + 1)); });
   const speakers = [...new Map(segments.map((segment) => [segment.speakerId, segment.speakerName])).entries()];
   return <>
     {searchable && <div className="transcript-filters">
       <label className="search-field"><Search size={16} /><input aria-label="Buscar en la transcripción" placeholder="Buscar palabras…" value={search} onChange={(event) => { setSearch(event.target.value); setLimit(100); }} /></label>
       <label><span className="sr-only">Filtrar por participante</span><select aria-label="Filtrar transcripción por participante" value={speaker} onChange={(event) => { setSpeaker(event.target.value); setLimit(100); }}><option value="">Todos los participantes</option>{speakers.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
     </div>}
-    {filtered.length ? <ol className="transcript-list">{filtered.slice(0, limit).map((segment) => <li key={segment.id}>
+    {filtered.length ? <ol className="transcript-list">{filtered.slice(0, limit).map((segment) => <li key={segment.id} id={reportSourceAnchor("transcripcion", segment.id)} tabIndex={-1}>
       <span className="avatar transcript-avatar">{initials(segment.speakerName)}</span>
       <div><div className="transcript-byline"><strong>{segment.speakerName}</strong><time title={`Desde ${elapsedTime(segment.startMs)} hasta ${elapsedTime(segment.endMs)}`}>{elapsedTime(segment.startMs)}</time></div><p className="preserve-lines">{segment.text}</p></div>
     </li>)}</ol> : <Empty title={search || speaker ? "No hay coincidencias" : "Aún no hay palabras registradas"}>{search || speaker ? "Prueba otra búsqueda o participante." : "Aquí aparecerá la voz que los participantes autoricen a transcribir."}</Empty>}

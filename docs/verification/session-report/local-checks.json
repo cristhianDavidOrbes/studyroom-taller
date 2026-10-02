@@ -27,5 +27,16 @@
   },
   "limitations": [
     "Local synthetic fixtures; does not certify all physical devices or speech accuracy."
-  ]
+  ],
+  "finalPolish": {
+    "observedAt": "2026-10-02T22:07:35.743Z",
+    "gatewayPassed": 24,
+    "apiPassed": 88,
+    "webPassed": 36,
+    "verified": [
+      "four speech batches admitted and inference serialized",
+      "UTF8 multipart names preserved",
+      "authorized readable report citations reveal original source"
+    ]
+  }
 }
