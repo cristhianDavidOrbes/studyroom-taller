@@ -19,4 +19,5 @@ credentials*.json
 *.tmp
 .supabase/
 **/supabase/.temp/
-
+apps/desktop/bin/
+apps/desktop/obj/

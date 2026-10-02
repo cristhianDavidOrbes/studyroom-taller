@@ -27,8 +27,9 @@ import {
   messageSchema,
   timerSchema,
   annotationSchema,
+  ANNOTATION_LIMITS,
 } from "./validation";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { Prisma } from "@prisma/client";
@@ -672,25 +673,40 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       );
     const annotation = {
       ...d,
+      id: randomUUID(),
       userId: i.uid,
       createdAt: new Date().toISOString(),
     };
-    await this.db.serial(async (tx) => {
+    const committed = await this.db.serial(async (tx) => {
       const r = await tx.room.findUniqueOrThrow({ where: { id } });
+      if (r.status !== "open") throw new ConflictException("La sala no está abierta");
+      const current = await tx.membership.findUnique({
+        where: { roomId_userId: { roomId: id, userId: i.uid } },
+      });
+      if (!current?.active || current.banned ||
+        (owner.identity !== i.uid && !["host", "moderator"].includes(current.role)))
+        throw new ForbiddenException("Ya no tienes permiso para señalar esta pantalla");
+      const targets = new Set(d.targetIds ?? []);
+      const removed: string[] = [];
       const existing = (r.annotations as any[]).filter(
-        (a) =>
-          !(
-            a.screenId === d.screenId &&
-            (d.action === "clear" ||
-              (d.action === "point" && a.action === "point"))
-          ),
+        (a) => {
+          if (a.screenId !== d.screenId) return true;
+          if (d.action === "erase" && typeof a.id === "string" && targets.has(a.id)) {
+            removed.push(a.id);
+            return false;
+          }
+          return d.action !== "clear" && !(d.action === "point" && a.action === "point");
+        },
       );
       const next =
-        d.action === "clear" ? existing : [...existing, annotation].slice(-40);
+        d.action === "clear" || d.action === "erase"
+          ? existing
+          : [...existing, annotation].slice(-ANNOTATION_LIMITS.stored);
       await tx.room.update({ where: { id }, data: { annotations: next } });
+      return d.action === "erase" ? { ...annotation, targetIds: removed } : annotation;
     });
-    this.events.emit(id, "annotation:updated", annotation);
-    return annotation;
+    this.events.emit(id, "annotation:updated", committed);
+    return committed;
   }
   async state(id: string, i: Identity) {
     const m = await this.member(id, i.uid);

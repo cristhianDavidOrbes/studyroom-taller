@@ -1,0 +1,63 @@
+{
+  "at": "2026-10-02T06:25:20.308Z",
+  "baseURL": "https://studyroom-sut.onrender.com/",
+  "reports": [
+    {
+      "name": "access",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 17,
+      "incompleteRules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "name": "explore-desktop",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 23,
+      "incompleteRules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "name": "explore-empty",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 23,
+      "incompleteRules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "name": "room-people",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 21,
+      "incompleteRules": []
+    },
+    {
+      "name": "session-history",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 19,
+      "incompleteRules": []
+    },
+    {
+      "name": "explore-mobile",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 24,
+      "incompleteRules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "name": "profile-mobile",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 18,
+      "incompleteRules": []
+    }
+  ]
+}

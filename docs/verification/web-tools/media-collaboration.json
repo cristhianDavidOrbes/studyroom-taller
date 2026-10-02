@@ -1,0 +1,47 @@
+{
+  "at": "2026-10-02T09:05:24.731Z",
+  "kind": "Two isolated browser contexts, synthetic camera/microphone and synthetic canvas screen through configured LiveKit SFU",
+  "limits": "Does not validate physical devices, distinct networks, real microphone intelligibility or four participants over 60 minutes.",
+  "checks": [
+    {
+      "name": "Both participants can open desktop tools and installation help before sharing",
+      "status": "passed"
+    },
+    {
+      "name": "Two real SFU connections with synthetic camera and microphone",
+      "status": "passed"
+    },
+    {
+      "name": "Synthetic screen reaches the second browser through LiveKit",
+      "status": "passed"
+    },
+    {
+      "name": "Compact camera menu shares a normalized point; guest cannot annotate",
+      "status": "passed"
+    },
+    {
+      "name": "Role update permits keyboard annotations at a different receiver size",
+      "status": "passed"
+    },
+    {
+      "name": "Full tool set shares geometry, escaped text, color and erases only the selected mark",
+      "status": "passed"
+    },
+    {
+      "name": "Clearing and stopping screen removes shared signals",
+      "status": "passed"
+    }
+  ],
+  "cameraVideoCounts": [
+    2,
+    2
+  ],
+  "desktopBridge": {
+    "kind": "Browser lifecycle with test-only HTTP204 bridge stub; native lifecycle verified separately",
+    "activatesOnlyForLocalScreen": true,
+    "stopReleased": true,
+    "cameraTriggered": false,
+    "requests": 8
+  },
+  "status": "passed"
+}

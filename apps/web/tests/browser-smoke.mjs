@@ -154,6 +154,19 @@ try {
       await page.getByRole("button", { name: "Guardar perfil" }).click();
       await page.getByRole("heading", { name: /Hola, Lucía/ }).waitFor();
       await auditAccessibility("explore-desktop");
+      await page
+        .getByLabel("Buscar salas")
+        .fill(`sin-resultados-${Date.now()}`);
+      await page
+        .getByRole("heading", { name: "Tu próxima sala puede empezar contigo" })
+        .waitFor();
+      await page
+        .getByText("Prueba con otros filtros o busca un tema más general.", {
+          exact: true,
+        })
+        .waitFor();
+      await auditAccessibility("explore-empty");
+      await page.getByLabel("Buscar salas").fill("");
     },
   );
   await step("Crear sala, entrar y persistir chat y notas", async () => {

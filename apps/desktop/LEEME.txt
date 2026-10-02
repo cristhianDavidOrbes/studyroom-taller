@@ -1,0 +1,47 @@
+HERRAMIENTAS STUDYROOM PARA WINDOWS
+
+Extrae TODO el ZIP antes de abrir Iniciar-Herramientas.cmd.
+Requiere Windows con .NET Framework 4.8 (integrado en Windows 10/11 actuales).
+No instala un modelo de IA ni necesita una cuenta. No tiene red externa, captura ni micrófono.
+
+El botón verde con lápiz aparece arriba a la derecha. Ábrelo para elegir lápiz, línea, flecha,
+rectángulo, elipse, texto o borrador de un objeto. Hay color, grosor, tamaño de texto,
+deshacer, rehacer y borrar todas las marcas. Las marcas solo viven en memoria.
+Puedes pulsar los botones y desplegables del menú con Lápiz u otra herramienta activa.
+No hace falta pulsar Esc para cambiar de herramienta, color, grosor o tamaño de texto.
+Esc o Interactuar permiten usar Windows sin que el lienzo intercepte los clics.
+Contraer también vuelve a Interactuar. Arrastra el encabezado para mover el panel.
+El selector permite colocar el panel en otro monitor; cada monitor conserva sus marcas.
+
+Para que los participantes vean las marcas, comparte PANTALLA COMPLETA desde el navegador.
+Compartir solo una pestaña o ventana generalmente no incluye una superposición del escritorio.
+No se captura la pantalla automáticamente. Evita mostrar datos personales durante la llamada.
+
+OPCIONAL: botón Abrir herramientas de la web
+Haz doble clic en Instalar-Herramientas.cmd una vez. Se copia exclusivamente a
+AppData Local de tu usuario y registra studyroom-tools://open en HKCU.
+No requiere administrador, no añade autoinicio y no modifica políticas de PowerShell.
+El navegador puede pedir confirmación para abrir la aplicación externa.
+Desinstalar-Herramientas.cmd retira ese protocolo y los archivos propios; cierra primero la app.
+Ejecuta la desinstalación desde la carpeta original del ZIP para poder retirar el EXE instalado.
+No omitas avisos de seguridad de Windows: el binario es local y no está firmado comercialmente.
+
+MULTIMONITOR Y LÍMITES
+Las marcas usan coordenadas normalizadas por monitor y el proceso solicita DPI por monitor V2.
+Un trazo no cruza físicamente de un monitor a otro: inicia otro trazo en el segundo monitor.
+Cambiar monitores vuelve a Interactuar. No dibuja sobre el escritorio seguro de UAC,
+pantalla de bloqueo ni aplicaciones en pantalla completa exclusiva.
+Máximo 300 objetos y 100000 puntos por monitor; 3000 puntos por trazo.
+Deshacer/rehacer se limita al monitor usado más recientemente y conserva hasta 30 cambios,
+con un límite adicional de memoria. No es una pizarra en la web.
+
+AL COMPARTIR EN STUDYROOM
+El compañero se comunica solo con el navegador de este PC mediante 127.0.0.1:8790.
+Recibe únicamente un identificador aleatorio y si se comparte; nunca contenido ni credenciales.
+Se muestra al compartir y desaparece al terminar, o tras ocho segundos sin señal.
+Las marcas e historial se limpian al acabar la última presentación. Si pulsas x durante
+la presentación vuelve contraído. Varias pestañas pueden compartir sin cerrar la otra.
+La instalación lo inicia en segundo plano; no inicia con Windows. Tras reiniciar el PC,
+abre las herramientas una vez. Acepta el permiso de acceso local del navegador si lo solicita.
+
+Ocultar: botón x. Salir del programa: icono StudyRoom, Salir completamente.

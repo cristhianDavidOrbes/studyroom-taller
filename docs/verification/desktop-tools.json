@@ -1,0 +1,29 @@
+{
+  "recordedAt": "2026-10-02T15:20:17.2528676Z",
+  "status": "passed",
+  "scope": "Windows native drawing companion, screen-sharing lifecycle and menu input regression",
+  "checks": {
+    "modelAndNativeAssertions": 53,
+    "hiddenNativeWindowAssertions": 10,
+    "webUnitTests": 16,
+    "twoBrowserSyntheticLiveKitChecks": 7
+  },
+  "package": {
+    "bytes": 29893,
+    "sha256": "04e2a5f34d4ec30c9241467e0828317f2dd0a353fb612078c5f70c789ea5b55a",
+    "exeSha256": "a698fdc358b6051af133a8dd023bf8a53d3b6c8a4d532d0bdd037560054f5982"
+  },
+  "regressions": [
+    "Drawing overlay never activates above the menu",
+    "OS drawing region excludes toolbar, open dropdowns and text input",
+    "Mouse capture released on stroke end and unexpected loss",
+    "Sharing leases expire and hide tools; stopped leases reject late heartbeat",
+    "Camera-only media does not start desktop helper; bridge does not await media"
+  ],
+  "limits": [
+    "Native manual visual review was interrupted by user Escape; no subsequent desktop control performed",
+    "Hidden native tests assert styles and OS region without sending user input",
+    "Browser media lifecycle used a local HTTP204 bridge stub, not an end-to-end native screen capture",
+    "Physical camera/microphone and long multi-device network call remain user testing"
+  ]
+}

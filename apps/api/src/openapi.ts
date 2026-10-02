@@ -1,4 +1,5 @@
 import { OpenAPIObject } from "@nestjs/swagger";
+import { ANNOTATION_LIMITS } from "./validation";
 const string = (maxLength?: number) => ({
   type: "string",
   ...(maxLength ? { maxLength } : {}),
@@ -8,6 +9,18 @@ const object = (
   required: string[] = [],
 ) => ({ type: "object", additionalProperties: false, properties, required });
 export function documentContracts(spec: OpenAPIObject) {
+  const coordinate = { type: "number", minimum: 0, maximum: 1 };
+  const annotationBase = {
+    screenId: { ...string(100), minLength: 1, description: "LiveKit trackSid de pantalla activa" },
+    color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$", default: "#ffd166" },
+  };
+  const strokeWidth = { type: "number", minimum: 1, maximum: ANNOTATION_LIMITS.strokeWidth, default: 3 };
+  const points = (maxItems: number) => ({
+    type: "array", minItems: 2, maxItems,
+    items: object({ x: coordinate, y: coordinate }, ["x", "y"]),
+  });
+  const annotationVariant = (actions: string[], properties: Record<string, unknown>, required: string[]) =>
+    object({ ...annotationBase, action: { type: "string", enum: actions }, ...properties }, ["action", "screenId", ...required]);
   const schemas: Record<string, any> = {
     ProfileUpdate: object({
       displayName: { ...string(80), minLength: 2 },
@@ -65,30 +78,24 @@ export function documentContracts(spec: OpenAPIObject) {
       },
       ["action"],
     ),
-    Annotation: object(
-      {
-        action: { type: "string", enum: ["point", "stroke", "clear"] },
-        screenId: {
-          ...string(100),
-          description: "LiveKit trackSid de una pantalla compartida activa",
-        },
-        x: { type: "number", minimum: 0, maximum: 1 },
-        y: { type: "number", minimum: 0, maximum: 1 },
-        points: {
-          type: "array",
-          maxItems: 200,
-          items: object(
-            {
-              x: { type: "number", minimum: 0, maximum: 1 },
-              y: { type: "number", minimum: 0, maximum: 1 },
-            },
-            ["x", "y"],
-          ),
-        },
-        color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" },
-      },
-      ["action", "screenId"],
-    ),
+    Annotation: {
+      description: "Coordenadas normalizadas. Tamaños en unidades de un viewport de ancho1000 con altura proporcional. IDs asignados por servidor; erase devuelve solo IDs realmente borrados de esta pantalla. Máximo40 elementos persistidos por sala.",
+      oneOf: [
+        annotationVariant(["point"], { x: coordinate, y: coordinate }, ["x", "y"]),
+        annotationVariant(["stroke"], { points: points(ANNOTATION_LIMITS.points), strokeWidth }, ["points"]),
+        annotationVariant(["line", "arrow", "rectangle", "ellipse"], { points: points(2), strokeWidth }, ["points"]),
+        annotationVariant(["text"], {
+          x: coordinate, y: coordinate,
+          text: { ...string(ANNOTATION_LIMITS.text), minLength: 1, description: "Texto plano, sin caracteres de control" },
+          fontSize: { type: "number", minimum: 8, maximum: ANNOTATION_LIMITS.fontSize, default: 24 },
+        }, ["x", "y", "text"]),
+        annotationVariant(["erase"], { targetIds: {
+          type: "array", minItems: 1, maxItems: ANNOTATION_LIMITS.stored, uniqueItems: true,
+          items: { type: "string", format: "uuid" },
+        } }, ["targetIds"]),
+        annotationVariant(["clear"], {}, []),
+      ],
+    },
     Question: object(
       {
         question: {

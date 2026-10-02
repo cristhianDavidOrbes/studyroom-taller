@@ -25,4 +25,21 @@ test('Flujos reales Firebase+PostgreSQL: acceso, salas, colaboración e historia
  await t.test('capacidad bajo solicitudes simultáneas',async()=>{const p=await ok(owner,'/rooms','POST',roomBody('Capacidad integración',{capacity:2}));const r=await Promise.all([req(member,`/rooms/${p.id}/join`,'POST',{}),req(outsider,`/rooms/${p.id}/join`,'POST',{})]);assert.equal(r.filter(x=>x.status===201).length,1);assert.equal(r.filter(x=>x.status===409).length,1);assert.equal((await ok(owner,`/rooms/${p.id}`)).participantCount,2);await ok(owner,`/rooms/${p.id}/close`,'POST',{});});
  await t.test('programación futura y cancelación',async()=>{const p=await ok(owner,'/rooms','POST',roomBody('Programada integración',{scheduledAt:new Date(Date.now()+3600000).toISOString()}));assert.equal(p.status,'scheduled');assert.equal((await req(member,`/rooms/${p.id}/join`,'POST',{})).status,409);await ok(owner,`/rooms/${p.id}/cancel`,'POST',{});assert.equal((await ok(owner,`/rooms/${p.id}`)).status,'cancelled');});
  await t.test('cuotas disponibles sin revelar secretos',async()=>{const u=await ok(owner,'/usage');assert.ok(u.limits.participantMinutes<=5000);assert.equal(JSON.stringify(u).includes('service_role'),false);});
+ await t.test('nuevas anotaciones rechazan acceso ajeno y payloads inválidos antes de consultar medios',async()=>{
+  const artist=await account('dibujo');
+  await ok(artist,'/me');
+  const drawing=await ok(artist,'/rooms','POST',roomBody('Herramientas integración'));
+  const path=`/rooms/${drawing.id}/annotations`;
+  try{
+   const shape={action:'rectangle',screenId:'TR_test',points:[{x:0.1,y:0.1},{x:0.8,y:0.8}]};
+   assert.equal((await req(outsider,path,'POST',shape)).status,403);
+   for(const payload of [
+    {...shape,strokeWidth:25},
+    {...shape,points:[{x:0.1,y:0.1}]},
+    {action:'text',screenId:'TR_test',x:0.5,y:0.5,text:'a'.repeat(301)},
+    {action:'erase',screenId:'TR_test',targetIds:[randomUUID()],userId:outsider.id},
+    {action:'erase',screenId:'TR_test',targetIds:[]},
+   ])assert.equal((await req(artist,path,'POST',payload)).status,400,JSON.stringify(payload));
+  }finally{await ok(artist,`/rooms/${drawing.id}/cancel`,'POST',{});}
+ });
 });

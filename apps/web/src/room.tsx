@@ -1,3 +1,4 @@
+import { applyAnnotation } from "./annotations";
 import {
   useCallback,
   useEffect,
@@ -332,20 +333,8 @@ export function RoomPage() {
         ),
       );
       socket.on("timer:updated", setTimer);
-      socket.on("annotation:updated", (a: Annotation) =>
-        setAnnotations((old) =>
-          a.action === "clear"
-            ? old.filter((x) => x.screenId !== a.screenId)
-            : [
-                ...old.filter(
-                  (x) =>
-                    a.action !== "point" ||
-                    x.action !== "point" ||
-                    x.screenId !== a.screenId,
-                ),
-                a,
-              ].slice(-200),
-        ),
+      socket.on("annotation:updated", (annotation: Annotation) =>
+        setAnnotations((old) => applyAnnotation(old, annotation)),
       );
       socket.on("ai:updated", (job: Job & { roomId?: string }) => {
         if (!job.roomId || job.roomId === id) upsertJob(job);
@@ -565,7 +554,11 @@ export function RoomPage() {
     });
   }
   async function onAnnotation(a: Annotation) {
-    await api(`/rooms/${id}/annotations`, json("POST", a));
+    const saved = await api<Annotation>(
+      `/rooms/${id}/annotations`,
+      json("POST", a),
+    );
+    setAnnotations((old) => applyAnnotation(old, saved));
   }
   if (isPending)
     return (

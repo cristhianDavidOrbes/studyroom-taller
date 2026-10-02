@@ -1,19 +1,10 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Room,
   RoomEvent,
   Track,
   VideoPresets,
   ConnectionState,
-  type Participant,
-  type RemoteTrack,
-  type LocalTrack,
-  type TrackPublication,
 } from "livekit-client";
 import {
   Camera,
@@ -22,9 +13,6 @@ import {
   MicOff,
   MonitorUp,
   MoreHorizontal,
-  MousePointer2,
-  Pencil,
-  Trash2,
   Settings2,
   Video,
   Volume2,
@@ -32,285 +20,14 @@ import {
   Wifi,
 } from "lucide-react";
 import { api, errorText, json } from "./api";
-import { contentBox, normalizedPoint, type Box } from "./annotations";
+import type { DrawingTool } from "./annotations";
+import { SharedScreen } from "./shared-screen";
+import { TrackElement, AudioElement, type TrackView } from "./media-elements";
+import { AnnotationToolbar } from "./annotation-toolbar";
+import { DesktopTools } from "./desktop-tools";
+import { useDesktopSharing } from "./use-desktop-sharing";
 import type { Annotation } from "./types";
 import { ErrorBox, initials } from "./ui";
-interface TrackView {
-  participant: Participant;
-  publication: TrackPublication;
-  track: RemoteTrack | LocalTrack;
-}
-function TrackElement({
-  track,
-  muted = false,
-  screen = false,
-  onVideo,
-}: {
-  track: RemoteTrack | LocalTrack;
-  muted?: boolean;
-  screen?: boolean;
-  onVideo?: (video: HTMLVideoElement | null) => void;
-}) {
-  const ref = useRef<HTMLVideoElement>(null),
-    onVideoRef = useRef(onVideo);
-  onVideoRef.current = onVideo;
-  useEffect(() => {
-    const element = ref.current;
-    if (element) {
-      track.attach(element);
-      onVideoRef.current?.(element);
-    }
-    return () => {
-      if (element) track.detach(element);
-      onVideoRef.current?.(null);
-    };
-  }, [track]);
-  return (
-    <video
-      ref={ref}
-      autoPlay
-      playsInline
-      muted={muted}
-      className={screen ? "screen-video" : "camera-video"}
-    />
-  );
-}
-function AudioElement({ track }: { track: RemoteTrack | LocalTrack }) {
-  const ref = useRef<HTMLAudioElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (el) track.attach(el);
-    return () => {
-      if (el) track.detach(el);
-    };
-  }, [track]);
-  return <audio ref={ref} autoPlay />;
-}
-function SharedScreen({
-  view,
-  annotations,
-  tool,
-  color,
-  onAnnotation,
-}: {
-  view: TrackView;
-  annotations: Annotation[];
-  tool: "off" | "point" | "stroke";
-  color: string;
-  onAnnotation: (a: Annotation) => Promise<void>;
-}) {
-  const container = useRef<HTMLDivElement>(null),
-    video = useRef<HTMLVideoElement | null>(null),
-    points = useRef<{ x: number; y: number }[]>([]);
-  const [box, setBox] = useState<Box>({ left: 0, top: 0, width: 0, height: 0 }),
-    [draft, setDraft] = useState<{ x: number; y: number }[]>([]),
-    [cursor, setCursor] = useState({ x: 0.5, y: 0.5 });
-  const [error, setError] = useState("");
-  useEffect(() => {
-    const el = container.current;
-    if (!el) return;
-    function measure() {
-      const r = el!.getBoundingClientRect();
-      setBox(
-        contentBox(
-          { left: 0, top: 0, width: r.width, height: r.height },
-          video.current?.videoWidth || 16,
-          video.current?.videoHeight || 9,
-        ),
-      );
-    }
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    const timer = setInterval(measure, 1000);
-    measure();
-    return () => {
-      observer.disconnect();
-      clearInterval(timer);
-    };
-  }, [view.publication.trackSid]);
-  const screenId = view.publication.trackSid;
-  async function send(a: Annotation) {
-    try {
-      setError("");
-      await onAnnotation(a);
-    } catch (e) {
-      setError(errorText(e));
-    }
-  }
-  function point(e: ReactPointerEvent) {
-    const r = container.current!.getBoundingClientRect();
-    return normalizedPoint(e.clientX - r.left, e.clientY - r.top, box);
-  }
-  function down(e: ReactPointerEvent<HTMLDivElement>) {
-    if (tool === "off") return;
-    const p = point(e);
-    if (!p) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    points.current = [p];
-    setDraft([p]);
-    if (tool === "point") void send({ action: "point", screenId, ...p, color });
-  }
-  function move(e: ReactPointerEvent) {
-    if (tool !== "stroke" || !points.current.length) return;
-    const p = point(e);
-    if (p && points.current.length < 100) {
-      points.current.push(p);
-      setDraft([...points.current]);
-    }
-  }
-  function up() {
-    if (tool === "stroke" && points.current.length > 1)
-      void send({ action: "stroke", screenId, points: points.current, color });
-    points.current = [];
-    setDraft([]);
-  }
-  return (
-    <div className="shared-screen-wrap">
-      <div className="screen-label">
-        <MonitorUp size={15} />
-        {view.participant.name || view.participant.identity} está compartiendo
-        pantalla
-      </div>
-      <div
-        className={`shared-screen ${tool !== "off" ? "annotating" : ""}`}
-        ref={container}
-        onPointerDown={down}
-        onPointerMove={move}
-        onPointerUp={up}
-        onPointerCancel={() => {
-          points.current = [];
-          setDraft([]);
-        }}
-        tabIndex={tool === "off" ? -1 : 0}
-        role={tool === "off" ? undefined : "application"}
-        aria-label={
-          tool === "off"
-            ? "Pantalla compartida"
-            : "Señalar pantalla: usa flechas para mover el cursor y Enter para compartir la señal"
-        }
-        onKeyDown={(e) => {
-          if (tool === "off") return;
-          const delta = e.shiftKey ? 0.1 : 0.02;
-          if (
-            ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
-          ) {
-            e.preventDefault();
-            setCursor((p) => ({
-              x: Math.min(
-                1,
-                Math.max(
-                  0,
-                  p.x +
-                    (e.key === "ArrowRight"
-                      ? delta
-                      : e.key === "ArrowLeft"
-                        ? -delta
-                        : 0),
-                ),
-              ),
-              y: Math.min(
-                1,
-                Math.max(
-                  0,
-                  p.y +
-                    (e.key === "ArrowDown"
-                      ? delta
-                      : e.key === "ArrowUp"
-                        ? -delta
-                        : 0),
-                ),
-              ),
-            }));
-          } else if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            void send({ action: "point", screenId, ...cursor, color });
-          }
-        }}
-      >
-        <TrackElement
-          track={view.track}
-          screen
-          muted={view.participant.isLocal}
-          onVideo={(v) => {
-            video.current = v;
-          }}
-        />
-        <svg
-          aria-hidden="true"
-          className="annotation-overlay"
-          viewBox="0 0 1000 1000"
-          preserveAspectRatio="none"
-          style={{
-            left: box.left,
-            top: box.top,
-            width: box.width,
-            height: box.height,
-          }}
-        >
-          {annotations
-            .filter((a) => a.screenId === screenId)
-            .map((a, i) =>
-              a.action === "point" ? (
-                <g key={a.id || i}>
-                  <circle
-                    cx={(a.x || 0) * 1000}
-                    cy={(a.y || 0) * 1000}
-                    r={12}
-                    fill={a.color || "#f6bf4f"}
-                    stroke="white"
-                    strokeWidth={3}
-                  />
-                </g>
-              ) : (
-                a.points && (
-                  <polyline
-                    key={a.id || i}
-                    points={a.points
-                      .map((p) => `${p.x * 1000},${p.y * 1000}`)
-                      .join(" ")}
-                    stroke={a.color || "#f6bf4f"}
-                    strokeWidth={4}
-                    vectorEffect="non-scaling-stroke"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    fill="none"
-                  />
-                )
-              ),
-            )}
-          {draft.length > 1 && (
-            <polyline
-              points={draft.map((p) => `${p.x * 1000},${p.y * 1000}`).join(" ")}
-              stroke={color}
-              strokeWidth={4}
-              vectorEffect="non-scaling-stroke"
-              fill="none"
-            />
-          )}
-          {tool !== "off" && (
-            <circle
-              className="keyboard-cursor"
-              cx={cursor.x * 1000}
-              cy={cursor.y * 1000}
-              r={13}
-              fill="none"
-              stroke={color}
-              strokeDasharray="5 5"
-              strokeWidth={3}
-            />
-          )}
-        </svg>
-      </div>
-      {tool !== "off" && (
-        <small className="annotation-hint">
-          Tus señales son visibles para todos. También puedes usar flechas y
-          Enter.
-        </small>
-      )}
-      <ErrorBox message={error} />
-    </div>
-  );
-}
 export function MediaStage({
   roomId,
   role,
@@ -348,8 +65,11 @@ export function MediaStage({
     [menu, setMenu] = useState(false),
     [devicesOpen, setDevicesOpen] = useState(false),
     [devices, setDevices] = useState<MediaDeviceInfo[]>([]),
-    [tool, setTool] = useState<"off" | "point" | "stroke">("off"),
+    [tool, setTool] = useState<DrawingTool>("off"),
     [color, setColor] = useState("#f6bf4f"),
+    [strokeWidth, setStrokeWidth] = useState(3),
+    [fontSize, setFontSize] = useState(24),
+    [text, setText] = useState(""),
     [audioOnly, setAudioOnly] = useState(false),
     [selectedScreen, setSelectedScreen] = useState("");
   const stats = useRef<unknown[]>([]);
@@ -443,6 +163,11 @@ export function MediaStage({
     screen =
       screens.find((s) => s.publication.trackSid === selectedScreen) ||
       screens[0];
+  const localScreen = screens.find((source) => source.participant.isLocal);
+  const desktopStatus = useDesktopSharing(
+    localScreen?.publication.trackSid,
+    localScreen?.track.mediaStreamTrack,
+  );
   useEffect(() => {
     if (!audioOnly) return;
     for (const participant of room.remoteParticipants.values()) {
@@ -527,6 +252,13 @@ export function MediaStage({
         </span>
       </div>
       <ErrorBox message={error} />
+      <DesktopTools
+        sharing={!!localScreen}
+        status={desktopStatus}
+        displaySurface={
+          localScreen?.track.mediaStreamTrack.getSettings().displaySurface
+        }
+      />
       {screens.length > 1 && (
         <label className="screen-picker">
           Pantalla que estás viendo
@@ -554,6 +286,9 @@ export function MediaStage({
           annotations={annotations}
           tool={canAnnotate ? tool : "off"}
           color={color}
+          strokeWidth={strokeWidth}
+          fontSize={fontSize}
+          text={text}
           onAnnotation={onAnnotation}
         />
       )}
@@ -618,73 +353,30 @@ export function MediaStage({
                       <MoreHorizontal size={20} />
                     </button>
                     {menu && (
-                      <div
-                        className="camera-tools"
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") setMenu(false);
+                      <AnnotationToolbar
+                        hasScreen={!!screen}
+                        enabled={canAnnotate}
+                        tool={tool}
+                        setTool={setTool}
+                        color={color}
+                        setColor={setColor}
+                        strokeWidth={strokeWidth}
+                        setStrokeWidth={setStrokeWidth}
+                        fontSize={fontSize}
+                        setFontSize={setFontSize}
+                        text={text}
+                        setText={setText}
+                        close={() => setMenu(false)}
+                        clear={() => {
+                          setTool("off");
+                          void change(() =>
+                            onAnnotation({
+                              action: "clear",
+                              screenId: screen!.publication.trackSid,
+                            }),
+                          );
                         }}
-                      >
-                        <strong>Señalar en pantalla</strong>
-                        <p>
-                          {!screen
-                            ? "Comparte pantalla para activar las herramientas."
-                            : canAnnotate
-                              ? "Las señales se comparten con la sala."
-                              : "Puede señalar quien comparte y quien modera."}
-                        </p>
-                        <button
-                          disabled={!canAnnotate}
-                          aria-pressed={tool === "point"}
-                          onClick={() =>
-                            setTool(tool === "point" ? "off" : "point")
-                          }
-                        >
-                          <MousePointer2 size={16} />
-                          Puntero
-                        </button>
-                        <button
-                          disabled={!canAnnotate}
-                          aria-pressed={tool === "stroke"}
-                          onClick={() =>
-                            setTool(tool === "stroke" ? "off" : "stroke")
-                          }
-                        >
-                          <Pencil size={16} />
-                          Lápiz
-                        </button>
-                        <label>
-                          Color
-                          <input
-                            type="color"
-                            aria-label="Color del señalamiento"
-                            value={color}
-                            onChange={(e) => setColor(e.target.value)}
-                          />
-                        </label>
-                        <button
-                          disabled={!canAnnotate}
-                          onClick={() => {
-                            setTool("off");
-                            void change(() =>
-                              onAnnotation({
-                                action: "clear",
-                                screenId: screen!.publication.trackSid,
-                              }),
-                            );
-                          }}
-                        >
-                          <Trash2 size={16} />
-                          Borrar señales
-                        </button>
-                        <button
-                          onClick={() => {
-                            setTool("off");
-                            setMenu(false);
-                          }}
-                        >
-                          Desactivar herramientas
-                        </button>
-                      </div>
+                      />
                     )}
                   </div>
                 )}

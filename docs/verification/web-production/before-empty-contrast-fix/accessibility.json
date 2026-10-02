@@ -1,0 +1,84 @@
+{
+  "at": "2026-10-02T06:20:10.140Z",
+  "baseURL": "https://studyroom-sut.onrender.com/",
+  "reports": [
+    {
+      "name": "access",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 17,
+      "incompleteRules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "name": "explore-desktop",
+      "version": "4.13.0",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+          "nodes": [
+            {
+              "target": [
+                ".empty > p"
+              ],
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.19 (foreground color: #819087, background color: #f8faf8, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "passedRules": 23,
+      "incompleteRules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "name": "room-people",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 21,
+      "incompleteRules": []
+    },
+    {
+      "name": "session-history",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 19,
+      "incompleteRules": []
+    },
+    {
+      "name": "explore-mobile",
+      "version": "4.13.0",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "description": "Ensure the contrast between foreground and background colors meets WCAG 2 AA minimum contrast ratio thresholds",
+          "helpUrl": "https://dequeuniversity.com/rules/axe/4.13/color-contrast?application=axeAPI",
+          "nodes": [
+            {
+              "target": [
+                ".empty > p"
+              ],
+              "failureSummary": "Fix any of the following:\n  Element has insufficient color contrast of 3.19 (foreground color: #819087, background color: #f8faf8, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ],
+      "passedRules": 24,
+      "incompleteRules": [
+        "color-contrast"
+      ]
+    },
+    {
+      "name": "profile-mobile",
+      "version": "4.13.0",
+      "violations": [],
+      "passedRules": 18,
+      "incompleteRules": []
+    }
+  ]
+}

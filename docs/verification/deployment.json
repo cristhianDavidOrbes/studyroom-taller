@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-10-02T06:08:08.170Z",
+  "observedAt": "2026-10-02T06:25:23.465Z",
   "frontend": {
     "url": "https://studyroom-sut.onrender.com",
     "type": "static_site",
@@ -10,14 +10,23 @@
       "spaRewrite": true,
       "registration": true,
       "profileSave": true,
-      "privateRoomCreation": true
-    }
+      "privateRoomCreation": true,
+      "chatAndHistory": true
+    },
+    "commit": "215df6346dfb2b5aa381d083c680c9dfeb473795",
+    "deployId": "dep-davkrlm0tbcc73ejau9g",
+    "status": "live",
+    "verifiedProductionBrowser": "web-production/browser-smoke.json",
+    "verifiedAccessibility": "web-production/accessibility.json"
   },
   "backend": {
     "url": "https://studyroom-sut-api.onrender.com",
     "serviceId": "srv-davk8vtg1s2s73ardjtg",
     "plan": "free",
-    "verifiedCloudIntegration": "cloud-smoke.json"
+    "verifiedCloudIntegration": "cloud-smoke.json",
+    "commit": "ac6b81776f37c1f9a8cd7b50c4531783bb679820",
+    "deployId": "dep-davkp45g1s2s73at2oc0",
+    "status": "live"
   },
   "firebase": {
     "project": "studyroom-sut-2026",
@@ -27,7 +36,12 @@
   "supabase": {
     "project": "wyjngkxhylcczjoqalhj",
     "plan": "Free",
-    "securityAdvisors": "No issues found"
+    "securityAdvisors": "No issues found",
+    "prismaBaseline": {
+      "migration": "20261002050007_studyroom_initial",
+      "completed": true,
+      "checksum": "216f3d6e06c4ff0fa1bc8732091645921b6fc3c689a1cd9847c502fe9ce08b25"
+    }
   },
   "livekit": {
     "project": "p_6are078fa3t",

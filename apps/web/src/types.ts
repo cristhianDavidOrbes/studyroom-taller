@@ -58,13 +58,26 @@ export interface Timer {
 }
 export interface Annotation {
   id?: string;
-  action: "point" | "stroke" | "clear";
+  action:
+    | "point"
+    | "stroke"
+    | "line"
+    | "arrow"
+    | "rectangle"
+    | "ellipse"
+    | "text"
+    | "erase"
+    | "clear";
   screenId: string;
   userId?: string;
   x?: number;
   y?: number;
   points?: { x: number; y: number }[];
   color?: string;
+  strokeWidth?: number;
+  text?: string;
+  fontSize?: number;
+  targetIds?: string[];
 }
 export interface Job {
   id: string;

@@ -1,8 +1,11 @@
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-const output = new URL("../test-results/", import.meta.url);
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { resolve } from "node:path";
+const output = process.env.TEST_OUTPUT_DIR
+  ? pathToFileURL(`${resolve(process.env.TEST_OUTPUT_DIR)}/`)
+  : new URL("../test-results/", import.meta.url);
 await mkdir(output, { recursive: true });
 const evidence = {
   at: new Date().toISOString(),
@@ -61,6 +64,30 @@ async function check(name, fn) {
   evidence.checks.push({ name, status: "passed" });
   console.log(`PASS ${name}`);
 }
+async function menu(page) {
+  const button = page.getByRole("button", {
+    name: "Herramientas de señalamiento",
+  });
+  if ((await button.getAttribute("aria-expanded")) !== "true")
+    await button.click();
+}
+async function selectTool(page, name) {
+  await menu(page);
+  await page.getByRole("button", { name, exact: true }).click();
+}
+async function draw(page, from, to) {
+  await page.locator(".shared-screen").scrollIntoViewIfNeeded();
+  const box = await page.locator(".shared-screen").boundingBox();
+  await page.mouse.move(
+    box.x + box.width * from.x,
+    box.y + box.height * from.y,
+  );
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * to.x, box.y + box.height * to.y, {
+    steps: 8,
+  });
+  await page.mouse.up();
+}
 try {
   const host = await account(1),
     guest = await account(2);
@@ -94,6 +121,25 @@ try {
       permissions: ["camera", "microphone"],
     });
     client.page = await client.context.newPage();
+    client.bridgeEvents = [];
+    await client.context.route(
+      "http://127.0.0.1:8790/v1/sharing",
+      async (route) => {
+        if (route.request().method() === "POST") {
+          const body = route.request().postDataJSON();
+          assert.deepEqual(Object.keys(body).sort(), ["active", "sessionId"]);
+          client.bridgeEvents.push({ active: body.active, at: Date.now() });
+        }
+        await route.fulfill({
+          status: 204,
+          headers: {
+            "Access-Control-Allow-Origin": "http://localhost:5173",
+            "Access-Control-Allow-Headers": "content-type",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+          },
+        });
+      },
+    );
     await client.page.addInitScript(() => {
       navigator.mediaDevices.getDisplayMedia = async () => {
         const canvas = document.createElement("canvas");
@@ -135,12 +181,35 @@ try {
     await client.page.getByRole("heading", { name: /Hola, Prueba/ }).waitFor();
     await client.page.goto(`http://localhost:5173/salas/${room.id}`);
     await client.page
+      .getByRole("link", { name: "Dibujar en el escritorio", exact: true })
+      .waitFor();
+    assert.equal(
+      await client.page
+        .getByRole("link", { name: "Dibujar en el escritorio", exact: true })
+        .getAttribute("href"),
+      "studyroom-tools://open",
+    );
+    await client.page
+      .getByRole("button", { name: "Primera vez / instalar" })
+      .click();
+    assert.equal(
+      await client.page
+        .getByRole("link", { name: "Descargar herramientas para Windows" })
+        .getAttribute("href"),
+      "/desktop/StudyRoom-Herramientas.zip",
+    );
+    await client.page.getByRole("button", { name: "Cerrar ventana" }).click();
+    await client.page
       .getByRole("button", { name: "Conectar videollamada" })
       .click();
     await client.page
       .locator(".connection-pill.connected")
       .waitFor({ timeout: 45000 });
   }
+  evidence.checks.push({
+    name: "Both participants can open desktop tools and installation help before sharing",
+    status: "passed",
+  });
   await check(
     "Two real SFU connections with synthetic camera and microphone",
     async () => {
@@ -165,6 +234,11 @@ try {
       evidence.cameraVideoCounts = await Promise.all(
         clients.map((c) => c.page.locator("video.camera-video").count()),
       );
+      assert.deepEqual(
+        clients.map((client) => client.bridgeEvents.length),
+        [0, 0],
+        "Camera/microphone do not activate the desktop helper",
+      );
     },
   );
   await check(
@@ -178,6 +252,13 @@ try {
         .waitFor({ timeout: 30000 });
       await guest.page.waitForFunction(
         () => document.querySelector("video.screen-video")?.videoWidth === 1280,
+      );
+      await host.page.getByText(/Menú de escritorio conectado/).waitFor();
+      assert(host.bridgeEvents.some((event) => event.active));
+      assert.equal(
+        guest.bridgeEvents.length,
+        0,
+        "Remote screen viewing does not activate the desktop helper",
       );
     },
   );
@@ -257,15 +338,119 @@ try {
     },
   );
   await check(
+    "Full tool set shares geometry, escaped text, color and erases only the selected mark",
+    async () => {
+      await menu(host.page);
+      await host.page
+        .getByLabel("Grosor del trazo", { exact: true })
+        .selectOption("6");
+      await host.page.getByLabel("Color del señalamiento").evaluate((input) => {
+        Object.getOwnPropertyDescriptor(
+          HTMLInputElement.prototype,
+          "value",
+        ).set.call(input, "#2468ac");
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      for (const [name, action, from, to] of [
+        ["Rectángulo", "rectangle", { x: 0.12, y: 0.15 }, { x: 0.35, y: 0.38 }],
+        ["Óvalo", "ellipse", { x: 0.55, y: 0.1 }, { x: 0.82, y: 0.35 }],
+        ["Línea", "line", { x: 0.6, y: 0.6 }, { x: 0.8, y: 0.8 }],
+        ["Flecha", "arrow", { x: 0.2, y: 0.7 }, { x: 0.4, y: 0.8 }],
+        ["Lápiz", "stroke", { x: 0.1, y: 0.55 }, { x: 0.4, y: 0.55 }],
+      ]) {
+        await selectTool(host.page, name);
+        await draw(host.page, from, to);
+        await guest.page
+          .locator(`[data-annotation-action="${action}"]`)
+          .waitFor({ state: "attached" });
+        assert.equal(
+          await guest.page
+            .locator(`[data-annotation-action="${action}"] [stroke]`)
+            .first()
+            .getAttribute("stroke"),
+          "#2468ac",
+        );
+        assert.equal(
+          await guest.page
+            .locator(`[data-annotation-action="${action}"] [stroke]`)
+            .first()
+            .getAttribute("stroke-width"),
+          "6",
+        );
+      }
+      await selectTool(host.page, "Texto");
+      await host.page
+        .getByLabel("Texto para colocar")
+        .fill("Área de estudio <texto>");
+      await host.page.getByLabel("Tamaño de letra").selectOption("36");
+      await host.page
+        .getByRole("button", { name: "Colocar texto", exact: true })
+        .click();
+      const box = await host.page.locator(".shared-screen").boundingBox();
+      await host.page.mouse.click(
+        box.x + box.width * 0.5,
+        box.y + box.height * 0.42,
+      );
+      await guest.page
+        .locator('[data-annotation-action="text"] text')
+        .waitFor();
+      assert.equal(
+        await guest.page
+          .locator('[data-annotation-action="text"] text')
+          .getAttribute("font-size"),
+        "36",
+      );
+      assert.equal(
+        await guest.page
+          .locator('[data-annotation-action="text"] text')
+          .textContent(),
+        "Área de estudio <texto>",
+      );
+      assert.equal(
+        await host.page.locator('[data-annotation-action="text"] text').count(),
+        1,
+      );
+      await menu(host.page);
+      await host.page.screenshot({
+        path: fileURLToPath(new URL("full-tools-desktop.png", output)),
+        fullPage: true,
+        animations: "disabled",
+      });
+      await guest.page.screenshot({
+        path: fileURLToPath(new URL("full-tools-receiver-mobile.png", output)),
+        fullPage: true,
+        animations: "disabled",
+      });
+      await selectTool(host.page, "Borrador");
+      await host.page.mouse.click(
+        box.x + box.width * 0.12,
+        box.y + box.height * 0.25,
+      );
+      await guest.page
+        .locator('[data-annotation-action="rectangle"]')
+        .waitFor({ state: "detached" });
+      assert.equal(
+        await guest.page.locator('[data-annotation-action="ellipse"]').count(),
+        1,
+      );
+      assert.equal(
+        await guest.page.locator('[data-annotation-action="text"]').count(),
+        1,
+      );
+    },
+  );
+  await check(
     "Clearing and stopping screen removes shared signals",
     async () => {
+      await menu(host.page);
       await host.page
         .getByRole("button", { name: "Borrar señales", exact: true })
         .click();
       await guest.page.waitForFunction(
         () =>
           document.querySelectorAll(
-            '.annotation-overlay circle[fill="#f6bf4f"]',
+            ".annotation-overlay [data-annotation-action]",
           ).length === 0,
       );
       await host.page
@@ -275,6 +460,24 @@ try {
         })
         .click();
       await guest.page.locator(".shared-screen").waitFor({ state: "detached" });
+      const deadline = Date.now() + 3000;
+      while (
+        !host.bridgeEvents.some((event) => event.active === false) &&
+        Date.now() < deadline
+      )
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      assert.equal(
+        host.bridgeEvents.at(-1)?.active,
+        false,
+        "Stopping the screen promptly releases the desktop menu",
+      );
+      evidence.desktopBridge = {
+        kind: "Browser lifecycle with test-only HTTP204 bridge stub; native lifecycle verified separately",
+        activatesOnlyForLocalScreen: true,
+        stopReleased: true,
+        cameraTriggered: false,
+        requests: host.bridgeEvents.length,
+      };
     },
   );
   evidence.status = "passed";

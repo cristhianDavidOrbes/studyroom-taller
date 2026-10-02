@@ -1,0 +1,32 @@
+{
+  "at": "2026-10-02T06:20:10.139Z",
+  "baseURL": "https://studyroom-sut.onrender.com/",
+  "results": [
+    {
+      "name": "Acceso accesible sin desbordamiento y error de credenciales",
+      "status": "passed"
+    },
+    {
+      "name": "Registro de cuenta temporal y onboarding persistido",
+      "status": "passed"
+    },
+    {
+      "name": "Recuperación explícita tras fallo al descargar la vista de sala",
+      "status": "passed"
+    },
+    {
+      "name": "Crear sala, entrar y persistir chat y notas",
+      "status": "passed"
+    },
+    {
+      "name": "Timer sincronizado y menú de personas",
+      "status": "passed"
+    },
+    {
+      "name": "Historial, interfaz móvil y navegación por teclado",
+      "status": "passed"
+    }
+  ],
+  "error": "AssertionError [ERR_ASSERTION]: No automated WCAG A/AA violations on inspected views\n\n2 !== 0\n",
+  "errors": []
+}

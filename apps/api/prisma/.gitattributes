@@ -1,0 +1,2 @@
+# Migration checksums must use identical bytes on Windows, CI and production.
+*.sql text eol=lf

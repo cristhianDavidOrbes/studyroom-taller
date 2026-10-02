@@ -10,6 +10,7 @@ Este registro no sustituye pruebas ejecutadas. Marcar cada resultado sólo con f
 - Probar UDP y TURN/TLS bloqueando UDP; cambiar Wi-Fi/datos; cortar la red cinco segundos. Medir recuperación ≤10 segundos después de restablecer conectividad útil.
 - Reiniciar NestJS durante la llamada: audio/video siguen por LiveKit. Chat/señalamientos se reconectan y recuperan estado sin duplicar usuarios.
 - Menú pequeño arriba a la derecha de la cámara: señalar/dibujar/borrar sobre pantalla compartida; coordenadas correctas con resoluciones distintas y barras negras; visible para los demás; rechaza acciones sin permiso.
+- Herramientas de escritorio (ampliación solicitada el 2 de octubre): abrir el cuadro flotante, cambiar entre escritorio y otras aplicaciones, expandir/contraer y comprobar lápiz, borrador por objeto, borrar todo, figuras, color, grosor y texto con tamaño. Elegir **Pantalla completa** y verificar que el emisor y otro participante ven las mismas marcas. Contrastar con captura de pestaña/ventana; Esc e Interactuar deben devolver el control del escritorio sin borrar marcas. Verificar monitor y escala DPI en cada equipo.
 - Repetir 60 minutos con una pregunta local y resumen/quiz en espera; registrar CPU/GPU/RAM/VRAM y calidad. Reducir carga de IA si afecta el audio.
 - Registrar cuota inicial/final, reserva de minutos y ancho de banda; alertas 80%; agotamiento impide nuevos consumos sin cobro.
 

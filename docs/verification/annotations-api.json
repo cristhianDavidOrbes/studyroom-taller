@@ -1,0 +1,84 @@
+{
+  "recordedAt": "2026-10-02T07:04:06.516Z",
+  "status": "passed",
+  "scope": "Local API validation for expanded screen annotations; not a production deployment or native overlay verification.",
+  "baseCommit": "215df6346dfb2b5aa381d083c680c9dfeb473795",
+  "workingTreeChanges": true,
+  "build": {
+    "command": "npm run build -w @studyroom/api",
+    "exitCode": 0,
+    "prisma": "6.19.3",
+    "typescript": "passed"
+  },
+  "unit": {
+    "command": "npm run test -w @studyroom/api -- --silent",
+    "passed": 58,
+    "failed": 0,
+    "suites": 5,
+    "durationSeconds": 16.565,
+    "newAnnotationTests": 30,
+    "externalServices": "Firebase Admin and LiveKit SDK mocked; no live SFU claim from these tests."
+  },
+  "integration": {
+    "command": "node --test tests/api.integration.mjs",
+    "passed": 15,
+    "failed": 0,
+    "durationMs": 4712.9948,
+    "countNote": "14 scenario subtests plus their parent test, as reported by node:test.",
+    "environment": {
+      "api": "http://127.0.0.1:3000/api",
+      "postgres": "127.0.0.1:54322",
+      "firebaseAuth": "127.0.0.1:9099",
+      "firebaseProject": "demo-studyroom"
+    },
+    "annotationCoverage": "403 for nonmember; 400 for malformed geometry, size overflow, oversized text, forged identity and empty erase targets. Live annotation rendering and publishing remain separate frontend/media QA."
+  },
+  "checks": [
+    "Existing point/stroke/clear accepted",
+    "New line/arrow/rectangle/ellipse/text/erase validated",
+    "Server-generated UUIDs; forged identity/IDs rejected",
+    "Coordinates finite and normalized; shape geometry nonempty",
+    "strokeWidth1..24; fontSize8..96; text1..300; stroke2..200points",
+    "Erase affects only matching IDs on the authorized screen; repeated erase is a no-op",
+    "Only screen owner, host or moderator may annotate",
+    "Membership, room status and role rechecked within transaction",
+    "Bounded40-item state; clear preserves other screens",
+    "Socket event emitted after state transaction returns"
+  ],
+  "sourceReview": {
+    "completed": true,
+    "notes": [
+      "No migration or schema change; bounded annotation JSON state in existing Room field",
+      "No new external endpoint or network destination; existing LiveKit screen verification retained",
+      "Existing Firebase bearer authentication and room authorization retained",
+      "No native companion protocol, CSRF or desktop integration changes in this API scope"
+    ]
+  },
+  "files": [
+    {
+      "file": "apps/api/src/validation.ts",
+      "sha256": "f395e7b8ebc1fb73ed4f472937dfd9883a2bcebc943fecd90301cf7dc2c58d44"
+    },
+    {
+      "file": "apps/api/src/rooms.ts",
+      "sha256": "5efdad95a16bb865c64bfbda18994fd01632f01833bae2a741c970c6c0e57588"
+    },
+    {
+      "file": "apps/api/src/openapi.ts",
+      "sha256": "b5d8f31850eedd310d5a5e479f3e733a5769314439bdefdd082d5919bccea106"
+    },
+    {
+      "file": "apps/api/test/annotations.spec.ts",
+      "sha256": "cfcfc13f01a6c2db992945e1d800d7711e360f21c9ff0d7d31dc9c56f8e482cf"
+    },
+    {
+      "file": "tests/api.integration.mjs",
+      "sha256": "93476e336ba11b5100c3385be28bf113447303e7e91d158f8e14cb5beba593ee"
+    }
+  ],
+  "notCovered": [
+    "Production Render deployment of these changes",
+    "Native desktop overlay drawing/capture",
+    "Frontend tool rendering and cross-participant shape/erase behavior; assigned to separate media QA"
+  ]
+}
