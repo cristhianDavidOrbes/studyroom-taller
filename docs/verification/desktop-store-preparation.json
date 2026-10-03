@@ -54,5 +54,13 @@
     "certificatesChanged": false,
     "windowsProtectionsChanged": false
   },
-  "nextStep": "Register the real Microsoft developer account, reserve Product identity, supply its exact identity parameters, then complete authorized runtime/WACK tests and Store certification/signing. This draft must not be distributed to customers."
+  "nextStep": "Archived technical draft: the owner rejected Microsoft Store and personal-document onboarding on 2026-10-02. Do not continue account creation, identity verification or submission. This draft must not be distributed to customers.",
+  "defenderDraftScan": {
+    "observedAt": "2026-10-03T03:36:44.5549146Z",
+    "exitCode": 0,
+    "threatsFound": 0,
+    "installed": false,
+    "executed": false,
+    "publicTrustGranted": false
+  }
 }

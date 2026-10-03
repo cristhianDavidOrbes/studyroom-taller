@@ -1,0 +1,43 @@
+{
+  "observedAt": "2026-10-03T03:45:51.495Z",
+  "sourceCommit": "37826a6813a630d2b662b733c886ad60446e566b",
+  "repository": "https://github.com/cristhianDavidOrbes/studyroom",
+  "ci": {
+    "url": "https://github.com/cristhianDavidOrbes/studyroom/actions/runs/37093693960",
+    "conclusion": "success",
+    "jobs": ["verify", "desktop"]
+  },
+  "webDeployment": {
+    "url": "https://studyroom-sut.onrender.com",
+    "deployId": "dep-db07hl2d0e5s73ae3ttg",
+    "status": "live",
+    "finishedAt": "2026-10-03T03:39:46.946843Z",
+    "sourceCommit": "37826a6813a630d2b662b733c886ad60446e566b"
+  },
+  "installer": {
+    "url": "https://studyroom-sut.onrender.com/desktop/Instalar-StudyRoom.exe",
+    "sha256": "cc2fd14b4902101fb29f29af8fcf0502a14a43a71797139850d4e303a167b897",
+    "bytes": 98816,
+    "signatureStatus": "NotSigned",
+    "publishedHashMatchesReviewedFile": true,
+    "defenderThreatsFound": 0,
+    "executedByThisVerification": false
+  },
+  "checks": {
+    "productionBrowserPassed": 10,
+    "productionPageErrors": 0,
+    "realInstalledBridgeHealthVerified": true,
+    "authenticationAndProfile": "Isolated HTTP fixtures, no real accounts",
+    "webUnitTestsPassed": 52,
+    "nativeHeadlessTestsPassed": 65,
+    "nativeDrawingTests": "Passed in Windows CI",
+    "windowsProtectionsChanged": false
+  },
+  "ownerDecision": "Keep direct installation; do not continue Microsoft Store or personal-document onboarding.",
+  "limitations": [
+    "Direct installer and helper remain unsigned; Smart App Control can block them independently of a clean antivirus scan.",
+    "No signed installer or SignPath approval has been obtained. The owner authorized MIT publication of the Windows helper alone and submitted the signing application; see desktop-signpath-application.json for that later event.",
+    "Production check reads health only and does not launch the installer, draw or capture user media.",
+    "Successful checks on this PC do not certify installation and Windows trust on all other PCs."
+  ]
+}

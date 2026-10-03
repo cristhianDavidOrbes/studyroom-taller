@@ -1,0 +1,193 @@
+{
+  "observedAt": "2026-10-03T03:35:22.5632034Z",
+  "phase": "Final diagnostic snapshot following parent-task packaging. Earlier public and installed file observations remain identified separately; the final release is still unsigned.",
+  "conclusion": "The examined installer and helper have no Authenticode publisher signature. The reported Smart App Control publisher block is consistent with this absence of trusted signing. A successful antivirus scan does not grant publisher trust.",
+  "installedFileExamined": {
+    "path": "C:\\Users\\crist\\AppData\\Local\\StudyRoom\\Herramientas\\StudyRoom.Tools.exe",
+    "exists": true,
+    "bytes": 55808,
+    "sha256": "a698fdc358b6051af133a8dd023bf8a53d3b6c8a4d532d0bdd037560054f5982",
+    "fileVersion": "0.0.0.0",
+    "lastWriteTimeUtc": "2026-10-02T15:18:50.4421831Z",
+    "authenticodeStatus": "NotSigned",
+    "signatureType": "None",
+    "signerCertificate": null,
+    "timestampCertificate": null,
+    "limitation": "Disk metadata and the observed health response are separate observations. The file is present and the local bridge responds; no live upgrade or process memory inspection was performed."
+  },
+  "localReadOnlyBridgeCheck": {
+    "method": "GET",
+    "url": "http://127.0.0.1:8790/v1/health",
+    "origin": "https://studyroom-sut.onrender.com",
+    "status": 200,
+    "body": {
+      "app": "StudyRoom.Tools",
+      "version": "1.1.0",
+      "ready": true
+    },
+    "accessControlAllowOrigin": "https://studyroom-sut.onrender.com",
+    "cacheControl": "no-store",
+    "listeningAddress": "127.0.0.1",
+    "listeningPort": 8790,
+    "owningProcessId": 34060,
+    "windowsSession": 1,
+    "processCreationTimeUtc": "2026-10-03T03:12:23.992189Z",
+    "sharingPostSent": false,
+    "startupRegistration": "\"C:\\Users\\crist\\AppData\\Local\\StudyRoom\\Herramientas\\StudyRoom.Tools.exe\" --background",
+    "protocolOwner": "StudyRoom.Tools.v1",
+    "protocolTargetMatchesInstalledDirectory": true,
+    "dotNetFrameworkRelease": 533509,
+    "persistentLogFilesFound": false,
+    "limitation": "This command-line GET confirms the current local bridge, not permission in every browser or readiness on another computer."
+  },
+  "otherComputerCausesNotVerified": [
+    "An unsigned installer or child executable may be refused by Smart App Control before the local bridge starts.",
+    "The user must actually open the installer once; saving a file in Downloads cannot install or start it from a webpage.",
+    "Chrome/Edge local-network permission for this HTTPS origin can be denied even when the helper is running.",
+    "A different preview/custom web origin is rejected by the existing exact-origin policy.",
+    "Port 8790 occupied by another process, missing .NET Framework 4.8, or disabled startup can leave the helper unavailable. These conditions were not inspected on another PC."
+  ],
+  "readinessFix": {
+    "sources": [
+      "apps/desktop/BridgeReadiness.cs",
+      "apps/desktop/Setup.cs",
+      "apps/desktop/InstallerPayload.cs",
+      "apps/desktop/BridgeInstallerTests.cs",
+      "apps/desktop/LEEME.txt",
+      "scripts/desktop/build.ps1"
+    ],
+    "behavior": "After starting its child the installer requires the exact read-only health contract within 8 seconds before reporting success. Failed start, unavailable bridge, wrong app, older version and timeout do not report Listo. The success message directs the user back to StudyRoom and Continuar.",
+    "probeTimeoutMs": 700,
+    "totalTimeoutMs": 8000,
+    "probeResponseMaximumBytes": 512,
+    "redirectsAllowed": false,
+    "proxyUsed": false,
+    "upgradeAllowedPreviousPublicHash": "ce95c476ada80b6d3739dc3e28d5e7d7e25273eda37e20c268713016875f228c",
+    "upgradeOwnershipChecksPreserved": [
+      "exact installed executable path",
+      "same Windows session",
+      "owned installation marker or protocol",
+      "known old/current executable hash",
+      "recheck immediately before stopping its own verified process"
+    ],
+    "buildCommand": "scripts/desktop/build.ps1 -HeadlessTest",
+    "buildExitCode": 0,
+    "headlessAssertionsPassed": 65,
+    "coverage": [
+      "real HTTP health and origin rejection on isolated port",
+      "health does not mutate sharing leases",
+      "standalone seven-resource payload integrity",
+      "ready, unavailable, old version, incorrect app, malformed contract and bounded timeout",
+      "exact previous-public helper upgrade eligibility",
+      "unknown hash, other path/session and foreign ownership rejection"
+    ],
+    "compiledHelperExamined": {
+      "path": "apps/desktop/dist/StudyRoom.Tools.exe",
+      "bytes": 69120,
+      "sha256": "3d649fd16135bd94a257935aa065b0f24bb47f36381345551613c1056e1a05f9",
+      "authenticodeStatus": "NotSigned"
+    },
+    "compiledInstallerExamined": {
+      "path": "apps/desktop/dist/Instalar-StudyRoom.exe",
+      "bytes": 98816,
+      "sha256": "cc2fd14b4902101fb29f29af8fcf0502a14a43a71797139850d4e303a167b897",
+      "authenticodeStatus": "NotSigned"
+    },
+    "securityLimitation": "This readiness fix does not supply a trusted signature or remove Smart App Control blocks. Parent-task scan evidence identifies the final published hashes."
+  },
+  "defenderEvidence": {
+    "file": "docs/verification/desktop-defender-scan.json",
+    "observedAt": "2026-10-03T03:32:57.6149551Z",
+    "signatureVersion": "1.459.520.0",
+    "files": [
+      {
+        "file": "apps/web/public/desktop/Instalar-StudyRoom.exe",
+        "sha256": "cc2fd14b4902101fb29f29af8fcf0502a14a43a71797139850d4e303a167b897",
+        "signatureStatus": "NotSigned",
+        "defenderExitCode": 0,
+        "threatsFound": 0,
+        "executableLaunched": false
+      },
+      {
+        "file": "apps/desktop/dist/StudyRoom.Tools.exe",
+        "sha256": "3d649fd16135bd94a257935aa065b0f24bb47f36381345551613c1056e1a05f9",
+        "signatureStatus": "NotSigned",
+        "defenderExitCode": 0,
+        "threatsFound": 0,
+        "executableLaunched": false
+      }
+    ],
+    "scanPerformedBy": "parent task; no duplicate scan by this diagnosis task",
+    "limitation": "Applies to these exact scanned hashes at that time; no guarantee for another antivirus, future detections or publisher trust."
+  },
+  "availableSigningTools": {
+    "signTool": "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64\\signtool.exe",
+    "makeAppx": "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.26100.0\\x64\\makeappx.exe",
+    "bothExist": true,
+    "currentUserPersonalStoreCodeSigningCertificateCount": 0,
+    "certificateSearchScope": "Cert:\\CurrentUser\\My only; no assertion about every certificate store or external signing service"
+  },
+  "freeTrustedDistribution": {
+    "ownerDecision": "Microsoft Store and personal-document onboarding rejected on 2026-10-02; earlier Store technical research below is historical, not the active plan.",
+    "recommendedPath": "Keep the direct installer. Consider SignPath Foundation only after express authorization to publish a separate open-source desktop helper and acceptance by the Foundation.",
+    "requirementsPending": [
+      "Microsoft account",
+      "free Individual developer registration via storedeveloper.microsoft.com",
+      "identity verification by the account owner",
+      "real reserved package identity and publisher",
+      "Store submission/certification and installed-package bridge/startup test"
+    ],
+    "draftWorkOwner": "ci_gate_coverage agent, separate dist-store output and declarative startup/protocol, no AppData installer wrapped into Store package",
+    "notEquivalent": "Uploading an MSI/EXE to Store does not obtain free Microsoft re-signing; those executables still require their publisher's trusted Authenticode signature.",
+    "alternative": "After owner approval, the Windows helper alone was published under MIT in https://github.com/cristhianDavidOrbes/studyroom-windows-tools. The owner submitted the SignPath form and received Form submitted confirmation. Main StudyRoom remains private. SignPath acceptance, MFA verification, signing access and signed distribution remain pending.",
+    "paidOptionsNotSelected": "Azure Artifact Signing and traditional CA certificates require payment; they were researched only.",
+    "selfSignedCertificate": "Does not establish default public-user trust; no certificate was generated or installed.",
+    "accountCreated": false,
+    "storePublished": false,
+    "certificatePurchased": false
+  },
+  "safetyScope": {
+    "actualInstallerExecuted": false,
+    "liveHelperStartedStoppedOrUpgraded": false,
+    "registryWritten": false,
+    "certificatesOrWindowsProtectionsChanged": false,
+    "publicDownloadsChangedByThisTask": false,
+    "guiWindowsCreatedByTests": false,
+    "commitsOrDeploymentsPerformedByThisTask": false
+  },
+  "officialSources": [
+    "https://support.microsoft.com/en-us/windows/security/threat-malware-protection/smart-app-control-frequently-asked-questions",
+    "https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options",
+    "https://learn.microsoft.com/en-us/windows/apps/publish/whats-new-individual-developer",
+    "https://learn.microsoft.com/en-us/deployedge/ms-edge-local-network-access",
+    "https://developer.chrome.com/release-notes/142?hl=en",
+    "https://learn.microsoft.com/en-us/windows/apps/desktop/modernize/desktop-to-uwp-extensions",
+    "https://learn.microsoft.com/en-us/windows/msix/desktop/desktop-to-uwp-behind-the-scenes",
+    "https://signpath.org/terms.html"
+  ],
+  "previousPublicDownloadExamined": {
+    "path": "apps/web/public/desktop/Instalar-StudyRoom.exe",
+    "bytes": 88064,
+    "sha256": "ec883a27a1e31aaef937fd5338211a345b4def18895032b2bbf5d6e72702af73",
+    "fileVersion": "1.1.0.0",
+    "authenticodeStatus": "NotSigned",
+    "signatureType": "None",
+    "signerCertificate": null,
+    "timestampCertificate": null,
+    "backupZipSha256": "1a798540666a1861f184dc34b55f1b14de91502a4ac9f6e1e77ab4efb3b4352e",
+    "embeddedHelperSha256": "ce95c476ada80b6d3739dc3e28d5e7d7e25273eda37e20c268713016875f228c"
+  },
+  "finalPublicDownloadExamined": {
+    "path": "apps/web/public/desktop/Instalar-StudyRoom.exe",
+    "bytes": 98816,
+    "sha256": "cc2fd14b4902101fb29f29af8fcf0502a14a43a71797139850d4e303a167b897",
+    "authenticodeStatus": "NotSigned",
+    "signatureType": "None",
+    "signerCertificate": null,
+    "timestampCertificate": null,
+    "fileVersion": "1.1.0.0",
+    "backupZipSha256": "d4ba4238387eded300d87d766519e61f5809739ce56f69996c95c7d4997abe87",
+    "embeddedHelperSha256": "3d649fd16135bd94a257935aa065b0f24bb47f36381345551613c1056e1a05f9",
+    "packagedBy": "parent task"
+  }
+}

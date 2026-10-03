@@ -1,6 +1,8 @@
 # Herramientas de StudyRoom en Microsoft Store
 
-La distribución gratuita con una firma pública confiable requiere publicar **MSIX en Microsoft Store**. Microsoft firma el paquete después de aprobar su certificación. Subir el instalador EXE a Store no consigue esa firma: EXE/MSI requieren Authenticode del desarrollador. No se compraron certificados ni se crearon certificados autofirmados. [Opciones oficiales de firma](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).
+**Alternativa descartada por el titular el 2 de octubre de 2026:** no se continuará con Microsoft Store ni con su verificación de identidad. Este documento conserva únicamente la preparación técnica anterior. La descarga activa sigue siendo el instalador EXE directo; véase la [propuesta de firma fuera de Store](desktop-signing.md).
+
+Microsoft Store puede proporcionar firma gratuita para paquetes **MSIX** después de aprobar su certificación. Subir el instalador EXE a Store no consigue esa firma: EXE/MSI requieren Authenticode del desarrollador. No se compraron certificados ni se crearon certificados autofirmados. [Opciones oficiales de firma](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options).
 
 La cuenta Microsoft y la identidad de este producto en Partner Center todavía están pendientes. El borrador técnico no es una instalación disponible para clientes y no resuelve por sí mismo Smart App Control. No se debe ofrecer en la página como una descarga utilizable.
 

@@ -1,0 +1,65 @@
+{
+  "observedAt": "2026-10-03T04:04:59Z",
+  "ownerAuthorization": "Publish only the Windows desktop helper under MIT to request free SignPath signing; main StudyRoom components remain private.",
+  "candidate": {
+    "sha256": "c343a60e3216c435ce379f1f13b15dcf98c0155f3c4060580149a0dbbfb5b84a",
+    "bytes": 40929,
+    "sourceInputs": 21,
+    "isolatedHeadlessAssertionsPassed": 65,
+    "installerExecuted": false
+  },
+  "publicRepository": {
+    "url": "https://github.com/cristhianDavidOrbes/studyroom-windows-tools",
+    "visibility": "PUBLIC",
+    "license": "MIT",
+    "firstCommit": "91ac448aa4e7dc464f3af1d11b5585bb337459fb",
+    "currentCommit": "08f8664f47a41c192868111395f9db015025fef6",
+    "filesPublished": 28,
+    "sourceInputsUnchanged": true,
+    "privateHistoryCopied": false,
+    "webApiAiOrUserDataCopied": false,
+    "knownLocalSecretValuesChecked": 7,
+    "secretsFound": 0,
+    "ci": {
+      "url": "https://github.com/cristhianDavidOrbes/studyroom-windows-tools/actions/runs/37095239936",
+      "sourceCommit": "08f8664f47a41c192868111395f9db015025fef6",
+      "conclusion": "success"
+    },
+    "release": {
+      "url": "https://github.com/cristhianDavidOrbes/studyroom-windows-tools/releases/tag/v1.1.0",
+      "publishedAt": "2026-10-03T04:03:05Z",
+      "sourceOnly": true,
+      "signedBinaryPublished": false
+    }
+  },
+  "mainStudyRoomRepository": {
+    "url": "https://github.com/cristhianDavidOrbes/studyroom",
+    "visibilityVerified": "PRIVATE",
+    "licenseChanged": false
+  },
+  "application": {
+    "url": "https://signpath.org/apply",
+    "formFilledBy": "Agent, using approved public component links and owner-provided contact details",
+    "submittedBy": "Owner directly in the browser",
+    "confirmationObserved": "Form submitted. Thank you, we'll be in touch soon.",
+    "liveBrowserConfirmationVerified": true,
+    "ownerScreenshot": "signpath-application-submitted.png",
+    "applicationIdentifierDisplayed": false,
+    "identityDocumentsSubmitted": false,
+    "approvalReceived": false,
+    "signingCredentialsReceived": false,
+    "certificateObtained": false,
+    "guaranteedApprovalTimeKnown": false
+  },
+  "pending": [
+    "SignPath eligibility/reputation decision and verification of maintainer MFA requirements.",
+    "Approved signing configuration and credentials, helper signing before hashes/embedding, then installer signing.",
+    "Signature and package verification, followed by actual installation testing on another Windows PC with protection enabled."
+  ],
+  "currentDistribution": {
+    "installerUnchangedFromReviewedRelease": true,
+    "signatureStatus": "NotSigned",
+    "windowsProtectionsChanged": false,
+    "warningFreeInstallationGuaranteed": false
+  }
+}

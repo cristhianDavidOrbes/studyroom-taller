@@ -1,0 +1,53 @@
+{
+  "verifiedAt": "2026-10-03T03:45:51.495Z",
+  "passed": true,
+  "productionBuild": true,
+  "authenticationAndProfile": "HTTP fixtures in isolated browser, no real accounts",
+  "desktopHealth": "Fixtures for error cases followed by real read-only installed helper health",
+  "installerExecuted": false,
+  "protectionSettingsChanged": false,
+  "checks": [
+    {
+      "name": "Portada pública desktop/mobile sin desbordamiento ni conexión local",
+      "passed": true
+    },
+    {
+      "name": "CTA de registro abre creación de cuenta",
+      "passed": true
+    },
+    {
+      "name": "Acceso obligatorio conserva destino, ofrece salida y funciona desktop/mobile",
+      "passed": true
+    },
+    {
+      "name": "Descargar un archivo no permite entrar ni simula instalación",
+      "passed": true
+    },
+    {
+      "name": "La detección muestra aplicación instalada y espera Continuar sin redirigir",
+      "passed": true
+    },
+    {
+      "name": "Continuar entra al destino original y deja de sondear sin dibujar",
+      "passed": true
+    },
+    {
+      "name": "Al volver con la aplicación instalada también espera Continuar",
+      "passed": true
+    },
+    {
+      "name": "Una respuesta ajena no habilita entrada y se explica el bloqueo de Windows",
+      "passed": true
+    },
+    {
+      "name": "La descarga publicada coincide con el instalador revisado por Defender; no se ejecuta",
+      "passed": true,
+      "sha256": "cc2fd14b4902101fb29f29af8fcf0502a14a43a71797139850d4e303a167b897"
+    },
+    {
+      "name": "El sitio publicado detecta el helper real con permiso local y espera Continuar; solo GET de salud",
+      "passed": true
+    }
+  ],
+  "pageErrors": []
+}
