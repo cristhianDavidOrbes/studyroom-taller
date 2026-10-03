@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-10-03T13:50:44.586Z",
+  "sourceCommit": "b115eeb722698783f4bc9c366f86d8125f01e27a",
+  "desktopInstallationRequired": false,
+  "webUrl": "https://studyroom-sut.onrender.com",
+  "ci": {
+    "conclusion": "success",
+    "url": "https://github.com/cristhianDavidOrbes/studyroom/actions/runs/37127286569"
+  },
+  "deployment": {
+    "finishedAt": "2026-10-03T13:50:08.995444Z",
+    "status": "live",
+    "id": "dep-db0gfp7avr4c73fjn100"
+  },
+  "verification": {
+    "helperRequests": 0,
+    "productionBrowserChecksPassed": 8,
+    "installerExecuted": false,
+    "protectionSettingsChanged": false,
+    "authenticationAndApi": "HTTP fixtures in isolated browser, no real accounts or server writes",
+    "localBrowserChecksPassed": 8,
+    "installerRequests": 0,
+    "webUnitTestsPassed": 52,
+    "productionPageErrors": 0
+  },
+  "scope": "Only the mandatory desktop installation entry requirement is temporarily disabled; the optional Windows tools and existing features remain available."
+}

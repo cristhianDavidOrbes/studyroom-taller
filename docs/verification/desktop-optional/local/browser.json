@@ -1,0 +1,48 @@
+{
+  "verifiedAt": "2026-10-03T13:46:57.961Z",
+  "passed": true,
+  "productionBuild": false,
+  "base": "http://127.0.0.1:5174",
+  "authenticationAndApi": "HTTP fixtures in isolated browser, no real accounts or server writes",
+  "nativeHelper": "All loopback helper requests blocked and counted; none occurred",
+  "installerExecuted": false,
+  "protectionSettingsChanged": false,
+  "helperRequests": [],
+  "installerRequests": [],
+  "fakeSignIns": 1,
+  "checks": [
+    {
+      "name": "La portada sigue siendo pública, desktop y móvil, sin consultar o descargar la herramienta",
+      "passed": true
+    },
+    {
+      "name": "Una ruta privada todavía exige iniciar sesión y conserva el destino",
+      "passed": true
+    },
+    {
+      "name": "Iniciar sesión entra directamente al perfil con ruta, consulta y fragmento intactos, sin helper",
+      "passed": true
+    },
+    {
+      "name": "Recargar el perfil conserva la sesión y permite entrar sin instalar",
+      "passed": true
+    },
+    {
+      "name": "El catálogo y su recarga funcionan para un usuario autenticado sin comprobar Windows",
+      "passed": true
+    },
+    {
+      "name": "Historial y reportes son accesibles tras iniciar sesión y recargar, sin requisito de instalación",
+      "passed": true
+    },
+    {
+      "name": "La sala se abre y recarga con su invitación; instalar sigue siendo opcional y no se captura audio, cámara ni pantalla",
+      "passed": true
+    },
+    {
+      "name": "Cerrar sesión restaura la protección de las rutas privadas",
+      "passed": true
+    }
+  ],
+  "pageErrors": []
+}

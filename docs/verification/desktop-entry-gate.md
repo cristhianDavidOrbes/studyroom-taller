@@ -32,11 +32,19 @@ y reportes posteriores al inicio de sesión. Estas pruebas no descargan ni
 ejecutan el instalador de Windows; la compilación y las pruebas nativas se
 realizan en el trabajo `desktop` separado.
 
-Se validó localmente la sintaxis de los cuatro scripts actualizados. Los
-recorridos con servicios requieren CI o un entorno de prueba preparado: este
-documento describe su cobertura y no afirma un resultado aún no ejecutado.
-Los resultados de cada ejecución quedan en `browser-smoke.json`,
-`media-collaboration.json`, `session-report.json` y `report-ui.json`.
+Se validó localmente la sintaxis de los cuatro scripts actualizados. La
+[ejecución de CI del cambio](https://github.com/cristhianDavidOrbes/studyroom/actions/runs/37127286569)
+terminó correctamente, incluidos los recorridos de `browser-smoke.mjs` con
+servicios aislados. Los recorridos independientes de medios y reportes
+conservan su cobertura y sus resultados en `media-collaboration.json`,
+`session-report.json` y `report-ui.json`; no se repitieron en esta ejecución.
+
+El 3 de octubre de 2026 se comprobó además el build local y la web publicada en
+Render: ocho casos por entorno, cero errores de página y ninguna solicitud a
+la herramienta de Windows ni al instalador. Las identidades, salas y respuestas
+API son fixtures en un navegador aislado; no se crearon cuentas reales ni se
+capturaron medios. La evidencia está en `desktop-optional/local/browser.json`,
+`desktop-optional/production/browser.json` y `desktop-optional/release.json`.
 
 Las comprobaciones unitarias de detección e instalación se conservan para la
 herramienta opcional. Si vuelve a exigirse la instalación para entrar, será
