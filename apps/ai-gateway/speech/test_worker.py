@@ -5,7 +5,7 @@ import json
 import threading
 import unittest
 import wave
-from worker import LocalServer, decode_input
+from worker import Handler, LocalServer, decode_input
 
 
 def audio(seconds=1, rate=16000):
@@ -28,10 +28,25 @@ class WorkerTests(unittest.TestCase):
     def test_private_worker_host_origin_auth_and_busy(self):
         class Stub:
             lock = threading.Lock()
+            fail = False
             def transcribe(self, *args):
+                if self.fail:
+                    raise RuntimeError("MODEL_FAILURE")
                 return {"text": "", "segments": []}
         engine = Stub()
+        released_before_reply = []
+        class ObservedReply(Handler):
+            def reply(self, status, value):
+                if self.path == "/v1/transcribe" and status in (200, 400, 408, 503):
+                    # Check before any HTTP bytes leave the handler. This fails
+                    # deterministically if cleanup still follows the response.
+                    acquired = engine.lock.acquire(blocking=False)
+                    released_before_reply.append(acquired)
+                    if acquired:
+                        engine.lock.release()
+                super().reply(status, value)
         server = LocalServer(("127.0.0.1", 0), "a" * 64, engine)
+        server.RequestHandlerClass = ObservedReply
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
         def request(path="/health", headers=None, body=None):
@@ -50,10 +65,16 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(request("/other"), 404)
             body = json.dumps(audio())
             self.assertEqual(request("/v1/transcribe", {"Content-Type": "application/json"}, body), 200)
+            self.assertEqual(released_before_reply, [True])
             self.assertEqual(request("/v1/transcribe", {"Content-Type": "application/json"}, "bad"), 400)
+            engine.fail = True
+            self.assertEqual(request("/v1/transcribe", {"Content-Type": "application/json"}, body), 503)
+            engine.fail = False
+            self.assertEqual(released_before_reply, [True, True, True])
             engine.lock.acquire()
             try:
                 self.assertEqual(request("/v1/transcribe", {"Content-Type": "application/json"}, body), 429)
+                self.assertTrue(engine.lock.locked(), "Busy response must not release a lock it did not acquire")
             finally:
                 engine.lock.release()
         finally:

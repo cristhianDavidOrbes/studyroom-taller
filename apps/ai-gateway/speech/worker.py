@@ -198,16 +198,20 @@ class Handler(BaseHTTPRequestHandler):
             if len(body) != size:
                 raise ValueError("INVALID_INPUT")
             pcm, duration, language = decode_input(json.loads(body))
-            self.reply(200, self.server.engine.transcribe(pcm, duration, language))
+            status, value = 200, self.server.engine.transcribe(pcm, duration, language)
         except (ValueError, json.JSONDecodeError, UnicodeDecodeError):
-            self.reply(400, {"code": "INVALID_AUDIO"})
+            status, value = 400, {"code": "INVALID_AUDIO"}
         except socket.timeout:
-            self.reply(408, {"code": "INPUT_TIMEOUT"})
+            status, value = 408, {"code": "INPUT_TIMEOUT"}
         except Exception:
             # A failed/cancelled chunk never becomes invented recognized words.
-            self.reply(503, {"code": "ASR_UNAVAILABLE"})
+            status, value = 503, {"code": "ASR_UNAVAILABLE"}
         finally:
             self.server.engine.lock.release()
+        # The mutex protects decoding/inference, not the HTTP response write.
+        # The gateway may dispatch its next queued chunk as soon as it reads
+        # this response; that chunk must not receive a stale ASR_BUSY.
+        self.reply(status, value)
 
 
 def main():

@@ -1,0 +1,245 @@
+{
+  "verifiedAt": "2026-10-03T02:19:05.630Z",
+  "passed": true,
+  "fixtureOnly": true,
+  "identities": 2,
+  "noRealAccounts": true,
+  "noNativeApplicationUsed": true,
+  "noRealMedia": true,
+  "developmentNote": "React StrictMode in development mounts effects twice when membership is already available; the fixture observed two initial consent writes with the same enabled=true intent, followed by stable state and no repeated writes during polling or after a pause. Normal mounting sends one write. Backend idempotence is covered separately.",
+  "checks": [
+    {
+      "name": "No activa la transcripción antes de ingresar a una sala",
+      "passed": true
+    },
+    {
+      "name": "Dos participantes se activan automáticamente al entrar, sin botones extra ni micrófono",
+      "passed": true
+    },
+    {
+      "name": "Refetch manual y periódico no reenvían activaciones",
+      "passed": true
+    },
+    {
+      "name": "Pausa voluntaria permanece pausada y no afecta a otro participante",
+      "passed": true
+    },
+    {
+      "name": "Cambiar sala activa la nueva; respuestas tardías de la anterior no cambian su pausa, datos ni errores",
+      "passed": true
+    },
+    {
+      "name": "Cero acceso a cámara, micrófono, escritorio o motores de audio reales",
+      "passed": true
+    },
+    {
+      "name": "Membresía disponible con StrictMode termina activa, no genera bucles y respeta pausa",
+      "passed": true,
+      "initialDevelopmentRequests": 2
+    },
+    {
+      "name": "Montaje normal con membresía disponible activa una sola vez",
+      "passed": true
+    }
+  ],
+  "requests": [
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "POST",
+      "enabled": true
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "POST",
+      "enabled": true
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "POST",
+      "enabled": false
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-c",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-c",
+      "method": "POST",
+      "enabled": true
+    },
+    {
+      "identity": "ana",
+      "room": "room-d",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-d",
+      "method": "POST",
+      "enabled": true
+    },
+    {
+      "identity": "ana",
+      "room": "room-d",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-d",
+      "method": "POST",
+      "enabled": false
+    },
+    {
+      "identity": "ana",
+      "room": "room-d",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "POST",
+      "enabled": true
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "POST",
+      "enabled": true
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "POST",
+      "enabled": false
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "ana",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "POST",
+      "enabled": true
+    },
+    {
+      "identity": "mateo",
+      "room": "room-a",
+      "method": "GET"
+    }
+  ],
+  "pageErrors": [],
+  "sourceSha256": "fce84d5a935074b3bed734883a17770ef27f72816bba7d4844f1f4a3c34a38ed",
+  "verificationScript": "../work/verify-automatic-transcription.cjs"
+}
