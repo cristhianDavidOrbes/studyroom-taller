@@ -1,0 +1,58 @@
+{
+  "observedAt": "2026-10-03T03:31:51.3452805Z",
+  "preparationOnly": true,
+  "publicationReady": false,
+  "artifact": "apps/desktop/dist/store/NO-PUBLICABLE-20261003-032846-7278441/StudyRoom.Tools-1.1.0.0-x64-NO-PUBLICABLE.msix",
+  "sha256": "833e865e58530f23c41ad0be1e2ba42f28eef9248faf2cda64cd84e7aa70ac40",
+  "architecture": "x64",
+  "sdk": "10.0.26100.8249",
+  "checks": {
+    "powershellSyntax": "passed",
+    "compilation": "passed",
+    "makeappxFullValidation": "passed",
+    "roundtripSha256": "passed",
+    "verifiedFiles": 7,
+    "parameterRejections": 6,
+    "installerClasses": "absent",
+    "wpfAndLoopbackBridge": "present",
+    "packageSignature": "absent"
+  },
+  "packageFiles": [
+    {
+      "path": "Package/AppxManifest.xml",
+      "sha256": "8a97ced084a8aa4b2c01d06ba906b6facc037b0886e69e2533df71e88999ccec"
+    },
+    {
+      "path": "Package/LEEME-STORE.txt",
+      "sha256": "e2a4b5a4b2367b6afad4723918004bd51f2b3f9a4afaeeb20319c60037eaa5b6"
+    },
+    {
+      "path": "Package/StudyRoom.Tools.exe",
+      "sha256": "062665dab953b220e25f8855d2494922851d25a868d4aec15a772fab9c81ce16"
+    },
+    {
+      "path": "Package/StudyRoom.Tools.exe.config",
+      "sha256": "7b537f3198c00bd7bfa7a3eb95e5734b86a3aba413c7d63cada5f4f1cf7f0fff"
+    },
+    {
+      "path": "Package/Assets/Square150x150Logo.png",
+      "sha256": "2c62377abce24e8dd1fc7714f1db225e59361a172a1d3dd965545961a7841e70"
+    },
+    {
+      "path": "Package/Assets/Square44x44Logo.png",
+      "sha256": "d191fc9b9fac17d6a1f6f348224285a40c919a9020276fe92b29745c506cba03"
+    },
+    {
+      "path": "Package/Assets/StoreLogo.png",
+      "sha256": "12e566348be8956948f4a3b9cd612d664c740314b478518fee22863071e979f2"
+    }
+  ],
+  "effects": {
+    "installed": false,
+    "applicationExecuted": false,
+    "published": false,
+    "certificatesChanged": false,
+    "windowsProtectionsChanged": false
+  },
+  "nextStep": "Register the real Microsoft developer account, reserve Product identity, supply its exact identity parameters, then complete authorized runtime/WACK tests and Store certification/signing. This draft must not be distributed to customers."
+}

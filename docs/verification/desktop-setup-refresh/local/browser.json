@@ -1,0 +1,44 @@
+{
+  "verifiedAt": "2026-10-03T03:27:20.076Z",
+  "passed": true,
+  "productionBuild": false,
+  "authenticationAndProfile": "HTTP fixtures in isolated browser, no real accounts",
+  "desktopHealth": "HTTP fixtures only",
+  "installerExecuted": false,
+  "protectionSettingsChanged": false,
+  "checks": [
+    {
+      "name": "Portada pública desktop/mobile sin desbordamiento ni conexión local",
+      "passed": true
+    },
+    {
+      "name": "CTA de registro abre creación de cuenta",
+      "passed": true
+    },
+    {
+      "name": "Acceso obligatorio conserva destino, ofrece salida y funciona desktop/mobile",
+      "passed": true
+    },
+    {
+      "name": "Descargar un archivo no permite entrar ni simula instalación",
+      "passed": true
+    },
+    {
+      "name": "La detección muestra aplicación instalada y espera Continuar sin redirigir",
+      "passed": true
+    },
+    {
+      "name": "Continuar entra al destino original y deja de sondear sin dibujar",
+      "passed": true
+    },
+    {
+      "name": "Al volver con la aplicación instalada también espera Continuar",
+      "passed": true
+    },
+    {
+      "name": "Una respuesta ajena no habilita entrada y se explica el bloqueo de Windows",
+      "passed": true
+    }
+  ],
+  "pageErrors": []
+}

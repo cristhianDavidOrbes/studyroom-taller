@@ -1,6 +1,7 @@
 export type DesktopSetupStatus = "connecting" | "unavailable" | "ready";
 export const desktopInstallerURL = "/desktop/Instalar-StudyRoom.exe";
 export const desktopHelperVersion = "1.1.0";
+export const desktopProbeWindowMs = 30_000;
 
 export function isWindowsUserAgent(userAgent: string) {
   return /\bWindows NT\b/i.test(userAgent) && !/Windows Phone/i.test(userAgent);
@@ -40,6 +41,8 @@ export function monitorDesktopHelper(
 ) {
   let stopped = false;
   let firstAttempt = true;
+  let announceChecking = true;
+  let windowEndsAt = Date.now() + desktopProbeWindowMs;
   let retryRequested = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let inFlight: AbortController | undefined;
@@ -57,13 +60,19 @@ export function monitorDesktopHelper(
     unsubscribe();
   }
   async function check() {
-    if (stopped || inFlight || !surface.isVisible()) return;
+    if (stopped || inFlight || !surface.isVisible() || Date.now() >= windowEndsAt) return;
     clearTimer();
     const controller = new AbortController();
     inFlight = controller;
-    const timeout = setTimeout(() => controller.abort(), firstAttempt ? 10_000 : 2_000);
+    const timeout = setTimeout(() => {
+      controller.abort();
+      if (!stopped && surface.isVisible()) onStatus("unavailable");
+    }, firstAttempt ? 10_000 : 2_000);
     firstAttempt = false;
-    onStatus("connecting");
+    if (announceChecking) {
+      onStatus("connecting");
+      announceChecking = false;
+    }
     try {
       const options: RequestInit & { targetAddressSpace: "loopback" } = {
         method: "GET",
@@ -86,8 +95,9 @@ export function monitorDesktopHelper(
     } finally {
       clearTimeout(timeout);
       if (inFlight === controller) inFlight = undefined;
-      if (!stopped && surface.isVisible()) {
-        timer = setTimeout(() => void check(), retryRequested ? 0 : 2_000);
+      const remaining = windowEndsAt - Date.now();
+      if (!stopped && surface.isVisible() && remaining > 0) {
+        timer = setTimeout(() => void check(), retryRequested ? 0 : Math.min(2_000, remaining));
         retryRequested = false;
       }
     }
@@ -95,11 +105,20 @@ export function monitorDesktopHelper(
   function wake() {
     clearTimer();
     if (!surface.isVisible()) inFlight?.abort();
-    else void check();
+    else {
+      windowEndsAt = Date.now() + desktopProbeWindowMs;
+      if (!inFlight) {
+        firstAttempt = true;
+        announceChecking = true;
+        void check();
+      }
+    }
   }
   function retry() {
     if (stopped) return;
     firstAttempt = true;
+    announceChecking = true;
+    windowEndsAt = Date.now() + desktopProbeWindowMs;
     clearTimer();
     if (inFlight) {
       retryRequested = true;

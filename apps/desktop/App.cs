@@ -41,7 +41,13 @@ namespace StudyRoomTools {
       if(mode=="invalid") {
         MessageBox.Show("StudyRoom solo acepta abrir sus herramientas. No se ejecutó ninguna acción.","Herramientas StudyRoom",MessageBoxButton.OK,MessageBoxImage.Information);return 2;
       }
-      if(mode=="install"||mode=="uninstall")return Setup.Run(mode=="install");
+      if(mode=="install"||mode=="uninstall") {
+#if STORE_PACKAGE
+        MessageBox.Show("Windows administra la instalación y desinstalación de esta aplicación de Microsoft Store.","StudyRoom",MessageBoxButton.OK,MessageBoxImage.Information);return 2;
+#else
+        return Setup.Run(mode=="install");
+#endif
+      }
       try {Native.SetProcessDpiAwarenessContext(new IntPtr(-4));} catch(EntryPointNotFoundException) {}
       var app=new ToolApp();app.backgroundStart=mode=="background";return app.Start(demoMode);
     }
@@ -240,7 +246,11 @@ namespace StudyRoomTools {
       var sizes=new DockPanel {Margin=new Thickness(4,2,4,6)};sizes.Children.Add(new TextBlock {Text="Texto",Width=65,VerticalAlignment=VerticalAlignment.Center,Foreground=dark});var size=new ComboBox {ItemsSource=new int[]{18,24,28,36,48,64},SelectedItem=(int)app.TextSize,MinWidth=74};size.SelectionChanged+=delegate{if(size.SelectedItem!=null)app.TextSize=(int)size.SelectedItem;};TrackCombo(size);sizes.Children.Add(size);stack.Children.Add(sizes);
       var screens=new ComboBox {Margin=new Thickness(4,5,4,5),MinHeight=29};for(int i=0;i<app.Monitors.Length;i++)screens.Items.Add("Panel en monitor "+(i+1)+(app.Monitors[i].Primary?" · principal":""));screens.SelectedIndex=app.SelectedMonitor;screens.SelectionChanged+=delegate{if(screens.SelectedIndex>=0)app.SelectMonitor(screens.SelectedIndex);};TrackCombo(screens);stack.Children.Add(screens);
       stack.Children.Add(Button("Borrar todo en las pantallas",app.Clear));
+#if STORE_PACKAGE
+      stack.Children.Add(Button("Aplicación de Microsoft Store",delegate{app.SetTool(Tool.Interact);MessageBox.Show("La integración con StudyRoom la administra Windows. Las herramientas estarán disponibles mientras la aplicación esté abierta. Puedes gestionar su inicio automático en Configuración de Windows.","StudyRoom",MessageBoxButton.OK,MessageBoxImage.Information);}));
+#else
       stack.Children.Add(Button("Integrar con StudyRoom",delegate{app.SetTool(Tool.Interact);Setup.Run(true);}));
+#endif
       stack.Children.Add(new TextBlock {Text="Puedes cambiar herramientas directamente en este menú.\nComparte Pantalla completa para mostrar las marcas.\nEsc vuelve a Interactuar. El borrador elimina un objeto.",TextWrapping=TextWrapping.Wrap,FontSize=11,Foreground=dark,Margin=new Thickness(5,7,5,3)});
       border.Child=stack;Content=border;UpdateStatus();
     }

@@ -4,7 +4,8 @@ FORMA RECOMENDADA
 Descarga Instalar-StudyRoom.exe desde StudyRoom y ábrelo una vez.
 El instalador contiene todos los archivos: no tienes que extraer un ZIP.
 Instala solo para tu usuario, sin pedir administrador, e inicia las herramientas
-en segundo plano. Vuelve a la página para que compruebe su disponibilidad.
+en segundo plano. Solo confirma «Listo» cuando las herramientas responden.
+Vuelve a StudyRoom, espera «La aplicación ya está instalada» y pulsa Continuar.
 Al entrar a Windows se inician solas en segundo plano. El menú solo aparece
 cuando compartes pantalla y se oculta cuando terminas.
 Si el navegador solicita acceso a aplicaciones locales, permite StudyRoom.
@@ -36,7 +37,13 @@ No requiere administrador ni modifica políticas de PowerShell.
 El navegador puede pedir confirmación para abrir la aplicación externa.
 Desinstalar-Herramientas.cmd retira ese protocolo y los archivos propios; cierra primero la app.
 Ejecuta la desinstalación desde la carpeta original del ZIP para poder retirar el EXE instalado.
-No omitas avisos de seguridad de Windows: el binario es local y no está firmado comercialmente.
+Esta descarga aún no tiene firma de publicador. Smart App Control puede bloquearla
+aunque un análisis antivirus no encuentre amenazas. El instalador no desactiva ni
+cambia tus protecciones. Si Windows bloquea el publicador, se necesita una
+distribución firmada de confianza; no omitas el bloqueo. Un hash no sustituye la firma.
+Si se copiaron los archivos pero la herramienta no responde, el instalador lo informa
+y la página no la da por disponible. La distribución mediante Microsoft Store está
+en preparación y todavía no se ha publicado ni certificado.
 
 MULTIMONITOR Y LÍMITES
 Las marcas usan coordenadas normalizadas por monitor y el proceso solicita DPI por monitor V2.

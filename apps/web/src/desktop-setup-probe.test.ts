@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { isDesktopHelperReady, isWindowsUserAgent, monitorDesktopHelper } from "./desktop-setup-probe";
+import { desktopProbeWindowMs, isDesktopHelperReady, isWindowsUserAgent, monitorDesktopHelper } from "./desktop-setup-probe";
 import { safeReturnPath } from "./auth-return";
 
 afterEach(() => vi.useRealTimers());
@@ -90,6 +90,53 @@ describe("entrada obligatoria con herramienta real", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(status).not.toHaveBeenCalledWith("ready");
     expect(fetcher.mock.calls[0][1].signal.aborted).toBe(true);
+  });
+  it("deja una indicación estable después del primer fallo y termina los intentos automáticos", async () => {
+    vi.useFakeTimers();
+    const scope = visibleSurface();
+    const fetcher = vi.fn().mockRejectedValue(new Error("offline"));
+    const status = vi.fn();
+    const monitor = monitorDesktopHelper(status, scope.surface, fetcher as typeof fetch);
+    await vi.advanceTimersByTimeAsync(desktopProbeWindowMs);
+    const requestsAtEnd = fetcher.mock.calls.length;
+    expect(requestsAtEnd).toBeGreaterThan(1);
+    expect(requestsAtEnd).toBeLessThanOrEqual(15);
+    expect(status.mock.calls.filter(([value]) => value === "connecting")).toHaveLength(1);
+    expect(status).toHaveBeenLastCalledWith("unavailable");
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(fetcher).toHaveBeenCalledTimes(requestsAtEnd);
+    monitor.retry();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetcher).toHaveBeenCalledTimes(requestsAtEnd + 1);
+    expect(status.mock.calls.filter(([value]) => value === "connecting")).toHaveLength(2);
+    monitor.stop();
+  });
+  it("volver a la página permite comprobar de nuevo después de terminar la espera", async () => {
+    vi.useFakeTimers();
+    const scope = visibleSurface();
+    const fetcher = vi.fn().mockRejectedValue(new Error("offline"));
+    const status = vi.fn();
+    const monitor = monitorDesktopHelper(status, scope.surface, fetcher as typeof fetch);
+    await vi.advanceTimersByTimeAsync(desktopProbeWindowMs + 1000);
+    const requestsAtEnd = fetcher.mock.calls.length;
+    fetcher.mockResolvedValue(new Response(JSON.stringify(health)));
+    scope.visibility(false);
+    scope.visibility(true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetcher).toHaveBeenCalledTimes(requestsAtEnd + 1);
+    expect(status).toHaveBeenLastCalledWith("ready");
+    monitor.stop();
+  });
+  it("quita el estado comprobando aunque la lectura de una respuesta no termine al abortarse", async () => {
+    vi.useFakeTimers();
+    const scope = visibleSurface();
+    const fetcher = vi.fn().mockResolvedValue({ ok: true, json: () => new Promise(() => {}) });
+    const status = vi.fn();
+    const monitor = monitorDesktopHelper(status, scope.surface, fetcher as typeof fetch);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(status).toHaveBeenLastCalledWith("unavailable");
+    expect(fetcher.mock.calls[0][1].signal.aborted).toBe(true);
+    monitor.stop();
   });
 });
 

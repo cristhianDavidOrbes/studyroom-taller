@@ -4016,6 +4016,16 @@ textarea::placeholder {
 .setup-retry { font-size: 12px; }
 .setup-footnote { margin: 20px 0 0; border-top: 1px solid #edf0e7; padding-top: 17px; font-size: 10px; line-height: 1.8; color: #8b9581; }
 .setup-unsupported { font-size: 14px; line-height: 1.8; color: #7c8973; margin: 20px 0 0; }
+.setup-installed .setup-device-icon { color: #176d62; background: #e4f1e8; }
+.setup-installed-description { color: #5d6d55; font-size: 14px; line-height: 1.8; margin: 17px 0; }
+.setup-ready-notice { display: flex; align-items: center; gap: 9px; color: #176d62; background: #eef6ee; border: 1px solid #dcebdc; padding: 12px 14px; border-radius: 11px; font-size: 13px; margin: 20px 0; }
+.setup-ready-notice > svg { flex-shrink: 0; }
+.setup-stay-note { color: #5d6d55; font-size: 11px; text-align: center; margin: 12px 0 20px; line-height: 1.7; }
+.setup-retry { margin-top: 16px; }
+.setup-security-help { padding: 13px 14px; border: 1px solid #e8e7da; background: #fafaf4; border-radius: 11px; margin: 17px 0; }
+.setup-security-help summary { cursor: pointer; color: #4d6347; font-size: 12px; font-weight: 650; }
+.setup-security-help p { color: #5d6d55; font-size: 12px; line-height: 1.8; margin: 14px 0; }
+.setup-security-help a { display: inline-flex; align-items: center; gap: 7px; color: #176d62; font-size: 11px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .landing-hero-copy > p,
 .landing-windows-note,
 .landing-section-heading > p,

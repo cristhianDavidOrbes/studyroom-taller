@@ -53,8 +53,13 @@ try {
         const stream = canvas.captureStream(15); stream.getVideoTracks()[0].addEventListener("ended", () => clearInterval(timer)); return stream;
       };
     });
-    await client.page.goto(`${base}/acceso`); await client.page.getByLabel("Correo electrónico").fill(client.email); await client.page.getByLabel("Contraseña", { exact: true }).fill(client.password); await client.page.getByRole("button", { name: "Iniciar sesión", exact: true }).click(); await client.page.getByRole("heading", { name: /Hola, Prueba/ }).waitFor();
+    await client.page.goto(`${base}/acceso`); await client.page.getByLabel("Correo electrónico").fill(client.email); await client.page.getByLabel("Contraseña", { exact: true }).fill(client.password); await client.page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
+    await client.page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+    await client.page.getByRole("button", { name: "Continuar", exact: true }).click();
+    await client.page.getByRole("heading", { name: /Hola, Prueba/ }).waitFor();
     await client.page.goto(`${base}/salas/${room.id}`);
+    await client.page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+    await client.page.getByRole("button", { name: "Continuar", exact: true }).click();
     let connected = false;
     for (let attempt = 0; attempt < 3 && !connected; attempt++) {
       console.log(`Connecting real media, attempt ${attempt + 1}/3`);
@@ -141,6 +146,8 @@ try {
   assert(state.messages.some((message) => message.text.includes("Mensaje escrito sintético")));
   await check("Historical report preserves both participants' voices and chat with speaker search", async () => {
     await host.page.goto(`${base}/sesiones/${room.sessionId}`);
+    await host.page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+    await host.page.getByRole("button", { name: "Continuar", exact: true }).click();
     await host.page.getByRole("heading", { name: "Lo que se habló" }).waitFor();
     await host.page.getByLabel("Buscar en la transcripción").fill("estudiando juntos");
     assert(await host.page.locator("#report-voice .transcript-list li").count() > 0);

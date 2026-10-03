@@ -178,6 +178,10 @@ try {
         await page.screenshot({ path: new URL("desktop-entry-gate.png", output).pathname.replace(/^\/([A-Z]:)/, "$1"), fullPage: true, animations: "disabled" });
         desktopHealth.mode = "ready";
         await page.getByRole("button", { name: "Comprobar otra vez", exact: true }).click();
+        await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+        assert.equal(await page.getByRole("heading", { name: "Hagamos este espacio tuyo", exact: true }).count(), 0);
+        await auditAccessibility("desktop-entry-installed");
+        await page.getByRole("button", { name: "Continuar", exact: true }).click();
       });
       await page
         .getByRole("heading", { name: "Hagamos este espacio tuyo" })
@@ -241,6 +245,8 @@ try {
           });
           await page.unroute(roomModule);
           await page.getByRole("button", { name: "Reintentar carga" }).click();
+          await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+          await page.getByRole("button", { name: "Continuar", exact: true }).click();
           await page
             .getByRole("heading", { name: "Cálculo en compañía", level: 1 })
             .waitFor();
@@ -280,6 +286,10 @@ try {
       }
       desktopHealth.mode = "ready";
       await page.getByRole("button", { name: "Comprobar otra vez", exact: true }).click();
+      await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+      assert.equal(await page.getByRole("heading", { name: "Cálculo en compañía", level: 1 }).count(), 0);
+      assert.equal(page.url(), originalURL.href, "Ready companion does not navigate before explicit Continue");
+      await page.getByRole("button", { name: "Continuar", exact: true }).click();
       await page.getByRole("heading", { name: "Cálculo en compañía", level: 1 }).waitFor();
       assert.equal(page.url(), originalURL.href, "Original room URL and query are retained after companion approval");
     });
@@ -299,6 +309,8 @@ try {
     await page.getByRole("button", { name: "Guardar notas" }).click();
     await page.getByText("Guardado", { exact: true }).waitFor();
     await page.reload();
+    await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Continuar", exact: true }).click();
     await page.getByRole("tab", { name: "Notas" }).click();
     await page.getByLabel("Mis notas privadas").waitFor();
     await page.waitForFunction(
@@ -344,6 +356,8 @@ try {
       .waitFor();
     await auditAccessibility("session-history");
     await page.goto(baseURL);
+    await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Continuar", exact: true }).click();
     await page.getByRole("heading", { name: /Hola, Lucía/ }).waitFor();
     await page.screenshot({
       path: new URL("explore-desktop.png", output).pathname.replace(

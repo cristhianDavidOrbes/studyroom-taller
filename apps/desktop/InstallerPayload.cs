@@ -43,13 +43,14 @@ namespace StudyRoomTools {
   public static class InstallationOwnership {
     public const string Owner="StudyRoom.Tools.v1",ProtocolKey="Software\\Classes\\studyroom-tools",RunKey="Software\\Microsoft\\Windows\\CurrentVersion\\Run",RunName="StudyRoomTools";
     public const string PreviousExecutableHash="a698fdc358b6051af133a8dd023bf8a53d3b6c8a4d532d0bdd037560054f5982";
+    public const string PreviousPublishedExecutableHash="ce95c476ada80b6d3739dc3e28d5e7d7e25273eda37e20c268713016875f228c";
     public static string StartupCommand(string target) {return "\""+Path.Combine(target,"StudyRoom.Tools.exe")+"\" --background";}
     public static string ProtocolCommand(string target) {return "\""+Path.Combine(target,"StudyRoom.Tools.exe")+"\" \"%1\"";}
     public static bool OwnsProtocol(string owner,string path,string command,string target) {return owner==Owner&&String.Equals(path,target,StringComparison.OrdinalIgnoreCase)&&String.Equals(command,ProtocolCommand(target),StringComparison.OrdinalIgnoreCase);}
     public static bool OwnsStartup(string command,string target) {return command!=null&&String.Equals(command,StartupCommand(target),StringComparison.OrdinalIgnoreCase);}
     public static bool CanRegisterStartup(object command,string target) {return command==null||(command is string&&OwnsStartup((string)command,target));}
     public static bool CanStop(string processPath,int processSession,int installerSession,string target,string hash,string currentHash,bool ownedInstallation) {
-      return ownedInstallation&&processSession==installerSession&&String.Equals(processPath,Path.Combine(target,"StudyRoom.Tools.exe"),StringComparison.OrdinalIgnoreCase)&&(hash==PreviousExecutableHash||hash==currentHash);
+      return ownedInstallation&&processSession==installerSession&&String.Equals(processPath,Path.Combine(target,"StudyRoom.Tools.exe"),StringComparison.OrdinalIgnoreCase)&&(hash==PreviousExecutableHash||hash==PreviousPublishedExecutableHash||hash==currentHash);
     }
   }
 }

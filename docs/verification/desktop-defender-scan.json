@@ -1,0 +1,32 @@
+{
+  "observedAt": "2026-10-03T03:32:57.6149551Z",
+  "scanner": "Microsoft Defender Antivirus",
+  "signatureVersion": "1.459.520.0",
+  "scanType": "Custom file scan, no execution, remediation disabled for this scan only",
+  "antivirusEnabled": true,
+  "realTimeProtectionEnabled": true,
+  "files": [
+    {
+      "file": "apps/web/public/desktop/Instalar-StudyRoom.exe",
+      "sha256": "cc2fd14b4902101fb29f29af8fcf0502a14a43a71797139850d4e303a167b897",
+      "signatureStatus": "NotSigned",
+      "defenderExitCode": 0,
+      "threatsFound": 0,
+      "executableLaunched": false
+    },
+    {
+      "file": "apps/desktop/dist/StudyRoom.Tools.exe",
+      "sha256": "3d649fd16135bd94a257935aa065b0f24bb47f36381345551613c1056e1a05f9",
+      "signatureStatus": "NotSigned",
+      "defenderExitCode": 0,
+      "threatsFound": 0,
+      "executableLaunched": false
+    }
+  ],
+  "limitations": [
+    "This local scan does not grant publisher trust or a guarantee against future detections on other machines.",
+    "Both current executables are unsigned; Smart App Control may block them independently of the antivirus scan.",
+    "No exclusions, certificates, browser security settings or Windows protection settings were changed."
+  ],
+  "officialSigningGuide": "https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/code-signing-options"
+}

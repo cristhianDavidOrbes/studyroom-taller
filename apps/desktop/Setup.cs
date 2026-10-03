@@ -53,8 +53,14 @@ namespace StudyRoomTools {
             run.SetValue(InstallationOwnership.RunName,InstallationOwnership.StartupCommand(target));
           }
           Shortcut(executable,false);
-          Process.Start(new ProcessStartInfo(executable,"--background"){UseShellExecute=false,CreateNoWindow=true});
-          MessageBox.Show("Listo. Vuelve a StudyRoom: la página comprobará que las herramientas estén disponibles.\n\nAparecerán al compartir pantalla y se ocultarán al terminar. Se iniciarán en segundo plano al entrar a Windows; no necesitas extraer un ZIP ni abrirlas cada vez.\nEl navegador puede solicitar permiso de acceso a aplicaciones locales.","StudyRoom instalado",MessageBoxButton.OK,MessageBoxImage.Information);
+          try {using(var started=Process.Start(new ProcessStartInfo(executable,"--background"){UseShellExecute=false,CreateNoWindow=true})) {}}
+          catch(Exception error) {
+            MessageBox.Show("Los archivos se instalaron para tu usuario, pero Windows no pudo iniciar las herramientas.\n\n"+error.Message+"\n\nRevisa el aviso de Windows. Si indica que no puede verificar el publicador, necesitas una distribución firmada de confianza. El programa no modifica tus protecciones.","StudyRoom: herramienta no disponible",MessageBoxButton.OK,MessageBoxImage.Warning);return 1;
+          }
+          if(!BridgeReadiness.WaitForReady()) {
+            MessageBox.Show("Los archivos se instalaron para tu usuario, pero las herramientas todavía no están disponibles. La página no podrá confirmarlas hasta que respondan.\n\nComprueba si Windows mostró un bloqueo al abrir la aplicación o si hay otra aplicación usando el puerto local 8790. Si Windows no puede verificar el publicador, esta descarga necesita una distribución firmada de confianza.\n\nNo se cambiaron tus protecciones. Puedes volver a abrir el instalador cuando la aplicación pueda iniciarse.","StudyRoom: instalación pendiente de apertura",MessageBoxButton.OK,MessageBoxImage.Warning);return 1;
+          }
+          MessageBox.Show("Listo. Vuelve a StudyRoom, espera el mensaje «La aplicación ya está instalada» y pulsa Continuar.\n\nLas herramientas aparecerán al compartir pantalla y se ocultarán al terminar. Se iniciarán en segundo plano al entrar a Windows; no necesitas extraer un ZIP ni abrirlas cada vez.\nEl navegador puede solicitar permiso de acceso a aplicaciones locales.","StudyRoom instalado",MessageBoxButton.OK,MessageBoxImage.Information);
         } else {
           if(!ownsProtocol&&!ownsMarker)throw new InvalidOperationException("No se encontró una instalación propia. No se borró ningún archivo.");
           // Preserve a startup entry changed by another application, even during uninstall.

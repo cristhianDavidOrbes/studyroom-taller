@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+         xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+         xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         IgnorableNamespaces="uap uap3 uap10 desktop rescap">
+  <!-- These markers are replaced only by the packaging script. -->
+  <Identity Name="__STORE_PACKAGE_NAME__" Publisher="__STORE_PUBLISHER__" Version="1.1.0.0" ProcessorArchitecture="x64" />
+  <Properties>
+    <DisplayName>__STORE_DISPLAY_NAME__</DisplayName>
+    <PublisherDisplayName>__STORE_PUBLISHER_DISPLAY_NAME__</PublisherDisplayName>
+    <Description>__PACKAGE_DESCRIPTION__</Description>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+  <Resources><Resource Language="es" /></Resources>
+  <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" /></Dependencies>
+  <Applications>
+    <Application Id="Tools" Executable="StudyRoom.Tools.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements DisplayName="__STORE_DISPLAY_NAME__" Description="__PACKAGE_DESCRIPTION__"
+                          Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png"
+                          BackgroundColor="transparent" />
+      <Extensions>
+        <uap3:Extension Category="windows.protocol">
+          <uap3:Protocol Name="studyroom-tools" Parameters="&quot;%1&quot;" />
+        </uap3:Extension>
+        <desktop:Extension Category="windows.startupTask" Executable="StudyRoom.Tools.exe"
+                           EntryPoint="Windows.FullTrustApplication" uap10:Parameters="--background">
+          <desktop:StartupTask TaskId="StudyRoomTools" Enabled="true" DisplayName="Herramientas StudyRoom" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+  <Capabilities><rescap:Capability Name="runFullTrust" /></Capabilities>
+</Package>

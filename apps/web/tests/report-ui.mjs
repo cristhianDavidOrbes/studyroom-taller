@@ -42,8 +42,13 @@ try {
   const completed = { id: jobId, kind: "answer", status: "completed", question: "¿Cómo se calculó el área?", result: { text: `Según Luis, se multiplicó base por altura. [TRANSCRIPCIO\u0301N:segment-2] [documento:image] [mensaje:message] [síntesis:${summaryId}] También hay una voz final transcripcion:${lateVoice}, un mensaje [mensaje:${lateMessage}] y un archivo [documento:${lateDocument}]. Referencia ajena [transcripción:${foreignId}]. [nota: repasar mañana] [x:2]`, sources: ["transcripcion:segment-2", "documento:image", "mensaje:message", `sintesis:${summaryId}`, `transcripcion:${lateVoice}`, `mensaje:${lateMessage}`, `documento:${lateDocument}`] }, createdAt: now };
   await context.route(`**/api/sessions/${sid}/questions`, (route) => { const body = route.request().postDataJSON(); assert.deepEqual(Object.keys(body).sort(), ["clientId", "question"]); assert(route.request().headers().authorization?.startsWith("Bearer ")); return route.fulfill({ json: { id: jobId, kind: "answer", status: "running", partialText: `Se está revisando la voz. [transcripción:${lateVoice}]`, question: body.question, createdAt: now } }); });
   await context.route(`**/api/ai/jobs/${jobId}`, (route) => { report.jobs = [report.jobs[0], completed]; return route.fulfill({ json: completed }); });
-  await page.goto(`${base}/acceso`); await page.getByLabel("Correo electrónico").fill(email); await page.getByLabel("Contraseña", { exact: true }).fill(password); await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click(); await page.getByRole("heading", { name: /Hola, Prueba/ }).waitFor();
+  await page.goto(`${base}/acceso`); await page.getByLabel("Correo electrónico").fill(email); await page.getByLabel("Contraseña", { exact: true }).fill(password); await page.getByRole("button", { name: "Iniciar sesión", exact: true }).click();
+  await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
+  await page.getByRole("heading", { name: /Hola, Prueba/ }).waitFor();
   await page.goto(`${base}/sesiones/${sid}`);
+  await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Continuar", exact: true }).click();
   await check("Original voice search, speaker filtering, chat and safe escaped transcript", async () => {
     await page.getByRole("heading", { name: "Lo que se habló" }).waitFor();
     assert.equal(await page.locator(".quiz, .quiz-result").count(), 0); assert.equal(await page.getByRole("button", { name: /quiz|cuestionario|comprobar respuestas/i }).count(), 0); assert.equal(await page.getByRole("heading", { name: "Tu progreso en el repaso", exact: true }).count(), 0);
@@ -81,7 +86,10 @@ try {
   await check("Mobile report stays inside viewport with all sections accessible", async () => {
     report.transcription.segments = [...originalSegments, report.transcription.segments.at(-1)]; report.messages = [...originalMessages, report.messages.at(-1)]; report.documents = [...originalDocuments, report.documents.at(-1)];
     report.transcription.participants = report.transcription.participants.filter((person) => person.userId !== "speaker-three"); report.transcription.coverage.totalParticipants = 3;
-    await page.goto(`${base}/sesiones/${sid}`); await page.getByRole("heading", { name: "Lo que se habló" }).waitFor(); await page.locator("#report-questions .job-completed").waitFor();
+    await page.goto(`${base}/sesiones/${sid}`);
+    await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Continuar", exact: true }).click();
+    await page.getByRole("heading", { name: "Lo que se habló" }).waitFor(); await page.locator("#report-questions .job-completed").waitFor();
     await page.screenshot({ path: resolve(output, "report-desktop.png"), fullPage: true, animations: "disabled" }); await page.setViewportSize({ width: 390, height: 844 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)); await page.screenshot({ path: resolve(output, "report-mobile.png"), fullPage: true, animations: "disabled" });
   });

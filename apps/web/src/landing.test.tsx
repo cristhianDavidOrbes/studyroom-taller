@@ -21,7 +21,15 @@ describe("portada y preparación de escritorio", () => {
     expect(html).toContain("Guardar el archivo no lo instala.");
     expect(html).toContain("Cerrar sesión");
     expect(html).toContain('href="studyroom-tools://open"');
+    expect(html).toContain("Pulsa Continuar");
+    expect(html).toContain("No te llevaremos a otra página automáticamente.");
+    expect(html).toContain("Windows bloqueó el instalador");
+    expect(html).toContain("Smart App Control");
+    expect(html).toContain("Descargar el archivo no significa que la aplicación se haya instalado.");
+    expect(html).toContain("Mantén la protección del equipo activada.");
     expect(html).not.toMatch(/entrar sin|omitir|ya lo descargué/i);
+    expect(html).not.toMatch(/desactivar|Unblock-File|powershell|cmd\.exe/i);
+    expect(html).not.toContain('class="button primary full setup-continue"');
   });
   it("no autoriza ni ofrece un instalador inservible en otros sistemas", () => {
     vi.stubGlobal("navigator", { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X)" });

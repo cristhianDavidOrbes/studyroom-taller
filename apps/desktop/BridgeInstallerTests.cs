@@ -75,11 +75,31 @@ class BridgeInstallerTests {
       Check(!InstallationOwnership.OwnsProtocol("other",target,InstallationOwnership.ProtocolCommand(target),target)&&!InstallationOwnership.OwnsProtocol(InstallationOwnership.Owner,target,"other.exe",target),"foreign ownership and command rejected");
       var executable=Path.Combine(target,"StudyRoom.Tools.exe");var currentHash=InstallerPayload.Hash(files["StudyRoom.Tools.exe"]);
       Check(InstallationOwnership.CanStop(executable,1,1,target,InstallationOwnership.PreviousExecutableHash,currentHash,true),"only known earlier owned executable can upgrade");
+      Check(InstallationOwnership.CanStop(executable,1,1,target,InstallationOwnership.PreviousPublishedExecutableHash,currentHash,true),"previous published 1.1 helper can upgrade only by exact hash");
       Check(InstallationOwnership.CanStop(executable,1,1,target,currentHash,currentHash,true),"own current verified executable can be restarted");
       Check(!InstallationOwnership.CanStop(executable,2,1,target,currentHash,currentHash,true),"another Windows session cannot be stopped");
       Check(!InstallationOwnership.CanStop(executable,1,1,target,currentHash,currentHash,false),"unowned installation cannot be stopped");
       Check(!InstallationOwnership.CanStop(executable,1,1,target,"unknown",currentHash,true),"unknown executable cannot be stopped");
       Check(!InstallationOwnership.CanStop("C:\\Other\\StudyRoom.Tools.exe",1,1,target,currentHash,currentHash,true),"same process name in other path cannot be stopped");
+      var ready="{\"app\":\"StudyRoom.Tools\",\"version\":\"1.1.0\",\"ready\":true}";
+      Check(BridgeReadiness.IsReady(ready),"installer readiness accepts current exact health");
+      Check(!BridgeReadiness.IsReady(null)&&!BridgeReadiness.IsReady("{}")&&!BridgeReadiness.IsReady("not-json"),"missing and invalid health cannot confirm installation");
+      Check(!BridgeReadiness.IsReady(ready.Replace("true","false")),"not-ready helper rejected");
+      Check(!BridgeReadiness.IsReady(ready.Replace("1.1.0","1.0.0")),"old helper version rejected");
+      Check(!BridgeReadiness.IsReady(ready.Replace("StudyRoom.Tools","Other.App")),"different local app rejected");
+      Check(!BridgeReadiness.IsReady(ready.Replace("true","\"true\"")),"health readiness requires a Boolean");
+      Check(!BridgeReadiness.IsReady(ready.Replace("}",",\"ready\":true}")),"duplicate readiness field rejected");
+      Check(!BridgeReadiness.IsReady(ready.Replace("}",",\"extra\":1}")),"extra health fields rejected");
+      long clock=0;int attempts=0,pauses=0;
+      Check(BridgeReadiness.WaitForReady(delegate(int budget){attempts++;Check(budget<=700&&budget>0,"probe has a bounded timeout");return ready;},delegate(int duration){pauses++;clock+=duration;},delegate{return clock;},1000)&&attempts==1&&pauses==0,"ready child confirms immediately");
+      clock=0;attempts=0;pauses=0;
+      Check(!BridgeReadiness.WaitForReady(delegate(int budget){attempts++;return null;},delegate(int duration){pauses++;clock+=duration;},delegate{return clock;},1000)&&clock==1000&&attempts==4&&pauses==4,"unavailable child stops at bounded deadline");
+      clock=0;attempts=0;
+      Check(BridgeReadiness.WaitForReady(delegate(int budget){return ++attempts==2?ready:null;},delegate(int duration){clock+=duration;},delegate{return clock;},1000)&&attempts==2,"child can become ready during startup");
+      clock=0;
+      Check(!BridgeReadiness.WaitForReady(delegate(int budget){clock+=budget;throw new IOException("child blocked");},delegate(int duration){clock+=duration;},delegate{return clock;},1000)&&clock==1000,"blocked child does not produce false success or unbounded retries");
+      clock=0;
+      Check(!BridgeReadiness.WaitForReady(delegate(int budget){clock=1001;return ready;},delegate(int duration){clock+=duration;},delegate{return clock;},1000),"late response after deadline cannot confirm installation");
       Console.WriteLine("PASS "+assertions+" assertions: read-only health HTTP, unchanged share leases, standalone embedded integrity and pure startup/upgrade ownership. No windows, installer execution, process stop or registry write.");return 0;
     }catch(Exception error){Console.Error.WriteLine("FAIL after "+assertions+" assertions: "+error.Message);return 1;}
   }
