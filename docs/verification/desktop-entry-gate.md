@@ -1,38 +1,43 @@
-# Verificación del acceso con herramientas de Windows
+# Verificación del acceso sin instalación obligatoria
 
-Los recorridos de navegador usan un User-Agent de Windows explícito incluso
-cuando el ejecutor de CI es Linux. El navegador solicita realmente
-`GET http://127.0.0.1:8790/v1/health`; una fixture aislada responde por ese único
-endpoint. No existe una marca en localStorage que omita la comprobación.
+La obligación de instalar el pizarrón de Windows está temporalmente desactivada
+para permitir probar la aplicación. El inicio de sesión y las comprobaciones de
+perfil y permisos siguen aplicándose. Las herramientas del escritorio siguen
+disponibles desde la sala como opción para quien las tenga instaladas.
 
 `apps/web/tests/browser-smoke.mjs`, ejecutado por `.github/workflows/ci.yml`,
-comprueba estos casos:
+usa un User-Agent de Windows explícito incluso cuando CI corre en Linux. Su
+fixture de `GET http://127.0.0.1:8790/v1/health` permanece desconectada durante
+todo el recorrido: no simula una instalación válida ni usa una marca en
+localStorage para aprobar el acceso. También intercepta y rechaza cualquier
+solicitud del instalador, y exige que no se produzca ninguna.
+
+El recorrido comprueba:
 
 - La landing pública ofrece registro e inicio de sesión sin exigir instalación.
-- Tras autenticar, una herramienta desconectada bloquea las vistas protegidas.
-- Descargar el instalador no habilita el acceso ni demuestra una instalación.
-- Se rechazan una aplicación distinta, una versión antigua y `ready: false`.
-- Solo `{ app: "StudyRoom.Tools", version: "1.1.0", ready: true }` permite
-  continuar a la URL original de la sala, conservando sus parámetros.
-- Landing y pantalla de preparación se capturan en la evidencia de navegador.
-  La landing se comprueba en tamaños de escritorio y móvil.
-
-El archivo descargado durante la prueba es texto sintético con un nombre `.exe`,
-nunca se ejecuta ni se guarda como instalación. Estas comprobaciones validan
-la decisión de la página, no la instalación nativa de Windows. La compilación y
-las pruebas nativas se ejecutan en el trabajo `desktop` separado.
+- Una cuenta nueva llega al perfil inicial y a las vistas autenticadas sin
+  comprobación de instalación, descarga o pantalla de preparación.
+- El acceso directo a `/salas/:id` conserva la ruta y sus parámetros aunque la
+  herramienta local no esté disponible.
+- Chat, notas persistidas tras recargar, temporizador, participantes e historial
+  funcionan durante ese mismo recorrido sin instalación obligatoria.
+- Se mantienen las comprobaciones de acceso con credenciales incorrectas,
+  interfaz móvil, teclado, accesibilidad y recuperación de la vista de sala
+  cuando falla su descarga.
 
 Los recorridos independientes `media-collaboration.mjs`, `session-report.mjs` y
-`report-ui.mjs` también reciben salud válida mediante la misma fixture para
-alcanzar sus vistas protegidas. La primera activación del micrófono en los
-recorridos de medios activa el micrófono directamente, sin un diálogo adicional.
-La prueba de voz comprueba que no se captura un micrófono sin publicar y que
-la transcripción comienza automáticamente para los dos participantes cuando
-publican su audio. La fixture de salud no modifica el estado de transcripción.
+`report-ui.mjs` tampoco esperan la pantalla de preparación ni pulsan
+«Continuar». Conservan sus fixtures de servicios y las comprobaciones de medios
+y reportes posteriores al inicio de sesión. Estas pruebas no descargan ni
+ejecutan el instalador de Windows; la compilación y las pruebas nativas se
+realizan en el trabajo `desktop` separado.
 
-Estado al preparar este cambio: se validó la sintaxis de los scripts; los
-recorridos con servicios se ejecutan por CI o desde un entorno de prueba
-preparado. Este documento describe cobertura, no afirma un resultado de
-navegador que aún no se haya ejecutado. Los resultados de cada ejecución quedan
-en `browser-smoke.json`, `media-collaboration.json`, `session-report.json` y
-`report-ui.json`, respectivamente.
+Se validó localmente la sintaxis de los cuatro scripts actualizados. Los
+recorridos con servicios requieren CI o un entorno de prueba preparado: este
+documento describe su cobertura y no afirma un resultado aún no ejecutado.
+Los resultados de cada ejecución quedan en `browser-smoke.json`,
+`media-collaboration.json`, `session-report.json` y `report-ui.json`.
+
+Las comprobaciones unitarias de detección e instalación se conservan para la
+herramienta opcional. Si vuelve a exigirse la instalación para entrar, será
+necesario adaptar estos recorridos al flujo de acceso que se habilite.

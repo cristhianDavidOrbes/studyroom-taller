@@ -4,6 +4,8 @@ El compañero de StudyRoom dibuja sobre el escritorio y otras aplicaciones. Es u
 
 ## Uso
 
+**Acceso temporal para pruebas (3 de octubre de 2026):** la instalación del pizarrón es opcional. Iniciar sesión permite entrar a las salas, el perfil y los reportes sin comprobar la herramienta local. La descarga sigue disponible en la sala; quien ya la tenga instalada puede continuar dibujando al compartir pantalla. El requisito se conserva en `apps/web/src/App.tsx`, desactivado con `desktopInstallationRequired = false`, para poder reactivarlo cuando se decida.
+
 **Estado de distribución:** el EXE directo todavía no tiene firma de un publicador reconocido. Microsoft Defender no encontró amenazas en la compilación comprobada, pero Smart App Control puede bloquearla por falta de confianza. El titular descartó Microsoft Store y autorizó publicar solo el componente Windows con MIT. La [firma directa](desktop-signing.md) se solicitó a SignPath Foundation; el formulario confirmó su envío, pero la aprobación y la firma siguen pendientes. StudyRoom conserva privados sus demás componentes. Un hash SHA-256 no sustituye la firma.
 
 1. Descargar `Instalar-StudyRoom.exe` desde StudyRoom y **abrirlo una vez**. Instala los archivos propios para el usuario y espera en segundo plano. Guardar un ZIP en Descargas no instala ni ejecuta una aplicación; el navegador tampoco puede inspeccionar automáticamente esa carpeta.

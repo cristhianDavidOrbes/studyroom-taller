@@ -182,12 +182,8 @@ try {
     await client.page
       .getByRole("button", { name: "Iniciar sesión", exact: true })
       .click();
-    await client.page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
-    await client.page.getByRole("button", { name: "Continuar", exact: true }).click();
     await client.page.getByRole("heading", { name: /Hola, Prueba/ }).waitFor();
     await client.page.goto(`http://localhost:5173/salas/${room.id}`);
-    await client.page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
-    await client.page.getByRole("button", { name: "Continuar", exact: true }).click();
     await client.page
       .getByRole("link", { name: "Dibujar en el escritorio", exact: true })
       .waitFor();

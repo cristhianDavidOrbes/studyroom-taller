@@ -31,6 +31,10 @@ import { errorText } from "./api";
 import { UsageButton } from "./usage";
 import { LandingPage } from "./landing";
 import { DesktopSetup } from "./desktop-setup";
+
+// Temporarily optional while the Windows signing application is under review.
+const desktopInstallationRequired = false;
+
 function Protected() {
   const { user, loading, error, reload, profile, logout } = useAuth();
   const location = useLocation();
@@ -72,7 +76,7 @@ function Protected() {
         </button>
       </div>
     );
-  if (readyUser !== user.uid)
+  if (desktopInstallationRequired && readyUser !== user.uid)
     return (
       <DesktopSetup
         key={user.uid}

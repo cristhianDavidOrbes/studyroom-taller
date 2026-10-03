@@ -16,13 +16,11 @@ const context = await browser.newContext({
 });
 context.setDefaultTimeout(90_000);
 const desktopHealth = await desktopHealthFixture(context, "offline");
-await context.route("**/desktop/Instalar-StudyRoom.exe", (route) =>
-  route.fulfill({
-    contentType: "application/octet-stream",
-    headers: { "Content-Disposition": 'attachment; filename="Instalar-StudyRoom.exe"' },
-    body: "StudyRoom test-only download fixture; never executable or installed.",
-  }),
-);
+let installerRequests = 0;
+await context.route("**/desktop/Instalar-StudyRoom.exe", (route) => {
+  installerRequests++;
+  return route.abort("failed");
+});
 const page = await context.newPage();
 const errors = [];
 const expectedErrors = [];
@@ -169,19 +167,12 @@ try {
       await page
         .getByRole("button", { name: "Crear cuenta", exact: true })
         .click();
-      await step("Herramienta desconectada bloquea el acceso tras registrarse", async () => {
-        await page.getByRole("heading", { name: "Prepara tus herramientas", exact: true }).waitFor();
-        await page.getByText(/Todavía no detectamos la herramienta/).waitFor();
-        assert.equal(await page.getByRole("heading", { name: "Hagamos este espacio tuyo", exact: true }).count(), 0);
-        assert(desktopHealth.requests.some((request) => request.method === "GET" && request.mode === "offline"));
-        await auditAccessibility("desktop-entry-gate");
-        await page.screenshot({ path: new URL("desktop-entry-gate.png", output).pathname.replace(/^\/([A-Z]:)/, "$1"), fullPage: true, animations: "disabled" });
-        desktopHealth.mode = "ready";
-        await page.getByRole("button", { name: "Comprobar otra vez", exact: true }).click();
-        await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
-        assert.equal(await page.getByRole("heading", { name: "Hagamos este espacio tuyo", exact: true }).count(), 0);
-        await auditAccessibility("desktop-entry-installed");
-        await page.getByRole("button", { name: "Continuar", exact: true }).click();
+      await step("Registro permite entrar sin instalar herramientas de Windows", async () => {
+        await page.getByRole("heading", { name: "Hagamos este espacio tuyo", exact: true }).waitFor();
+        assert.equal(await page.getByRole("heading", { name: "Prepara tus herramientas", exact: true }).count(), 0);
+        assert.equal(await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).count(), 0);
+        assert.equal(desktopHealth.requests.length, 0, "Authenticated entry does not require a local installation check");
+        assert.equal(installerRequests, 0, "Authenticated entry does not download an installer");
       });
       await page
         .getByRole("heading", { name: "Hagamos este espacio tuyo" })
@@ -245,8 +236,6 @@ try {
           });
           await page.unroute(roomModule);
           await page.getByRole("button", { name: "Reintentar carga" }).click();
-          await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
-          await page.getByRole("button", { name: "Continuar", exact: true }).click();
           await page
             .getByRole("heading", { name: "Cálculo en compañía", level: 1 })
             .waitFor();
@@ -257,41 +246,16 @@ try {
     await page
       .getByRole("heading", { name: "Cálculo en compañía", level: 1 })
       .waitFor();
-    await step("Descargar no habilita acceso; solo salud válida conserva el enlace original", async () => {
-      desktopHealth.mode = "offline";
+    await step("Sala y parámetros del enlace se conservan sin herramienta instalada", async () => {
       const originalURL = new URL(page.url());
-      originalURL.searchParams.set("gate", "check");
+      originalURL.searchParams.set("entry", "without-desktop-tools");
       await page.goto(originalURL.href);
-      await page.getByRole("heading", { name: "Prepara tus herramientas", exact: true }).waitFor();
-      await page.getByText(/Todavía no detectamos la herramienta/).waitFor();
-      const downloadLink = page.getByRole("link", { name: "Descargar para Windows", exact: true });
-      assert.equal(await downloadLink.getAttribute("href"), "/desktop/Instalar-StudyRoom.exe");
-      assert.equal(await page.getByRole("link", { name: "Abrir herramientas instaladas", exact: true }).getAttribute("href"), "studyroom-tools://open");
-      const downloadPromise = page.waitForEvent("download");
-      await downloadLink.click();
-      const download = await downloadPromise;
-      assert.equal(download.suggestedFilename(), "Instalar-StudyRoom.exe");
-      await download.delete();
-      assert(await page.getByRole("heading", { name: "Prepara tus herramientas", exact: true }).isVisible());
-      assert.equal(await page.getByRole("heading", { name: "Cálculo en compañía", level: 1 }).count(), 0);
-      for (const mode of ["wrong-app", "old-version", "not-ready"]) {
-        desktopHealth.mode = mode;
-        const requestsBefore = desktopHealth.requests.length;
-        const healthResponse = page.waitForResponse((response) => response.url() === "http://127.0.0.1:8790/v1/health" && response.request().method() === "GET");
-        await page.getByRole("button", { name: "Comprobar otra vez", exact: true }).click();
-        await healthResponse;
-        await page.getByText(/Todavía no detectamos la herramienta/).waitFor();
-        assert(desktopHealth.requests.slice(requestsBefore).some((request) => request.method === "GET" && request.mode === mode), `Health check made for ${mode}`);
-        assert(await page.getByRole("heading", { name: "Prepara tus herramientas", exact: true }).isVisible());
-      }
-      desktopHealth.mode = "ready";
-      await page.getByRole("button", { name: "Comprobar otra vez", exact: true }).click();
-      await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
-      assert.equal(await page.getByRole("heading", { name: "Cálculo en compañía", level: 1 }).count(), 0);
-      assert.equal(page.url(), originalURL.href, "Ready companion does not navigate before explicit Continue");
-      await page.getByRole("button", { name: "Continuar", exact: true }).click();
       await page.getByRole("heading", { name: "Cálculo en compañía", level: 1 }).waitFor();
-      assert.equal(page.url(), originalURL.href, "Original room URL and query are retained after companion approval");
+      assert.equal(page.url(), originalURL.href, "Original room URL and query are retained without a companion");
+      assert.equal(await page.getByRole("heading", { name: "Prepara tus herramientas", exact: true }).count(), 0);
+      assert.equal(await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).count(), 0);
+      assert.equal(desktopHealth.requests.length, 0, "Direct room access does not probe an unavailable companion");
+      assert.equal(installerRequests, 0, "Direct room access does not download an installer");
     });
     await page
       .getByLabel("Mensaje al grupo")
@@ -309,8 +273,7 @@ try {
     await page.getByRole("button", { name: "Guardar notas" }).click();
     await page.getByText("Guardado", { exact: true }).waitFor();
     await page.reload();
-    await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
-    await page.getByRole("button", { name: "Continuar", exact: true }).click();
+    await page.getByRole("heading", { name: "Cálculo en compañía", level: 1 }).waitFor();
     await page.getByRole("tab", { name: "Notas" }).click();
     await page.getByLabel("Mis notas privadas").waitFor();
     await page.waitForFunction(
@@ -356,8 +319,6 @@ try {
       .waitFor();
     await auditAccessibility("session-history");
     await page.goto(baseURL);
-    await page.getByRole("heading", { name: "La aplicación ya está instalada", exact: true }).waitFor();
-    await page.getByRole("button", { name: "Continuar", exact: true }).click();
     await page.getByRole("heading", { name: /Hola, Lucía/ }).waitFor();
     await page.screenshot({
       path: new URL("explore-desktop.png", output).pathname.replace(
@@ -400,6 +361,9 @@ try {
       "Keyboard focus active",
     );
   });
+  assert.equal(desktopHealth.mode, "offline", "The entire smoke test runs without an installed companion");
+  assert.equal(desktopHealth.requests.length, 0, "No installation health check is required during authenticated navigation");
+  assert.equal(installerRequests, 0, "No installer is requested or executed during the smoke test");
   assert.deepEqual(errors, [], "No uncaught browser errors");
   if (accessibility.length)
     assert.equal(
