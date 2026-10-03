@@ -19,7 +19,7 @@ El proyecto contiene la aplicación y sus pruebas. La aceptación de todas las i
 | Voz y lectura de imágenes | Whisper small local con palabras y tiempos; OCR Tesseract en español e inglés |
 | Trabajos de IA | Cola durable PostgreSQL, un consumidor dentro de la API |
 
-El modelo local seleccionado tras probarlo es **qwen3:4b-instruct Q4_K_M**, aproximadamente 2,5 GB, Apache 2.0. Solo se procesa una inferencia simultánea con contexto de texto 4096. Audio, cámara y pantalla compartida de la llamada viajan por LiveKit. Si un participante activa la transcripción, fragmentos separados de su propio micrófono pasan por la API y ngrok a Whisper local; la llamada sigue funcionando mientras se procesan.
+El modelo local seleccionado tras probarlo es **qwen3:4b-instruct Q4_K_M**, aproximadamente 2,5 GB, Apache 2.0. Solo se procesa una inferencia simultánea con contexto de texto 4096. Audio, cámara y pantalla compartida de la llamada viajan por LiveKit. La transcripción se prepara automáticamente para cada participante al entrar: cuando enciende su micrófono, fragmentos separados de esa misma pista pasan por la API y ngrok a Whisper local. La llamada sigue funcionando mientras se procesan; un indicador muestra el estado y la pestaña Voz permite pausarla.
 
 Las señales se abren desde el **menú pequeño arriba a la derecha de la cámara**. Puntero, trazos y borrado se muestran sobre la pantalla compartida a los participantes autorizados. No hay una pizarra independiente.
 
@@ -89,7 +89,7 @@ La configuración genera un secreto privado. Copiar el valor de `AI_GATEWAY_SECR
 
 Si ngrok aún no tiene una cuenta configurada, ejecutar `setup.ps1 -ConfigureNgrok`: solicita el authtoken mediante entrada oculta. Un authtoken existente se reutiliza sin mostrarlo. Solo se expone el gateway autenticado; Ollama escucha en loopback con sus funciones cloud desactivadas.
 
-El PC debe permanecer encendido, despierto y conectado. `pause.ps1 -Mode background` aplaza nuevos resúmenes/quizzes para reservar recursos a la llamada; `-Mode all` pausa toda generación nueva; `-Mode resume` reanuda. `stop.ps1` detiene únicamente los procesos registrados por StudyRoom. Los modelos y datos se conservan.
+El PC debe permanecer encendido, despierto y conectado. `pause.ps1 -Mode background` aplaza nuevos resúmenes para reservar recursos a la llamada; `-Mode all` pausa toda generación nueva; `-Mode resume` reanuda. `stop.ps1` detiene únicamente los procesos registrados por StudyRoom. Los modelos y datos se conservan.
 
 La [guía de IA](apps/ai-gateway/local-ai.md) documenta autenticación, NDJSON, cancelación, prioridad, errores, límites y verificación. [La evidencia de inferencia local](apps/ai-gateway/model-verification.json) incluye digest, licencia, muestras reales y tiempos. [La evidencia del túnel](apps/ai-gateway/tunnel-verification.json) distingue conexión del agente de una solicitud pública verificada; no son equivalentes.
 
@@ -102,7 +102,7 @@ La [guía de IA](apps/ai-gateway/local-ai.md) documenta autenticación, NDJSON, 
 5. Usar chat, levantar la mano, reaccionar, consultar documentos, guardar notas privadas y coordinar el timer de enfoque/descanso. Los anfitriones administran roles y expulsiones.
 6. Preguntar en la pestaña del asistente seleccionando qué chat/documentos incluir. `@IA` en el chat solicita ayuda compartida. Las notas privadas no se envían al asistente. Las solicitudes muestran espera, progreso, error o cancelación según el estado real.
 7. En **Voz → Transcribir mi voz**, cada participante puede habilitar el reconocimiento de su micrófono. La transcripción conserva las palabras reconocidas, su hablante y tiempos; muestra errores y cobertura parcial. No se captura automáticamente la voz de quien no lo active.
-8. Finalizar la sesión y abrir **Mi aprendizaje → Reporte** para consultar y exportar la transcripción, chat, imágenes y documentos compartidos, resumen, puntos clave y quiz. En **Consultar este reporte** puedes hacer preguntas privadas sobre esas fuentes. Las notas privadas no forman parte del reporte compartido.
+8. Finalizar la sesión y abrir **Mi aprendizaje → Reporte** para consultar y exportar la transcripción, chat, imágenes y documentos compartidos, resumen y puntos clave. En **Consultar este reporte** puedes hacer preguntas privadas sobre esas fuentes. Las notas privadas no forman parte del reporte compartido. El sistema no genera ni muestra cuestionarios.
 
 La [revisión de copias anteriores](docs/legacy-studyroom-review.md) documenta qué se encontró y qué se aprovechó. La voz que nunca se capturó en sesiones antiguas no puede reconstruirse. El reconocimiento automático puede equivocarse; los fallos no se sustituyen por texto inventado. Consulta [el contrato de reportes y voz](docs/session-report-api.md).
 

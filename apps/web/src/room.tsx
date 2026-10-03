@@ -48,6 +48,7 @@ import { AIPanel } from "./ai";
 import { MediaStage } from "./media";
 import { useTranscription } from "./use-transcription";
 import { TranscriptionPanel } from "./transcription-panel";
+import "./report-enhancements.css";
 import type {
   StudyRoom,
   Member,
@@ -703,6 +704,11 @@ export function RoomPage() {
       )}
       <div className="room-workspace" id="room-main">
         <section className="room-main-column">
+          <div className="shared-report-banner">
+            <span className={`shared-report-indicator ${transcription.recording ? "is-recording" : ""}`}><AudioLines size={22} /></span>
+            <div><strong>Un reporte para todos en esta reunión</strong><p>{transcription.recording ? "Tu voz se está transcribiendo. Las intervenciones se ordenan por el momento en que se hablaron." : transcription.enabled ? "La transcripción está lista. Al encender tu micrófono, tu voz se incluirá automáticamente en el reporte compartido." : transcription.busy ? "Preparando la transcripción automática de tu voz…" : "Tu voz no se está transcribiendo. Revisa su estado en Voz; el chat, las imágenes y los archivos se conservan en el reporte."}</p></div>
+            <button className="button secondary" onClick={() => setTab("transcription")}>Ver transcripción</button>
+          </div>
           <MediaStage
             key={id}
             roomId={id!}
@@ -1123,7 +1129,7 @@ export function RoomPage() {
         >
           <p>
             {confirm === "close"
-              ? "El grupo saldrá de la sala. La sesión se guardará en el historial y podrás consultar su resumen y repaso."
+              ? "El grupo saldrá de la sala. La sesión se guardará en el historial y podrás consultar su reporte y hacer preguntas sobre lo compartido."
               : confirm === "cancel"
                 ? "La sala programada quedará cancelada y los participantes ya no podrán entrar."
                 : "Se desconectarán tu cámara y micrófono. Tus notas se guardarán antes de salir."}

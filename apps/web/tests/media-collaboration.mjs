@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve } from "node:path";
+import { desktopHealthFixture, windowsUserAgent } from "./desktop-health-fixture.mjs";
+import { activateMicrophone } from "./media-actions.mjs";
 const output = process.env.TEST_OUTPUT_DIR
   ? pathToFileURL(`${resolve(process.env.TEST_OUTPUT_DIR)}/`)
   : new URL("../test-results/", import.meta.url);
@@ -119,7 +121,9 @@ try {
     client.context = await browser.newContext({
       viewport: { width: 1280, height: 900 },
       permissions: ["camera", "microphone"],
+      userAgent: windowsUserAgent,
     });
+    await desktopHealthFixture(client.context);
     client.page = await client.context.newPage();
     client.bridgeEvents = [];
     await client.context.route(
@@ -196,7 +200,7 @@ try {
       await client.page
         .getByRole("link", { name: "Descargar herramientas para Windows" })
         .getAttribute("href"),
-      "/desktop/StudyRoom-Herramientas.zip",
+      "/desktop/Instalar-StudyRoom.exe",
     );
     await client.page.getByRole("button", { name: "Cerrar ventana" }).click();
     await client.page
@@ -217,9 +221,7 @@ try {
         await c.page
           .getByRole("button", { name: "Activar cámara", exact: true })
           .click();
-        await c.page
-          .getByRole("button", { name: "Activar micrófono", exact: true })
-          .click();
+        await activateMicrophone(c.page);
       }
       for (const c of clients) {
         await c.page.waitForFunction(

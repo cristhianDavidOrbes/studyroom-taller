@@ -32,6 +32,7 @@ import { auth, configurationError } from "./firebase";
 import { api, authError, errorText, json } from "./api";
 import type { Profile } from "./types";
 import { Brand, ErrorBox, Spinner, useToast } from "./ui";
+import { safeReturnPath } from "./auth-return";
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
@@ -114,7 +115,7 @@ export function AuthPage() {
   const [params] = useSearchParams();
   const resetCode = params.get("oobCode");
   const [mode, setMode] = useState<"login" | "register" | "recover" | "reset">(
-    resetCode ? "reset" : "login",
+    resetCode ? "reset" : params.get("mode") === "register" ? "register" : "login",
   );
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -162,15 +163,10 @@ export function AuthPage() {
           json("PATCH", { displayName: String(data.get("name")) }),
         );
         await reload();
-        navigate("/perfil");
+        navigate(safeReturnPath(params.get("next"), "/perfil"));
       } else {
         await signInWithEmailAndPassword(auth, email, password);
-        navigate(
-          params.get("next")?.startsWith("/") &&
-            !params.get("next")?.startsWith("//")
-            ? params.get("next")!
-            : "/",
-        );
+        navigate(safeReturnPath(params.get("next")));
       }
     } catch (e) {
       setError(authError(e));
@@ -187,7 +183,7 @@ export function AuthPage() {
   return (
     <div className="auth-page">
       <section className="auth-story">
-        <Brand />
+        <Link to="/" aria-label="StudyRoom, inicio"><Brand /></Link>
         <div className="auth-story-main">
           <span className="eyebrow light">APRENDER ES MEJOR EN COMPAÑÍA</span>
           <h1>

@@ -1,41 +1,93 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Security.Principal;
+using System.Threading;
 using System.Windows;
 using Microsoft.Win32;
 
 namespace StudyRoomTools {
   public static class Setup {
-    const string Key="Software\\Classes\\studyroom-tools",Owner="StudyRoom.Tools.v1";
-    static readonly string[] Files={"StudyRoom.Tools.exe","StudyRoom.Tools.exe.config","Iniciar-Herramientas.cmd","Instalar-Herramientas.cmd","Desinstalar-Herramientas.cmd","LEEME.txt","SHA256SUMS.txt"};
-    public static int Run(bool install) {
+    const string Marker="StudyRoom.installation";
+    public static int Run(bool install) {return Run(install,delegate{return InstallerPayload.FromFolder(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));});}
+    public static int InstallEmbedded(Assembly assembly) {return Run(true,delegate{return InstallerPayload.FromEmbedded(assembly);});}
+    static int Run(bool install,Func<Dictionary<string,byte[]>> getFiles) {
       try {
-        var target=Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"StudyRoom","Herramientas"));
-        var parent=Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"StudyRoom"))+Path.DirectorySeparatorChar;
-        if(!target.StartsWith(parent,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Ruta no válida.");
-        using(var existing=Registry.CurrentUser.OpenSubKey(Key)) {
-          if(existing!=null&&((string)existing.GetValue("StudyRoomOwner")!=Owner||(string)existing.GetValue("StudyRoomPath")!=target))throw new InvalidOperationException("El protocolo pertenece a otra instalación. No se modificó.");
+        var parent=Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"StudyRoom"));
+        var target=Path.GetFullPath(Path.Combine(parent,"Herramientas"));
+        if(!target.StartsWith(parent+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Ruta no válida.");
+        if((Directory.Exists(parent)&&(File.GetAttributes(parent)&FileAttributes.ReparsePoint)!=0)||(Directory.Exists(target)&&(File.GetAttributes(target)&FileAttributes.ReparsePoint)!=0))throw new InvalidOperationException("La carpeta de instalación no puede ser un enlace a otra ubicación.");
+        bool ownsProtocol=false;
+        using(var existing=Registry.CurrentUser.OpenSubKey(InstallationOwnership.ProtocolKey)) {
+          if(existing!=null)using(var command=existing.OpenSubKey("shell\\open\\command")) {
+            ownsProtocol=InstallationOwnership.OwnsProtocol(existing.GetValue("StudyRoomOwner") as string,existing.GetValue("StudyRoomPath") as string,command==null?null:command.GetValue("") as string,target);
+            if(!ownsProtocol)throw new InvalidOperationException("El protocolo pertenece a otra instalación. No se modificó.");
+          }
         }
+        var marker=Path.Combine(target,Marker);var markerValue=InstallationOwnership.Owner+"\n"+target;
+        if(File.Exists(marker)&&(File.GetAttributes(marker)&FileAttributes.ReparsePoint)!=0)throw new InvalidOperationException("La marca de instalación no puede ser un enlace.");
+        bool ownsMarker=File.Exists(marker)&&File.ReadAllText(marker)==markerValue;
         var executable=Path.Combine(target,"StudyRoom.Tools.exe");
         if(install) {
+          using(var run=Registry.CurrentUser.OpenSubKey(InstallationOwnership.RunKey))if(run!=null&&!InstallationOwnership.CanRegisterStartup(run.GetValue(InstallationOwnership.RunName),target))throw new InvalidOperationException("La entrada de inicio pertenece a otra aplicación. No se modificó.");
+          var files=getFiles(); // Verify every embedded file before changing registry or installation.
+          foreach(var name in InstallerPayload.Names) {
+            var candidate=Path.Combine(target,name);
+            if(File.Exists(candidate)&&(File.GetAttributes(candidate)&FileAttributes.ReparsePoint)!=0)throw new InvalidOperationException("Un archivo de instalación es un enlace. No se modificó.");
+          }
+          if(File.Exists(executable)&&InstallerPayload.Hash(File.ReadAllBytes(executable))!=InstallerPayload.Hash(files["StudyRoom.Tools.exe"]))StopOwnTools(target,InstallerPayload.Hash(files["StudyRoom.Tools.exe"]),ownsProtocol||ownsMarker);
           Directory.CreateDirectory(target);
-          var source=Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-          foreach(var name in Files){var from=Path.Combine(source,name);var to=Path.Combine(target,name);if(File.Exists(from)&&!String.Equals(from,to,StringComparison.OrdinalIgnoreCase))File.Copy(from,to,true);}
-          using(var key=Registry.CurrentUser.CreateSubKey(Key)) {
-            key.SetValue("","URL:Herramientas StudyRoom");key.SetValue("URL Protocol","");key.SetValue("StudyRoomOwner",Owner);key.SetValue("StudyRoomPath",target);
-            using(var command=key.CreateSubKey("shell\\open\\command"))command.SetValue("","\""+executable+"\" \"%1\"");
+          foreach(var name in InstallerPayload.Names) {
+            var to=Path.Combine(target,name);
+            if(!File.Exists(to)||InstallerPayload.Hash(File.ReadAllBytes(to))!=InstallerPayload.Hash(files[name]))File.WriteAllBytes(to,files[name]);
+          }
+          File.WriteAllText(marker,markerValue);
+          using(var key=Registry.CurrentUser.CreateSubKey(InstallationOwnership.ProtocolKey)) {
+            key.SetValue("","URL:Herramientas StudyRoom");key.SetValue("URL Protocol","");key.SetValue("StudyRoomOwner",InstallationOwnership.Owner);key.SetValue("StudyRoomPath",target);
+            using(var command=key.CreateSubKey("shell\\open\\command"))command.SetValue("",InstallationOwnership.ProtocolCommand(target));
+          }
+          using(var run=Registry.CurrentUser.CreateSubKey(InstallationOwnership.RunKey)) {
+            if(!InstallationOwnership.CanRegisterStartup(run.GetValue(InstallationOwnership.RunName),target))throw new InvalidOperationException("Otra aplicación registró una entrada de inicio. No se sobrescribió.");
+            run.SetValue(InstallationOwnership.RunName,InstallationOwnership.StartupCommand(target));
           }
           Shortcut(executable,false);
-          System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(executable,"--background"){UseShellExecute=false,CreateNoWindow=true});
-          MessageBox.Show("Listo. Las herramientas esperan en segundo plano y aparecerán cuando compartas pantalla en StudyRoom.\n\nNo se añadió inicio automático de Windows ni se pidieron permisos de administrador. Tras reiniciar el PC, abre el acceso directo una vez.\nEl navegador puede solicitar permiso para comunicarse con esta aplicación local.","StudyRoom instalado",MessageBoxButton.OK,MessageBoxImage.Information);
+          Process.Start(new ProcessStartInfo(executable,"--background"){UseShellExecute=false,CreateNoWindow=true});
+          MessageBox.Show("Listo. Vuelve a StudyRoom: la página comprobará que las herramientas estén disponibles.\n\nAparecerán al compartir pantalla y se ocultarán al terminar. Se iniciarán en segundo plano al entrar a Windows; no necesitas extraer un ZIP ni abrirlas cada vez.\nEl navegador puede solicitar permiso de acceso a aplicaciones locales.","StudyRoom instalado",MessageBoxButton.OK,MessageBoxImage.Information);
         } else {
-          Registry.CurrentUser.DeleteSubKeyTree(Key,false);Shortcut(executable,true);
+          if(!ownsProtocol&&!ownsMarker)throw new InvalidOperationException("No se encontró una instalación propia. No se borró ningún archivo.");
+          // Preserve a startup entry changed by another application, even during uninstall.
+          using(var run=Registry.CurrentUser.OpenSubKey(InstallationOwnership.RunKey,true))if(run!=null&&InstallationOwnership.OwnsStartup(run.GetValue(InstallationOwnership.RunName) as string,target))run.DeleteValue(InstallationOwnership.RunName,false);
+          if(ownsProtocol)Registry.CurrentUser.DeleteSubKeyTree(InstallationOwnership.ProtocolKey,false);
+          Shortcut(executable,true);
           bool remaining=false;
-          foreach(var name in Files){var file=Path.Combine(target,name);if(File.Exists(file)){try{File.Delete(file);}catch(IOException){remaining=true;}catch(UnauthorizedAccessException){remaining=true;}}}
-          MessageBox.Show(remaining?"El protocolo y acceso directo fueron retirados.\nCierra las herramientas y ejecuta Desinstalar-Herramientas.cmd desde la carpeta original del ZIP para retirar los archivos en uso.":"El protocolo, acceso directo y archivos propios fueron retirados. No se modificaron otras aplicaciones.","StudyRoom",MessageBoxButton.OK,MessageBoxImage.Information);
+          foreach(var name in InstallerPayload.Names) {
+            var file=Path.Combine(target,name);
+            if(File.Exists(file)) {if((File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0){remaining=true;continue;}try{File.Delete(file);}catch(IOException){remaining=true;}catch(UnauthorizedAccessException){remaining=true;}}
+          }
+          if(!remaining&&ownsMarker)File.Delete(marker);
+          MessageBox.Show(remaining?"El inicio automático, protocolo y acceso directo propios fueron retirados.\nCierra las herramientas y ejecuta de nuevo Desinstalar-Herramientas.cmd desde el ZIP de respaldo para retirar los archivos en uso.":"El inicio automático, protocolo, acceso directo y archivos propios fueron retirados. No se modificaron otras aplicaciones.","StudyRoom",MessageBoxButton.OK,MessageBoxImage.Information);
         }
         return 0;
-      }catch(Exception error){MessageBox.Show("No se completó la operación. Cierra otra instancia de las herramientas y vuelve a intentarlo.\n\n"+error.Message,"Herramientas StudyRoom",MessageBoxButton.OK,MessageBoxImage.Warning);return 1;}
+      }catch(Exception error){MessageBox.Show("No se completó la operación.\n\n"+error.Message,"Herramientas StudyRoom",MessageBoxButton.OK,MessageBoxImage.Warning);return 1;}
+    }
+    static void StopOwnTools(string target,string currentHash,bool owned) {
+      var executable=Path.Combine(target,"StudyRoom.Tools.exe");var installedHash=InstallerPayload.Hash(File.ReadAllBytes(executable));
+      var installer=Process.GetCurrentProcess();
+      foreach(var process in Process.GetProcessesByName("StudyRoom.Tools"))using(process) {
+        if(process.Id==installer.Id)continue;
+        string path;try{path=process.MainModule.FileName;}catch {continue;}
+        if(!InstallationOwnership.CanStop(path,process.SessionId,installer.SessionId,target,installedHash,currentHash,owned))continue;
+        // New versions exit through their own event; the known older release has no exit event.
+        EventWaitHandle quit;
+        if(EventWaitHandle.TryOpenExisting("Local\\StudyRoom.Tools.Exit."+WindowsIdentity.GetCurrent().User.Value,out quit))using(quit){quit.Set();process.WaitForExit(2000);}
+        if(!process.HasExited) {
+          // Recheck the exact target and image hash immediately before stopping this owned app.
+          if(!InstallationOwnership.CanStop(process.MainModule.FileName,process.SessionId,installer.SessionId,target,InstallerPayload.Hash(File.ReadAllBytes(executable)),currentHash,owned))throw new InvalidOperationException("La aplicación cambió durante la actualización. Cierra las herramientas y vuelve a abrir el instalador.");
+          process.Kill();if(!process.WaitForExit(5000))throw new InvalidOperationException("No se pudo cerrar la versión anterior de StudyRoom.");
+        }
+      }
     }
     static void Shortcut(string executable,bool remove) {
       var path=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),"Herramientas StudyRoom.lnk");
@@ -48,7 +100,7 @@ namespace StudyRoomTools {
         shortcut.GetType().InvokeMember("TargetPath",BindingFlags.SetProperty,null,shortcut,new object[]{executable});
         shortcut.GetType().InvokeMember("WorkingDirectory",BindingFlags.SetProperty,null,shortcut,new object[]{Path.GetDirectoryName(executable)});
         shortcut.GetType().InvokeMember("Save",BindingFlags.InvokeMethod,null,shortcut,null);
-      }catch { /* The protocol/portable launcher remains usable if desktop shortcuts are restricted. */ }
+      }catch { /* Protocol and startup remain usable if shortcuts are restricted. */ }
     }
   }
 }

@@ -1,6 +1,6 @@
 # Verificación del reporte de sesión
 
-La implementación conserva las palabras reconocidas por participante y tiempo, el chat y los recursos compartidos; el reporte permite buscar, exportar y hacer preguntas privadas sobre sus fuentes. Para registrar voz, cada participante activa **Voz → Transcribir mi voz** con su micrófono encendido. Al terminar se consulta desde **Mi aprendizaje → Reporte**.
+La implementación conserva las palabras reconocidas por participante y tiempo, el chat y los recursos compartidos; el reporte permite buscar, exportar y hacer preguntas privadas sobre sus fuentes. La transcripción se prepara automáticamente para cada participante al entrar y registra su micrófono cuando está encendido, con indicador visible y control para pausar. Al terminar se consulta desde **Mi aprendizaje → sesión**. La descarga completa incluye una página HTML y los originales disponibles; no hay cuestionarios.
 
 Las comprobaciones utilizan cuentas y archivos de prueba propios. No se capturó el micrófono, escritorio ni archivos personales del usuario.
 
@@ -15,6 +15,8 @@ Las comprobaciones utilizan cuentas y archivos de prueba propios. No se capturó
 El reconocimiento automático puede equivocarse. No se recupera audio anterior que nunca fue capturado; la cobertura identifica pendientes, pérdidas y participantes sin voz registrada. El OCR reconoce texto, sin prometer comprensión visual de fotos. Las cuotas gratuitas y el equipo local condicionan disponibilidad de IA; la llamada de LiveKit funciona por separado. Una prueba sintética con dos navegadores no certifica una llamada prolongada con cuatro dispositivos y redes físicas.
 
 ## Browser evidence — 2026-10-02
+
+Esta sección conserva evidencia histórica del flujo anterior de activación manual. No prueba el cambio posterior a activación automática ni el nuevo instalador. Las verificaciones de publicación y del nuevo flujo se documentan por separado; no se reinterpretan las capturas antiguas como pruebas actuales.
 
 `browser.json` records **eight passing checks against real services** using two isolated headless Chromium contexts. The application used the local API, PostgreSQL, Firebase Auth emulator, the configured LiveKit SFU, local Whisper speech recognition, private document storage, OCR and the local report-question model. The generated Spanish SAPI microphone, animated camera/canvas screen and PNG/text attachments were synthetic. No personal microphone, camera, desktop or files were captured.
 

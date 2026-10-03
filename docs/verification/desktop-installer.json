@@ -1,0 +1,67 @@
+{
+  "verifiedAt": "2026-10-03T02:05:54.2141043Z",
+  "status": "passed",
+  "version": "1.1.0",
+  "headlessAssertions": 50,
+  "healthContract": {
+    "app": "StudyRoom.Tools",
+    "version": "1.1.0",
+    "ready": true
+  },
+  "checks": [
+    "Real isolated loopback GET health and preflight",
+    "Exact Host and Origin, bounded body and request methods",
+    "Health does not create or refresh share leases or trigger drawings",
+    "Existing sharing POST remains available",
+    "Seven embedded files match built artifacts and manifest hashes",
+    "Tampered content and unexpected extraction paths rejected",
+    "Startup/protocol ownership guards preserve foreign registrations",
+    "Upgrade process guard requires exact path, recognized hash, current Windows session and owned installation",
+    "ZIP entries exactly match built files; published SHA256 sidecars match"
+  ],
+  "installerExecuted": false,
+  "registryWrites": false,
+  "processesStopped": false,
+  "windowsCreated": false,
+  "installedHelperUpgraded": false,
+  "deploymentVerified": false,
+  "limits": [
+    "Installer UI, real registry installation, file-lock upgrade and autostart at Windows login were not executed on this user account",
+    "Physical screen sharing and native toolbar interaction were not repeated",
+    "An EXE must be opened once by the user; downloading a ZIP cannot install it automatically"
+  ],
+  "artifacts": [
+    {
+      "name": "Instalar-StudyRoom.exe",
+      "bytes": 88064,
+      "sha256": "ec883a27a1e31aaef937fd5338211a345b4def18895032b2bbf5d6e72702af73",
+      "publicPath": "/desktop/Instalar-StudyRoom.exe"
+    },
+    {
+      "name": "StudyRoom-Herramientas.zip",
+      "bytes": 33373,
+      "sha256": "1a798540666a1861f184dc34b55f1b14de91502a4ac9f6e1e77ab4efb3b4352e",
+      "publicPath": "/desktop/StudyRoom-Herramientas.zip"
+    }
+  ],
+  "zipEntries": [
+    "StudyRoom.Tools.exe",
+    "StudyRoom.Tools.exe.config",
+    "Iniciar-Herramientas.cmd",
+    "Instalar-Herramientas.cmd",
+    "Desinstalar-Herramientas.cmd",
+    "LEEME.txt",
+    "SHA256SUMS.txt"
+  ],
+  "sourceHashes": {
+    "App.cs": "14ad873221753d8eab22c09ac10b27bf07f0260eaed8b7b2450b1e48cdb7343e",
+    "Bridge.cs": "d3b4f6c7fca81971a9915d3c351b0b9d1872b1e16057e8e4c8e7e3e807b6a4bd",
+    "Setup.cs": "43c0c61d580d1eb74585373114ada709280b1e18635133d952173894ef9cd05e",
+    "Installer.cs": "e800b3aab5a2b319af6bdf01ebbeb131586af3ed9482b93a9a567c8336f6c0d3",
+    "InstallerPayload.cs": "0dce1aba4fd00c8bc4220b7c20ccba3d8c2866d885ada9005141667022f45d74",
+    "BridgeInstallerTests.cs": "aaed8afed155e6e14041714675347c6175e639cb382128a4dba8efe6e1a5d69e",
+    "AssemblyInfo.cs": "842cabb43aa89d610340462424efa08885387a9510213d39958474112df166cb",
+    "StudyRoom.Tools.exe.manifest": "67384ce3c04e07337c043ac7b116d882ed496eb7ee8592c231fee4a266d936f2",
+    "LEEME.txt": "5866f3179f8f49a1dd46e70c6a234d21d73edaf1c0779aeb7f8096b4cd780dfe"
+  }
+}

@@ -104,7 +104,7 @@ Los contadores incluyen tráfico que llega a esta puerta y una estimación de ca
 
 `npm test -w @studyroom/ai-gateway` ejecuta pruebas de autenticación, validación, límites de modelo/contexto, streaming, caída del motor, respuesta inválida, timeout, cuota persistente, prioridad, cancelación y pausa.
 
-`scripts/local-ai/verify.ps1` ejecuta inferencia real y guarda muestras de español, resumen fiel, quiz, tiempos y GPU en `model-verification.json`. `verify.ps1 -PublicTunnel` repite por la URL pública y guarda `tunnel-verification.json`. La comprobación de español/fidelidad debe revisarse manualmente; tres muestras no constituyen una evaluación estadística.
+`scripts/local-ai/verify.ps1` ejecuta inferencia real y guarda muestras de español, resumen fiel y consulta de un reporte, tiempos y GPU en `model-verification.json`. `verify.ps1 -PublicTunnel` repite por la URL pública y guarda `tunnel-verification.json`. La comprobación de español/fidelidad debe revisarse manualmente; tres muestras no constituyen una evaluación estadística. Las evidencias anteriores pueden contener una muestra histórica de cuestionario; esa función ya no se ofrece en StudyRoom.
 
 `node scripts/local-ai/verify-public.mjs` comprueba el túnel HTTPS público: acceso privado sin credencial rechazado (401), salud autenticada y respuesta NDJSON completa. Incluye reintento limitado frente a un fallo de DNS transitorio. Esta verificación pasó en el PC y quedó registrada en `tunnel-verification.json`.
 

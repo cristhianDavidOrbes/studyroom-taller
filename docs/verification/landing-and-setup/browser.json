@@ -1,0 +1,30 @@
+{
+  "verifiedAt": "2026-10-03T02:07:43.477Z",
+  "passed": true,
+  "fixtureOnly": true,
+  "noRealAccounts": true,
+  "noNativeApplicationUsed": true,
+  "checks": [
+    {
+      "name": "Portada pública desktop/mobile sin desbordamiento ni conexión local",
+      "passed": true
+    },
+    {
+      "name": "CTA de registro abre creación de cuenta",
+      "passed": true
+    },
+    {
+      "name": "Acceso obligatorio conserva destino, ofrece salida y funciona desktop/mobile",
+      "passed": true
+    },
+    {
+      "name": "Descargar un archivo no permite entrar ni simula instalación",
+      "passed": true
+    },
+    {
+      "name": "Salud válida entra automáticamente al destino original; deja de sondear y no dibuja",
+      "passed": true
+    }
+  ],
+  "pageErrors": []
+}

@@ -18,6 +18,8 @@ export function useTranscription(roomId: string | undefined, joined: boolean, us
   const consentClock = useRef<{ serverMs: number; receivedAt: number } | null>(null);
   const enabledRef = useRef(false);
   const consentConfirmedAt = useRef<string | null>(null);
+  const consentOperation = useRef(0);
+  const automaticStart = useRef(false);
   const sequence = useRef(0);
   const currentRoom = useRef(roomId);
   currentRoom.current = roomId;
@@ -65,7 +67,7 @@ export function useTranscription(roomId: string | undefined, joined: boolean, us
     queue.current = null;
     pendingUploads?.abort();
     if (alive.current) {
-      setEnabled(false); setError("La autorización de tu voz terminó en otra pestaña o la sesión ya no está disponible. La captura se detuvo.");
+      setEnabled(false); setError("Tu transcripción se desactivó en otra pestaña o la sesión ya no está disponible. La captura se detuvo.");
     }
     void stopCapture();
   }, [stopCapture]);
@@ -76,12 +78,15 @@ export function useTranscription(roomId: string | undefined, joined: boolean, us
     alive.current = true;
     return () => {
       alive.current = false;
+      consentOperation.current++;
       enabledRef.current = false;
       void stopCapture().then(() => queue.current?.drain(55000));
     };
   }, [stopCapture]);
   useEffect(() => {
-    enabledRef.current = false; setEnabled(false); setError("");
+    consentOperation.current++;
+    automaticStart.current = false;
+    enabledRef.current = false; setEnabled(false); setError(""); setBusy(false);
     consentConfirmedAt.current = null;
     consentClock.current = null;
     const previous = queue.current;
@@ -110,7 +115,7 @@ export function useTranscription(roomId: string | undefined, joined: boolean, us
       try {
         await api(`/rooms/${roomId}/transcription/audio`, { method: "POST", body: form, signal });
       } catch (failure) {
-        if (failure instanceof ApiError && [401, 403, 409].includes(failure.status)) revokeLocal();
+        if (currentRoom.current === roomId && failure instanceof ApiError && [401, 403, 409].includes(failure.status)) revokeLocal();
         throw failure;
       }
       if (alive.current && currentRoom.current === roomId) void refetch();
@@ -139,31 +144,44 @@ export function useTranscription(roomId: string | undefined, joined: boolean, us
     };
   }, [enabled, microphone, data?.sessionId, data?.startedAt, roomId, refetch, stopCapture, revokeLocal]);
   const toggle = useCallback(async () => {
-    if (!roomId || busy) return;
+    if (!roomId || busy) return false;
+    const operation = ++consentOperation.current;
+    const current = () => alive.current && currentRoom.current === roomId && consentOperation.current === operation;
     setBusy(true); setError("");
-    setBusyLabel(enabledRef.current ? "Guardando última voz…" : "Autorizando tu voz…");
+    setBusyLabel(enabledRef.current ? "Guardando última voz…" : "Activando tu transcripción…");
     try {
       if (enabledRef.current) {
         enabledRef.current = false; setEnabled(false);
         await stopCapture();
+        if (!current()) return false;
         await queue.current?.drain(55000);
+        if (!current()) return false;
         queue.current = null;
         await api(`/rooms/${roomId}/transcription/consent`, json("POST", { enabled: false }));
       } else {
         if (!window.AudioContext || !window.AudioWorkletNode)
           throw new Error("La transcripción necesita una versión reciente de Chrome, Edge o Firefox.");
         const confirmed = await api<{ updatedAt: string }>(`/rooms/${roomId}/transcription/consent`, json("POST", { enabled: true }));
-        if (!alive.current) return;
+        if (!current()) return false;
         consentConfirmedAt.current = confirmed.updatedAt;
         consentClock.current = { serverMs: Date.parse(confirmed.updatedAt), receivedAt: performance.now() };
         enabledRef.current = true; setEnabled(true);
       }
+      if (!current()) return false;
       await refetch();
+      return current() && enabledRef.current;
     } catch (failure) {
-      if (alive.current) setError(errorText(failure));
+      if (current()) setError(errorText(failure));
+      return false;
     } finally {
-      if (alive.current) setBusy(false);
+      if (current()) setBusy(false);
     }
   }, [roomId, busy, refetch, stopCapture]);
-  return { data, error: error || (queryError ? errorText(queryError) : ""), enabled, recording, busy, busyLabel, pending, toggle, stopForClose, setMicrophone, refetch };
+  const enable = useCallback(async () => enabledRef.current ? true : toggle(), [toggle]);
+  useEffect(() => {
+    if (!joined || !roomId || busy || automaticStart.current) return;
+    automaticStart.current = true;
+    void enable();
+  }, [joined, roomId, busy, enable]);
+  return { data, error: error || (queryError ? errorText(queryError) : ""), enabled, recording, busy, busyLabel, pending, toggle, enable, stopForClose, setMicrophone, refetch };
 }

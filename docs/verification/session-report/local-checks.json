@@ -38,5 +38,31 @@
       "UTF8 multipart names preserved",
       "authorized readable report citations reveal original source"
     ]
+  },
+  "finalCitationValidation": {
+    "observedAt": "2026-10-02T22:21:32.197694Z",
+    "apiPassed": 92,
+    "typecheck": "passed",
+    "build": "passed",
+    "verified": [
+      "bracketed, parenthesized and unbracketed namespaced references enforce exact source identity",
+      "ordinary notes and standalone identifiers retained"
+    ]
+  },
+  "automaticReportRelease": {
+    "observedAt": "2026-10-03T02:16:14.3757667Z",
+    "build": "passed",
+    "typecheck": "passed",
+    "gatewayTests": 24,
+    "apiTests": 106,
+    "webTests": 49,
+    "auditVulnerabilities": 0,
+    "desktopAssertions": 50,
+    "verified": [
+      "full archive with original bytes, chronological conversation and word timestamps",
+      "automatic transcription prepared upon joining with visible status",
+      "questionnaires removed from UI, scheduling and endpoints",
+      "Jest test tools updated without changes to 473 runtime packages"
+    ]
   }
 }

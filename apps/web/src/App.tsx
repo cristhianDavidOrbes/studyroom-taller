@@ -29,10 +29,16 @@ const RoomPage = lazy(() =>
 import { HistoryPage, SessionPage } from "./history";
 import { errorText } from "./api";
 import { UsageButton } from "./usage";
+import { LandingPage } from "./landing";
+import { DesktopSetup } from "./desktop-setup";
 function Protected() {
   const { user, loading, error, reload, profile, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [readyUser, setReadyUser] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user) setReadyUser(null);
+  }, [user]);
   if (loading)
     return (
       <div className="fullscreen-loading">
@@ -40,6 +46,7 @@ function Protected() {
         <Spinner label="Preparando tu espacio…" />
       </div>
     );
+  if (!user && location.pathname === "/") return <LandingPage />;
   if (!user)
     return (
       <Navigate
@@ -64,6 +71,16 @@ function Protected() {
           Volver a iniciar sesión
         </button>
       </div>
+    );
+  if (readyUser !== user.uid)
+    return (
+      <DesktopSetup
+        key={user.uid}
+        onReady={() => setReadyUser(user.uid)}
+        onLogout={() =>
+          void logout().catch(() => {}).finally(() => navigate("/"))
+        }
+      />
     );
   return <Outlet />;
 }

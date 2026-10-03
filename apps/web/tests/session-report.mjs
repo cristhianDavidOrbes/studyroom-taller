@@ -2,6 +2,8 @@ import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { desktopHealthFixture, windowsUserAgent } from "./desktop-health-fixture.mjs";
+import { activateMicrophone } from "./media-actions.mjs";
 
 const base = process.env.WEB_BASE_URL || "http://localhost:5173";
 const output = resolve(process.env.TEST_OUTPUT_DIR || "apps/web/test-results/session-report");
@@ -30,12 +32,13 @@ try {
   console.log("Preparing isolated test accounts and room");
   const host = await account(1), guest = await account(2); clients.push(host, guest);
   assert((await request(host.token, "/usage")).configured.media, "Configured LiveKit required");
-  room = await request(host.token, "/rooms", { title: `Reporte sintético ${nonce}`, description: "Prueba sintética de transcripción consentida y consulta del reporte.", subject: "Aprendizaje", privacy: "public", capacity: 2, durationMinutes: 15 });
+  room = await request(host.token, "/rooms", { title: `Reporte sintético ${nonce}`, description: "Prueba sintética de transcripción automática de participantes y consulta del reporte.", subject: "Aprendizaje", privacy: "public", capacity: 2, durationMinutes: 15 });
   await request(guest.token, `/rooms/${room.id}/join`, {});
   browser = await chromium.launch({ headless: true, args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", `--use-file-for-fake-audio-capture=${speech}`, "--autoplay-policy=no-user-gesture-required"] });
   for (const client of clients) {
     console.log(`Preparing browser ${client.email.endsWith("-1@example.test") ? "host" : "guest"}`);
-    client.context = await browser.newContext({ viewport: { width: 1400, height: 1000 }, permissions: ["camera", "microphone"] });
+    client.context = await browser.newContext({ viewport: { width: 1400, height: 1000 }, permissions: ["camera", "microphone"], userAgent: windowsUserAgent });
+    await desktopHealthFixture(client.context);
     client.page = await client.context.newPage(); client.page.setDefaultTimeout(90000);
     client.page.on("pageerror", (error) => errors.push(error.message));
     await client.context.route("http://127.0.0.1:8790/v1/sharing", (route) => route.fulfill({ status: 204, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" } }));
@@ -61,30 +64,40 @@ try {
     }
     if (!connected) throw new Error(await client.page.locator(".media-stage .notice.error").textContent({ timeout: 1000 }).catch(() => "Media connection unavailable"));
     console.log("Real media connected");
-    await client.page.getByRole("button", { name: "Activar cámara", exact: true }).click(); await client.page.getByRole("button", { name: "Activar micrófono", exact: true }).click();
+    await client.page.getByRole("button", { name: "Activar cámara", exact: true }).click();
     await client.page.getByRole("tab", { name: "Voz", exact: true }).click();
   }
-  await check("Camera and microphone alone do not enable or record transcription", async () => {
-    const state = await request(host.token, `/rooms/${room.id}/transcription`); assert.equal(state.segments.length, 0); assert(state.participants.every((person) => !person.enabled));
-    assert.equal(await host.page.evaluate(() => window.testMicrophoneRequests), 1);
+  await check("Automatic transcription never captures a microphone that has not been published", async () => {
+    const state = await request(host.token, `/rooms/${room.id}/transcription`); assert.equal(state.segments.length, 0);
+    for (const client of clients) assert.equal(await client.page.evaluate(() => window.testMicrophoneRequests), 0);
   });
   await host.page.getByRole("button", { name: "Compartir pantalla", exact: true }).click();
   await guest.page.waitForFunction(() => document.querySelector("video.screen-video")?.videoWidth === 1280);
   const before = await guest.page.locator("video.screen-video").evaluate((video) => video.currentTime);
-  await host.page.getByRole("button", { name: "Transcribir mi voz", exact: true }).click();
-  await host.page.getByText("Escuchando tu micrófono", { exact: false }).waitFor();
-  await check("Published microphone reaches real Whisper and literal words propagate to another participant", async () => {
+  for (const client of clients) {
+    await activateMicrophone(client.page);
+    await client.page.getByText("Escuchando tu micrófono", { exact: false }).waitFor();
+    assert.equal(await client.page.getByRole("heading", { name: "Tu voz en el reporte compartido", exact: true }).count(), 0);
+  }
+  await check("Both published microphones transcribe automatically and literal words reach every participant", async () => {
     await host.page.getByText(/El reporte contiene la transcripci[oó]n/).first().waitFor({ timeout: 180000 });
     await guest.page.getByText(/El reporte contiene la transcripci[oó]n/).first().waitFor({ timeout: 30000 });
-    const state = await request(host.token, `/rooms/${room.id}/transcription`);
+    let state;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      state = await request(host.token, `/rooms/${room.id}/transcription`);
+      if (clients.every((client) => state.segments.some((segment) => segment.speakerId === client.uid))) break;
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
     assert(state.segments.some((segment) => /estudiando juntos/i.test(segment.text)));
-    assert(state.segments.every((segment) => segment.speakerId === host.uid));
+    assert(state.segments.every((segment) => clients.some((client) => client.uid === segment.speakerId)));
+    for (const client of clients) assert(state.segments.some((segment) => segment.speakerId === client.uid), "Each participant's published microphone is represented");
     assert(state.segments.some((segment) => segment.words?.length));
     evidence.recognizedWords = state.segments.flatMap((segment) => segment.words || []).length;
     evidence.recognizedText = state.segments.map((segment) => segment.text).join(" ");
+    evidence.automaticTranscription = { participants: clients.length, speakers: new Set(state.segments.map(segment => segment.speakerId)).size, microphoneConfirmationDialogs: 0, manualStart: false };
   });
   await check("STT uses only the existing microphone; screen/camera keep moving while it runs", async () => {
-    assert.equal(await host.page.evaluate(() => window.testMicrophoneRequests), 1);
+    for (const client of clients) assert.equal(await client.page.evaluate(() => window.testMicrophoneRequests), 1);
     const after = await guest.page.locator("video.screen-video").evaluate((video) => video.currentTime); assert(after - before > 5);
     const cameras = await guest.page.locator("video.camera-video").evaluateAll((videos) => videos.filter((video) => video.readyState >= 2 && video.videoWidth > 0).length); assert.equal(cameras, 2);
     assert(await host.page.getByRole("button", { name: "Silenciar micrófono", exact: true }).isVisible());
@@ -95,14 +108,27 @@ try {
     await host.page.getByRole("button", { name: "Transcribir mi voz", exact: true }).click();
     await host.page.getByText("Escuchando tu micrófono", { exact: false }).waitFor();
     assert.equal(await host.page.evaluate(() => window.testMicrophoneRequests), 1);
+    assert(await guest.page.getByRole("button", { name: "Silenciar micrófono", exact: true }).isVisible());
   });
-  await check("Opt-out flushes final chunk, stops capture and preserves media", async () => {
+  await check("Pausing one voice flushes its final chunk while the other participant keeps transcribing", async () => {
+    const beforePause = await request(host.token, `/rooms/${room.id}/transcription`);
+    const guestSegmentsBefore = beforePause.segments.filter((segment) => segment.speakerId === guest.uid).length;
     await host.page.getByRole("button", { name: "Dejar de transcribir mi voz", exact: true }).click();
     await host.page.getByText("Tu voz no se está capturando", { exact: false }).waitFor();
     await host.page.getByRole("button", { name: "Transcribir mi voz", exact: true }).waitFor({ timeout: 90000 });
     assert(await host.page.getByRole("button", { name: "Silenciar micrófono", exact: true }).isVisible());
-    const state = await request(host.token, `/rooms/${room.id}/transcription`); assert.equal(state.participants.find((person) => person.userId === host.uid).enabled, false);
+    let state;
+    for (let attempt = 0; attempt < 30; attempt++) {
+      state = await request(host.token, `/rooms/${room.id}/transcription`);
+      if (state.segments.filter((segment) => segment.speakerId === guest.uid).length > guestSegmentsBefore) break;
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    assert.equal(state.participants.find((person) => person.userId === host.uid).enabled, false);
+    assert.equal(state.participants.find((person) => person.userId === guest.uid).enabled, true);
+    assert(state.segments.filter((segment) => segment.speakerId === guest.uid).length > guestSegmentsBefore, "Other voice continues producing new transcript fragments");
   });
+  await guest.page.getByRole("button", { name: "Dejar de transcribir mi voz", exact: true }).click();
+  await guest.page.getByRole("button", { name: "Transcribir mi voz", exact: true }).waitFor({ timeout: 90000 });
   await host.page.getByRole("button", { name: "Dejar de compartir pantalla", exact: true }).click();
   for (const [name, type, bytes] of [["Informe de StudyRoom.png", "image/png", await readFile(resolve(".local/ocr-fixture.png"))], ["Apuntes de la sesión.txt", "text/plain", Buffer.from("El área de un rectángulo se calcula multiplicando base por altura.")]]) {
     const form = new FormData(); form.append("file", new Blob([bytes], { type }), name);
@@ -113,7 +139,7 @@ try {
   await request(host.token, `/rooms/${room.id}/close`, {});
   const state = await request(host.token, `/sessions/${room.sessionId}/report`);
   assert(state.messages.some((message) => message.text.includes("Mensaje escrito sintético")));
-  await check("Historical report preserves actual voice and chat with speaker search", async () => {
+  await check("Historical report preserves both participants' voices and chat with speaker search", async () => {
     await host.page.goto(`${base}/sesiones/${room.sessionId}`);
     await host.page.getByRole("heading", { name: "Lo que se habló" }).waitFor();
     await host.page.getByLabel("Buscar en la transcripción").fill("estudiando juntos");
@@ -122,6 +148,8 @@ try {
     await host.page.getByRole("heading", { name: "No hay coincidencias" }).waitFor();
     await host.page.getByLabel("Buscar en la transcripción").fill("");
     await host.page.getByText("Mensaje escrito sintético conservado en el reporte.", { exact: true }).waitFor();
+    const history = await request(host.token, `/sessions/${room.sessionId}/report`);
+    for (const client of clients) assert(history.transcription.segments.some((segment) => segment.speakerId === client.uid));
   });
   await check("Private questions use this report route and show durable progress/result", async () => {
     await host.page.getByLabel("¿Qué te gustaría entender?").fill("¿Qué dijo la voz registrada sobre el reporte?");

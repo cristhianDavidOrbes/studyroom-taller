@@ -31,6 +31,8 @@ import { Ai } from "./ai";
 import { StorageGuard } from "./storage-guard";
 import { Transcription, AUDIO_MAX_BYTES } from "./transcription";
 import { reportMarkdown } from "./report-context";
+import { createReportArchive } from "./report-archive";
+import { pipeline } from "node:stream/promises";
 type Authed = Request & { identity: Identity };
 @Controller()
 export class HealthController {
@@ -57,6 +59,7 @@ export class HealthController {
 @ApiBearerAuth()
 @ApiTags("StudyRoom")
 export class AppController {
+  private archiveInFlight = false;
   constructor(
     private rooms: Rooms,
     private identities: IdentityService,
@@ -110,7 +113,7 @@ export class AppController {
   ) {
     const session = await this.rooms.close(id, r.identity);
     if (session)
-      for (const kind of ["summary", "keypoints", "quiz"])
+      for (const kind of ["summary", "keypoints"])
         await this.ai
           .artifact(session.id, r.identity, { kind })
           .catch(() => {});
@@ -320,6 +323,20 @@ export class AppController {
     @Res() res: Response,
   ) {
     const data = await this.ai.report(id, r.identity);
+    if (format === "zip") {
+      this.rate.check(`report-export:${r.identity.uid}`, 3, 60000);
+      if (this.archiveInFlight) throw new ServiceUnavailableException("Se está preparando otra descarga completa. Intenta nuevamente en un momento.");
+      this.archiveInFlight = true;
+      try {
+        const archive = await createReportArchive(data, (documentId, maxBytes) => this.documents.downloadForReport(id, documentId, r.identity, maxBytes));
+        res.setHeader("Content-Disposition", `attachment; filename="studyroom-${data.id}.zip"`);
+        res.setHeader("Cache-Control", "private, no-store");
+        res.type("application/zip");
+        try { await pipeline(archive.stream, res); }
+        catch (error) { if (!res.headersSent) throw error; res.destroy(); }
+      } finally { this.archiveInFlight = false; }
+      return;
+    }
     res.setHeader(
       "Content-Disposition",
       `attachment; filename="studyroom-${data.id}.${format === "markdown" ? "md" : "json"}"`,
@@ -335,12 +352,5 @@ export class AppController {
     @Body() b: unknown,
   ) {
     return this.ai.artifact(id, r.identity, b);
-  }
-  @Post("sessions/:id/quiz/attempts") quiz(
-    @Req() r: Authed,
-    @Param("id") id: string,
-    @Body() b: unknown,
-  ) {
-    return this.ai.quiz(id, r.identity, b);
   }
 }

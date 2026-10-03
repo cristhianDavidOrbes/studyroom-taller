@@ -1,6 +1,17 @@
 HERRAMIENTAS STUDYROOM PARA WINDOWS
 
-Extrae TODO el ZIP antes de abrir Iniciar-Herramientas.cmd.
+FORMA RECOMENDADA
+Descarga Instalar-StudyRoom.exe desde StudyRoom y ábrelo una vez.
+El instalador contiene todos los archivos: no tienes que extraer un ZIP.
+Instala solo para tu usuario, sin pedir administrador, e inicia las herramientas
+en segundo plano. Vuelve a la página para que compruebe su disponibilidad.
+Al entrar a Windows se inician solas en segundo plano. El menú solo aparece
+cuando compartes pantalla y se oculta cuando terminas.
+Si el navegador solicita acceso a aplicaciones locales, permite StudyRoom.
+La página no puede instalar un ZIP ni inspeccionar tu carpeta Descargas.
+
+ZIP DE RESPALDO (opcional)
+Extrae TODO el ZIP antes de abrir Iniciar-Herramientas.cmd o Instalar-Herramientas.cmd.
 Requiere Windows con .NET Framework 4.8 (integrado en Windows 10/11 actuales).
 No instala un modelo de IA ni necesita una cuenta. No tiene red externa, captura ni micrófono.
 
@@ -17,10 +28,11 @@ Para que los participantes vean las marcas, comparte PANTALLA COMPLETA desde el 
 Compartir solo una pestaña o ventana generalmente no incluye una superposición del escritorio.
 No se captura la pantalla automáticamente. Evita mostrar datos personales durante la llamada.
 
-OPCIONAL: botón Abrir herramientas de la web
-Haz doble clic en Instalar-Herramientas.cmd una vez. Se copia exclusivamente a
-AppData Local de tu usuario y registra studyroom-tools://open en HKCU.
-No requiere administrador, no añade autoinicio y no modifica políticas de PowerShell.
+INTEGRACIÓN CON STUDYROOM
+Instalar-StudyRoom.exe (o Instalar-Herramientas.cmd del ZIP de respaldo) copia exclusivamente
+sus archivos a AppData Local de tu usuario, registra studyroom-tools://open en HKCU
+y añade una entrada propia de inicio de Windows en HKCU para esperar en segundo plano.
+No requiere administrador ni modifica políticas de PowerShell.
 El navegador puede pedir confirmación para abrir la aplicación externa.
 Desinstalar-Herramientas.cmd retira ese protocolo y los archivos propios; cierra primero la app.
 Ejecuta la desinstalación desde la carpeta original del ZIP para poder retirar el EXE instalado.
@@ -41,7 +53,8 @@ Recibe únicamente un identificador aleatorio y si se comparte; nunca contenido 
 Se muestra al compartir y desaparece al terminar, o tras ocho segundos sin señal.
 Las marcas e historial se limpian al acabar la última presentación. Si pulsas x durante
 la presentación vuelve contraído. Varias pestañas pueden compartir sin cerrar la otra.
-La instalación lo inicia en segundo plano; no inicia con Windows. Tras reiniciar el PC,
-abre las herramientas una vez. Acepta el permiso de acceso local del navegador si lo solicita.
+La instalación lo inicia en segundo plano y al entrar a Windows. La página comprueba
+que la aplicación esté disponible mediante una consulta local que no activa el menú,
+no captura datos y no altera la presentación. Acepta el permiso de acceso local del navegador.
 
 Ocultar: botón x. Salir del programa: icono StudyRoom, Salir completamente.

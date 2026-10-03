@@ -89,7 +89,7 @@ export class Transcription implements OnModuleInit, OnModuleDestroy {
       ...(page ? { nextCursor: segments.length > page.limit ? visible[visible.length - 1]?.id ?? null : null } : {}),
       batches: batches.map(({ userId, ...b }) => ({ ...b, speakerId: userId })), participants,
       coverage: { status: pendingBatches ? "pending" : failedBatches || (completedBatches && uncoveredParticipants) ? "partial" : completedBatches ? "available" : "none", pendingBatches, failedBatches, completedBatches, consentingParticipants, totalParticipants: participants.length, uncoveredParticipants,
-        notice: "Solo se transcribe el micrófono de cada participante que lo habilita. No se reconstruye el audio previo ni el de personas sin consentimiento. El reconocimiento puede contener errores." },
+        notice: "Se transcribe el micrófono encendido de cada participante mientras su transcripción está activa. No se reconstruye el audio previo ni el de micrófonos apagados o capturas pausadas. El reconocimiento puede contener errores." },
     };
   }
   async audio(roomId: string, i: Identity, body: unknown, file: Express.Multer.File | undefined) {

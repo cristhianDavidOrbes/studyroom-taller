@@ -116,23 +116,12 @@ export function documentContracts(spec: OpenAPIObject) {
       ["rating"],
     ),
     Artifact: object(
-      { kind: { type: "string", enum: ["summary", "keypoints", "quiz"] } },
+      { kind: { type: "string", enum: ["summary", "keypoints"] } },
       ["kind"],
     ),
     TranscriptionConsent: object({ enabled: { type: "boolean", description: "Consentimiento personal. No permite habilitar a otros participantes." } }, ["enabled"]),
     ReportQuestion: object({ question: { ...string(1500), minLength: 3, description: "Máximo1000bytesUTF8. Contextoexclusivo del reporteautorizado, citasfiltradas." }, clientId: { type: "string", format: "uuid" } }, ["question"]),
     TranscriptionGap: object({ clientId: { type: "string", format: "uuid" }, sessionId: { type: "string", format: "uuid" }, startMs: { type: "integer", minimum: 0 }, endMs: { type: "integer", minimum: 1 }, reason: { type: "string", enum: ["capture_failed", "queue_overflow", "upload_failed"] } }, ["clientId", "sessionId", "startMs", "endMs", "reason"]),
-    QuizAttempt: object(
-      {
-        answers: {
-          type: "array",
-          minItems: 1,
-          maxItems: 5,
-          items: { type: "integer", minimum: 0, maximum: 3 },
-        },
-      },
-      ["answers"],
-    ),
     Error: object({ message: string(), code: string(), requestId: string() }, [
       "message",
     ]),
@@ -156,7 +145,6 @@ export function documentContracts(spec: OpenAPIObject) {
     ["/api/ai/answers/{id}/feedback", "post", "Feedback"],
     ["/api/sessions/{id}/artifacts", "post", "Artifact"],
     ["/api/sessions/{id}/questions", "post", "ReportQuestion"],
-    ["/api/sessions/{id}/quiz/attempts", "post", "QuizAttempt"],
   ];
   for (const [path, method, schema] of bodies) {
     const operation = (spec.paths[path] as any)?.[method];

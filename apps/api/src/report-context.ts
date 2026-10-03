@@ -36,6 +36,6 @@ export function reportMarkdown(report: any) {
   lines.push("", "## Imágenes y archivos compartidos", "");
   for (const d of report.documents) lines.push(`### ${d.name} [documento:${d.id}]`, `${d.mimeType}; ${d.size} bytes; ${d.available ? "original disponible en StudyRoom con acceso autorizado" : "original eliminado/no disponible"}; extracción: ${d.extractionStatus}`, d.extractedText || "Sin texto extraíble.", "");
   lines.push("## Síntesis y consultas de IA", "");
-  for (const j of report.jobs) lines.push(`### ${j.kind} — ${j.status}`, j.question ? `Pregunta: ${j.question}` : "", j.result?.text ?? JSON.stringify(j.result ?? { error: j.error }), "");
+  for (const j of report.jobs.filter((job: any) => job.kind !== "quiz")) lines.push(`### ${j.kind} — ${j.status}`, j.question ? `Pregunta: ${j.question}` : "", j.result?.text ?? JSON.stringify(j.result ?? { error: j.error }), "");
   return lines.join("\n");
 }

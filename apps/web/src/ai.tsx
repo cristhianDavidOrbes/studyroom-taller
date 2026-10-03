@@ -279,7 +279,7 @@ export function AIPanel({
         o sin conexión, tu pregunta puede quedar en espera.
       </p>
       <div className="job-list">
-        {jobs.map((job) => (
+        {jobs.filter((job) => job.kind !== "quiz").map((job) => (
           <JobCard
             key={job.id}
             job={job}

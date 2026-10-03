@@ -51,7 +51,7 @@ namespace StudyRoomTools {
       mutex=new Mutex(true,"Local\\StudyRoom.Tools."+suffix,out ownsMutex);
       openEvent=new EventWaitHandle(false,EventResetMode.AutoReset,"Local\\StudyRoom.Tools.Open."+suffix);
       demoEvent=new EventWaitHandle(false,EventResetMode.AutoReset,"Local\\StudyRoom.Tools.Demo."+suffix);
-      stopEvent=new EventWaitHandle(false,EventResetMode.AutoReset);
+      stopEvent=new EventWaitHandle(false,EventResetMode.AutoReset,"Local\\StudyRoom.Tools.Exit."+suffix);
       if(!ownsMutex) {if(!backgroundStart)(demoMode?demoEvent:openEvent).Set();openEvent.Dispose();demoEvent.Dispose();stopEvent.Dispose();mutex.Dispose();return 0;}
       ShutdownMode=ShutdownMode.OnExplicitShutdown;
       DispatcherUnhandledException+=delegate(object sender,DispatcherUnhandledExceptionEventArgs e) {e.Handled=true;SetTool(Tool.Interact);MessageBox.Show("Las herramientas volvieron a Interactuar tras un error. Puedes cerrarlas y abrirlas de nuevo.","StudyRoom");};
@@ -62,7 +62,7 @@ namespace StudyRoomTools {
         bridge=new SharingBridge(leases,delegate{Dispatcher.BeginInvoke(new Action(SyncSharing));});
         if(!bridge.Start())tray.ShowBalloonTip(5000,"StudyRoom","La apertura automática no está disponible porque el puerto local está ocupado. Puedes abrir las herramientas manualmente.",System.Windows.Forms.ToolTipIcon.Warning);
         leaseTimer=new DispatcherTimer {Interval=TimeSpan.FromMilliseconds(500)};leaseTimer.Tick+=delegate{SyncSharing();};leaseTimer.Start();
-        new Thread(delegate() { while(true) {var signal=WaitHandle.WaitAny(new WaitHandle[]{openEvent,demoEvent,stopEvent});if(signal==2)return;Dispatcher.BeginInvoke(new Action(delegate {if(closing)return;if(signal==1)ShowDemo();ShowPanel();}));} }) {IsBackground=true,Name="StudyRoom activation"}.Start();
+        new Thread(delegate() { while(true) {var signal=WaitHandle.WaitAny(new WaitHandle[]{openEvent,demoEvent,stopEvent});if(signal==2){if(!closing)Dispatcher.BeginInvoke(new Action(Quit));return;}Dispatcher.BeginInvoke(new Action(delegate {if(closing)return;if(signal==1)ShowDemo();ShowPanel();}));} }) {IsBackground=true,Name="StudyRoom activation"}.Start();
         if(demoMode)ShowDemo();
         else if(backgroundStart)HideTools();
       };

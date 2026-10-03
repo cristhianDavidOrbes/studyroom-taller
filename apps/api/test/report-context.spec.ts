@@ -56,6 +56,19 @@ describe("Contexto fiel del reporte", () => {
     const text = reportMarkdown(report);
     expect(text).toContain("Primero"); expect(text).toContain("Segundo"); expect(text).toContain("Palabras:"); expect(text).toContain("Chat completo"); expect(text).toContain("original eliminado"); expect(text).not.toContain("signedUrl");
   });
+  test("exportar un reporte antiguo omite quiz y conserva síntesis y respuestas", () => {
+    const report: any = { title: "Reporte", startedAt: new Date(), messages: [], documents: [], transcription: {
+      coverage: { notice: "Sin voz", status: "none", pendingBatches: 0, failedBatches: 0 }, segments: [], batches: [],
+    }, jobs: [
+      { kind: "quiz", status: "completed", result: { questions: [{ question: "QUIZ_ANTIGUO_OCULTO" }] } },
+      { kind: "summary", status: "completed", result: { text: "Resumen reconocido" } },
+      { kind: "answer", status: "completed", question: "¿Qué se habló?", result: { text: "Respuesta del reporte" } },
+    ] };
+    const before = JSON.stringify(report.jobs), text = reportMarkdown(report);
+    expect(text).not.toContain("quiz"); expect(text).not.toContain("QUIZ_ANTIGUO_OCULTO");
+    expect(text).toContain("Resumen reconocido"); expect(text).toContain("¿Qué se habló?"); expect(text).toContain("Respuesta del reporte");
+    expect(JSON.stringify(report.jobs)).toBe(before);
+  });
 });
 jest.mock("firebase-admin/auth", () => ({ getAuth: jest.fn() }));
 jest.mock("livekit-server-sdk", () => ({ AccessToken: jest.fn(), RoomServiceClient: jest.fn() }));

@@ -15,7 +15,7 @@ Copy `.env.example` to `.env.local`, set Firebase web configuration and API URL,
 | `src/room.tsx` | SUT-18,23,25,35–37,42–44,53: joining, roles, membership, chat, reactions, files, private notes, timer, closing |
 | `src/media.tsx`, `shared-screen.tsx`, `annotation-toolbar.tsx`, `annotation-graphic.tsx`, `annotations.ts` | SUT-38–41: separate LiveKit media connection, camera/microphone/devices, adaptive video, screen sharing, compact camera menu, normalized shared pointer/pen/line/arrow/rectangle/ellipse/text, sizes/colors, per-mark eraser and clearing |
 | `src/ai.tsx`, `usage.tsx` | SUT-46–51: server AI jobs, selected authorized context, streaming updates, cancellation, offline states, usage, feedback |
-| `src/history.tsx` | SUT-53–57: authorized session history, artifacts, quiz attempts, date filters and export |
+| `src/history.tsx` | SUT-53–57: authorized session history, report synthesis, private report questions, date filters and export |
 | `src/use-transcription.ts`, `transcription-audio.ts`, `transcription-panel.tsx`, `session-report.tsx` | Explicit personal voice consent, continuous existing-microphone capture, literal recognized transcript, authorized session resources and report questions |
 
 Corresponding frontend activities are implemented with shared loading, success/error, empty-state, keyboard and responsive primitives. The repository-wide Jira matrix retains every one of the 657 issues. The table above is code mapping; it does **not** assert every acceptance test has passed.

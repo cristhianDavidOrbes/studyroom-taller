@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Download, ExternalLink, Pencil, Monitor } from "lucide-react";
 import { Modal } from "./ui";
 import type { DesktopBridgeStatus } from "./desktop-bridge";
+import { desktopInstallerURL } from "./desktop-setup-probe";
 
 export function DesktopTools({
   sharing,
@@ -83,15 +84,10 @@ export function DesktopTools({
             colores.
           </p>
           <ol className="desktop-install-steps">
-            <li>Descarga el archivo y extrae su contenido en una carpeta.</li>
+            <li>Descarga el instalador para Windows.</li>
             <li>
-              Abre <strong>Iniciar-Herramientas.cmd</strong> para usarlo
-              directamente.
-            </li>
-            <li>
-              Para que el botón de StudyRoom pueda abrirlo, haz doble clic una
-              vez en <strong>Instalar-Herramientas.cmd</strong> desde esa
-              carpeta.
+              Abre <strong>Instalar-StudyRoom.exe</strong> una vez. Instala y
+              prepara la herramienta automáticamente, sin extraer un ZIP.
             </li>
             <li>
               Comparte <strong>Pantalla completa</strong> y selecciona la
@@ -100,7 +96,7 @@ export function DesktopTools({
           </ol>
           <a
             className="button primary"
-            href="/desktop/StudyRoom-Herramientas.zip"
+            href={desktopInstallerURL}
             download
           >
             <Download size={17} />

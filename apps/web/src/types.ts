@@ -104,12 +104,6 @@ export interface Session {
     content: unknown;
     createdAt: string;
   }[];
-  quizAttempts?: {
-    id: string;
-    score: number;
-    total: number;
-    createdAt: string;
-  }[];
 }
 export interface RoomState {
   members: Member[];
@@ -144,7 +138,6 @@ export interface TranscriptionState {
   };
 }
 export interface SessionReport extends Session {
-  attempts?: { score: number; total: number; createdAt: string }[];
   messages: Message[];
   documents: (StudyDocument & {
     available: boolean;

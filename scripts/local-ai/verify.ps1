@@ -10,7 +10,7 @@ $secretValue = Read-GatewaySecret
 $cases = @(
   @{ name = 'espanol'; prompt = 'Explica en dos frases qué es la fotosíntesis y por qué las plantas necesitan luz.'; system = 'Eres un tutor de ciencias. Responde en español con precisión.'; maxTokens = 180 },
   @{ name = 'resumen_fiel'; prompt = 'Resume únicamente estos hechos en español: Ana y Luis estudiaron ecuaciones lineales. Resolvieron 2x + 4 = 10 y obtuvieron x = 3. Acordaron practicar cinco ejercicios mañana. No se discutieron otros temas.'; system = 'Resume el contexto dado sin inventar información. Separa resumen y acuerdo.'; maxTokens = 220 },
-  @{ name = 'quiz'; prompt = 'Crea una pregunta de opción múltiple sobre este contexto: En 2x + 4 = 10, primero restamos 4 a ambos lados y luego dividimos por 2: x = 3. Devuelve JSON con question, options de cuatro textos, correctIndex (base cero), explanation.'; system = 'Eres un tutor. Devuelve exclusivamente JSON válido y una única respuesta correcta.'; maxTokens = 256 }
+  @{ name = 'consulta_reporte'; prompt = 'Pregunta: ¿Qué valor de x obtuvieron? Reporte: Ana y Luis resolvieron 2x + 4 = 10. Restaron 4 a ambos lados y dividieron por 2: obtuvieron x = 3. Responde en una frase usando solo este reporte.'; system = 'Responde en español basándote únicamente en el reporte recibido.'; maxTokens = 180 }
 )
 $results = @()
 try {
@@ -21,10 +21,7 @@ try {
     $body = @{ prompt = $case.prompt; system = $case.system; maxTokens = $case.maxTokens; stream = $false } | ConvertTo-Json
     $response = Invoke-RestMethod -Uri ($baseUrl + '/v1/generate') -Method Post -ContentType 'application/json; charset=utf-8' -Headers @{ Authorization = "Bearer $secretValue" } -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 150
     if ($response.text -match '<think>|Okay,|Let me think') { throw ('Se detectó salida interna sin respuesta final en: ' + $case.name) }
-    if ($case.name -eq 'quiz') {
-      $quiz = $response.text -replace '^```(?:json)?\s*', '' -replace '\s*```$', '' | ConvertFrom-Json
-      if ($quiz.options.Count -ne 4 -or $quiz.correctIndex -lt 0 -or $quiz.correctIndex -gt 3 -or !$quiz.explanation) { throw 'El quiz no cumple el contrato esperado.' }
-    }
+    if ($case.name -eq 'consulta_reporte' -and $response.text -notmatch '\b3\b') { throw 'La respuesta no coincide con el dato del reporte de prueba.' }
     $results += @{ name = $case.name; prompt = $case.prompt; response = $response }
   }
   $streamBody = @{prompt='Responde exactamente: StudyRoom conectado.';system='Sigue la instrucción.';maxTokens=32;stream=$true} | ConvertTo-Json

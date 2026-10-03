@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -9,122 +9,19 @@ import {
   Clock3,
   Download,
   FileText,
-  GraduationCap,
   ListChecks,
   Search,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { api, API_URL, errorText, json } from "./api";
 import { auth } from "./firebase";
 import type { Job, Session, SessionReport } from "./types";
 import { ReportArchive, ReportQuestions } from "./session-report";
-import { buildReportSources, reportSourceAnchor, type ReportSourceMap } from "./report-sources";
-import { SourceText } from "./source-text";
+import { buildReportSources, reportSourceAnchor } from "./report-sources";
 import { JobCard } from "./ai";
 import { Badge, dateTime, Empty, ErrorBox, Spinner, useToast } from "./ui";
-interface QuizQuestion {
-  question: string;
-  options: string[];
-  correctIndex?: number;
-  explanation?: string;
-}
-function Quiz({ sessionId, job, sourceMap }: { sessionId: string; job: Job; sourceMap?: ReportSourceMap }) {
-  const questions =
-    (job.result as { questions?: QuizQuestion[] })?.questions || [];
-  const [answers, setAnswers] = useState<number[]>(
-      Array(questions.length).fill(-1),
-    ),
-    [result, setResult] = useState<{
-      score: number;
-      total: number;
-      feedback: unknown;
-    } | null>(null),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      setResult(
-        await api(
-          `/sessions/${sessionId}/quiz/attempts`,
-          json("POST", { answers }),
-        ),
-      );
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <form className="quiz panel" onSubmit={submit}>
-      <div className="section-heading">
-        <h2>
-          <GraduationCap size={23} />
-          Pon a prueba lo aprendido
-        </h2>
-        <Badge>{questions.length} preguntas</Badge>
-      </div>
-      {questions.map((q, i) => (
-        <fieldset key={i}>
-          <legend>
-            {i + 1}. <SourceText text={q.question} result={job.result} sourceMap={sourceMap} />
-          </legend>
-          {q.options.map((option, j) => (
-            <label
-              className={`quiz-option ${answers[i] === j ? "selected" : ""}`}
-              key={j}
-            >
-              <input
-                type="radio"
-                name={`question-${i}`}
-                value={j}
-                checked={answers[i] === j}
-                onChange={() =>
-                  setAnswers((old) => old.map((v, k) => (k === i ? j : v)))
-                }
-                required
-              />
-              <SourceText text={option} result={job.result} sourceMap={sourceMap} />
-            </label>
-          ))}
-        </fieldset>
-      ))}
-      <ErrorBox message={error} />
-      {result ? (
-        <div className="quiz-result" role="status">
-          <strong>
-            {result.score} de {result.total} respuestas correctas
-          </strong>
-          {Array.isArray(result.feedback) &&
-            result.feedback.map((f, i) => (
-              <p key={i}>
-                {i + 1}.{" "}
-                <SourceText text={typeof f === "string"
-                  ? f
-                  : typeof f === "object" && f
-                    ? String(
-                        (f as { explanation?: string }).explanation ||
-                          ((f as { correct?: boolean }).correct
-                            ? "¡Correcto!"
-                            : "Revisa esta respuesta."),
-                      )
-                    : ""} result={job.result} sourceMap={sourceMap} />
-              </p>
-            ))}
-        </div>
-      ) : (
-        <button
-          className="button primary"
-          disabled={busy || answers.some((v) => v < 0)}
-        >
-          {busy ? "Revisando…" : "Comprobar respuestas"}
-        </button>
-      )}
-    </form>
-  );
-}
+import "./report-enhancements.css";
 export function HistoryPage() {
   const [q, setQ] = useState(""),
     [from, setFrom] = useState(""),
@@ -252,7 +149,7 @@ export function HistoryPage() {
               </Link>
             }
           >
-            Tus sesiones, resúmenes y repasos aparecerán aquí.{" "}
+            Tus sesiones, reportes y consultas aparecerán aquí.{" "}
             {q ? "Prueba otra búsqueda." : "Encuentra una sala para comenzar."}
           </Empty>
         ) : (
@@ -289,6 +186,7 @@ export function SessionPage() {
   const { id } = useParams();
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const toast = useToast();
   const {
     data: session,
@@ -300,7 +198,7 @@ export function SessionPage() {
     queryFn: () => api<SessionReport>(`/sessions/${id}/report`),
     refetchInterval: (query) =>
       query.state.data?.transcription?.coverage.pendingBatches || query.state.data?.jobs?.some((j) =>
-        ["running", "queued"].includes(j.status),
+        ["summary", "keypoints", "answer"].includes(j.kind) && ["running", "queued"].includes(j.status),
       )
         ? 4000
         : false,
@@ -310,7 +208,7 @@ export function SessionPage() {
     queryFn: () => api<{ text: string }>(`/rooms/${session!.roomId}/notes`),
     enabled: !!session?.roomId,
   });
-  async function generate(kind: string) {
+  async function generate(kind: "summary" | "keypoints") {
     setBusy(true);
     setError("");
     try {
@@ -323,24 +221,29 @@ export function SessionPage() {
       setBusy(false);
     }
   }
-  async function download(format: "json" | "markdown") {
+  async function download(format: "json" | "markdown" | "zip") {
+    if (downloading) return;
+    setDownloading(true); setError("");
     try {
       const token = await auth.currentUser?.getIdToken();
       const response = await fetch(
         `${API_URL}/sessions/${id}/export?format=${format}`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      if (!response.ok) throw new Error("No se pudo descargar la sesión.");
+      if (!response.ok) {
+        const detail = await response.json().catch(() => null);
+        throw new Error(typeof detail?.message === "string" ? detail.message : "No se pudo descargar la sesión.");
+      }
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `studyroom-sesion-${id}.${format === "json" ? "json" : "md"}`;
+      a.download = `studyroom-sesion-${id}.${format === "markdown" ? "md" : format}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
       setError(errorText(e));
-    }
+    } finally { setDownloading(false); }
   }
   if (isPending) return <Spinner />;
   if (queryError || !session)
@@ -352,8 +255,7 @@ export function SessionPage() {
         />
       </div>
     );
-  const jobs = session.jobs || [],
-    quiz = jobs.find((j) => j.kind === "quiz" && j.status === "completed");
+  const jobs = (session.jobs || []).filter((job) => ["summary", "keypoints", "answer"].includes(job.kind));
   const sourceMap = buildReportSources(session);
   return (
     <div className="page session-page">
@@ -361,9 +263,9 @@ export function SessionPage() {
         <ArrowLeft size={17} />
         Mi aprendizaje
       </Link>
-      <div className="welcome-row">
+      <div className="welcome-row report-header-card">
         <div>
-          <span className="eyebrow">EL REPORTE DE TU SESIÓN</span>
+          <span className="eyebrow"><Users size={14} /> EL REPORTE DE LA REUNIÓN</span>
           <h1>{session.title || session.room?.title || "Sesión de estudio"}</h1>
           <p className="page-intro">
             {dateTime(session.startedAt)}{" "}
@@ -371,17 +273,22 @@ export function SessionPage() {
               ? `· Finalizó ${dateTime(session.endedAt)}`
               : "· En curso"}
           </p>
+          <p className="report-header-description">Lo que hablaron, las ideas que compartieron y los recursos para volver a entenderlo. Disponible para todos los participantes de esta reunión.</p>
         </div>
+        <div className="report-download-actions">
+        <button className="button primary" disabled={downloading} onClick={() => void download("zip")}><Download size={17} />{downloading ? "Preparando descarga…" : "Descargar reporte completo"}</button>
+        <span>Incluye conversación, imágenes y archivos disponibles.</span>
         <details className="export-menu">
           <summary className="button secondary">
             <Download size={16} />
-            Exportar
+            Otros formatos
           </summary>
-          <button onClick={() => void download("markdown")}>
+          <button disabled={downloading} onClick={() => void download("markdown")}>
             Documento Markdown
           </button>
-          <button onClick={() => void download("json")}>Datos JSON</button>
+          <button disabled={downloading} onClick={() => void download("json")}>Datos JSON</button>
         </details>
+        </div>
       </div>
       <ErrorBox message={error} />
       <ReportArchive key={session.id} session={session} />
@@ -391,7 +298,6 @@ export function SessionPage() {
         {[
           ["summary", "Resumen de la sesión", FileText],
           ["keypoints", "Puntos clave y acuerdos", ListChecks],
-          ["quiz", "Quiz de repaso", GraduationCap],
         ].map(([kind, title, Icon]) => {
           const pending = jobs.some(
             (j) => j.kind === kind && ["queued", "running"].includes(j.status),
@@ -402,7 +308,7 @@ export function SessionPage() {
               className="artifact-action"
               key={kind as string}
               disabled={busy || pending || !session.endedAt}
-              onClick={() => void generate(kind as string)}
+              onClick={() => void generate(kind as "summary" | "keypoints")}
             >
               <Symbol size={25} />
               <strong>{title as string}</strong>
@@ -419,7 +325,7 @@ export function SessionPage() {
         })}
       </div>
       <p className="muted">
-        El resumen y el repaso usan la voz registrada, el chat y los recursos
+        El resumen y los puntos clave usan la voz registrada, el chat y los recursos
         autorizados de la sesión. Revisa los resultados junto con las fuentes.
       </p>
       {jobs.length === 0 && (
@@ -431,49 +337,31 @@ export function SessionPage() {
           }
         >
           {session.endedAt
-            ? "Prepara un resumen, extrae acuerdos o crea un quiz para repasar."
-            : "Cuando termine, podrás consultar lo aprendido y preparar tu repaso."}
+            ? "Prepara un resumen o extrae los puntos clave de este reporte."
+            : "Cuando termine, podrás consultar el reporte y hacer preguntas sobre la sesión."}
         </Empty>
       )}
       <div className="artifact-list">
         {jobs
-          .filter((j) => j.kind !== "answer" && (j.kind !== "quiz" || j.status !== "completed"))
+          .filter((j) => ["summary", "keypoints"].includes(j.kind))
           .map((job) => (
             <section key={job.id} id={reportSourceAnchor("sintesis", job.id)} tabIndex={-1}>
               <h2 className="artifact-heading">
                 {job.kind === "summary"
                   ? "Resumen"
-                  : job.kind === "keypoints"
-                    ? "Puntos clave"
-                    : job.kind === "quiz"
-                      ? "Quiz de repaso"
-                      : "Preguntas y respuestas"}
+                  : "Puntos clave"}
               </h2>
               <JobCard job={job} sourceMap={sourceMap} onUpdated={() => void refetch()} />
             </section>
           ))}
       </div>
-      {quiz && <Quiz key={quiz.id} sessionId={id!} job={quiz} sourceMap={sourceMap} />}
       </section>
       <ReportQuestions key={session.id} sessionId={session.id} jobs={jobs} sourceMap={sourceMap} onRefresh={() => void refetch()} />
       {privateNotes?.text && (
-        <section className="panel attempts">
+        <section className="panel private-notes">
           <h2>Mis notas privadas</h2>
           <p>Solo tú puedes ver estas notas. No se envían al asistente.</p>
           <div className="preserve-lines">{privateNotes.text}</div>
-        </section>
-      )}
-      {!!session.attempts?.length && (
-        <section className="panel attempts">
-          <h2>Tu progreso en el repaso</h2>
-          {session.attempts.map((a, i) => (
-            <p key={i}>
-              <strong>
-                {a.score} / {a.total}
-              </strong>{" "}
-              · {dateTime(a.createdAt)}
-            </p>
-          ))}
         </section>
       )}
     </div>

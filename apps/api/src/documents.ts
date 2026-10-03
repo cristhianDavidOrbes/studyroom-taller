@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
   ConflictException,
+  PayloadTooLargeException,
 } from "@nestjs/common";
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
@@ -212,6 +213,10 @@ export class Documents {
     return this.signedUrl(doc);
   }
   async sessionUrl(sessionId: string, docId: string, i: Identity) {
+    const doc = await this.reportOriginal(sessionId, docId, i);
+    return this.signedUrl(doc);
+  }
+  private async reportOriginal(sessionId: string, docId: string, i: Identity) {
     const session = await this.db.session.findUnique({ where: { id: sessionId } });
     if (!session || !session.participantIds.includes(i.uid)) throw new ForbiddenException("Este archivo no pertenece a tu historial");
     await this.rooms.member(session.roomId, i.uid, undefined, true);
@@ -220,22 +225,35 @@ export class Documents {
     if (!record && !legacy) throw new ForbiddenException("Este archivo no pertenece a este reporte");
     const doc = await this.db.document.findFirst({ where: { id: docId, roomId: session.roomId } });
     if (!doc) throw new NotFoundException("El archivo original fue eliminado; su registro permanece en el reporte");
-    return this.signedUrl(doc);
+    return doc;
   }
-  private async signedUrl(doc: { path: string; size: number }) {
+  async downloadForReport(sessionId: string, docId: string, i: Identity, maxBytes: number) {
+    const doc = await this.reportOriginal(sessionId, docId, i);
+    if (!Number.isSafeInteger(doc.size) || doc.size < 0 || doc.size > Math.min(maxBytes, 10_000_000))
+      throw new PayloadTooLargeException("El reporte completo supera el límite de descarga; no se preparó un archivo parcial");
+    await this.reserveDownload(doc.size);
+    const { data, error } = await this.storage().download(doc.path);
+    if (error || !data || data.size !== doc.size)
+      throw new ServiceUnavailableException("No se pudo descargar un original para el reporte. Intenta nuevamente; no se preparó un archivo parcial.");
+    return Buffer.from(await data.arrayBuffer());
+  }
+  private async reserveDownload(size: number) {
     await this.db.serial(async (tx) => {
       const u = await tx.usage.upsert({
         where: { id: monthKey() },
         create: { id: monthKey() },
         update: {},
       });
-      if (u.storageEgress + BigInt(doc.size) > BigInt(CAPS.storageEgress))
+      if (u.storageEgress + BigInt(size) > BigInt(CAPS.storageEgress))
         denyQuota("Se alcanzó la cuota gratuita de descarga");
       await tx.usage.update({
         where: { id: u.id },
-        data: { storageEgress: { increment: doc.size } },
+        data: { storageEgress: { increment: size } },
       });
     });
+  }
+  private async signedUrl(doc: { path: string; size: number }) {
+    await this.reserveDownload(doc.size);
     const { data, error } = await this.storage().createSignedUrl(doc.path, 60);
     if (error)
       throw new ServiceUnavailableException(

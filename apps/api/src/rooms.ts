@@ -785,7 +785,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
         },
       });
       if (!cancel && (messages.length || docs.length || await tx.transcriptionConsent.count({ where: { sessionId: session.id } }))) {
-        for (const kind of ["summary", "keypoints", "quiz"])
+        for (const kind of ["summary", "keypoints"])
           await tx.aiJob.upsert({
             where: { idempotencyKey: "artifact:" + saved.id + ":" + kind },
             create: {
