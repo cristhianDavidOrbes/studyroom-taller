@@ -1,0 +1,19 @@
+{
+  "observedAt": "2026-10-02T22:22:08.9731744Z",
+  "method": "Checked each owned process ID, exact start time and command before closing",
+  "localTestServicesStopped": [
+    "API3000",
+    "Vite5173",
+    "FirebaseAuth9099",
+    "PostgreSQL54322"
+  ],
+  "temporaryWebFixtureConfigRemoved": true,
+  "preserved": [
+    "local AI gateway",
+    "private Whisper worker",
+    "ngrok tunnel",
+    "Ollama",
+    "installed Windows drawing helper"
+  ],
+  "testDataAndSecrets": "Retained only in ignored local paths; no user files deleted"
+}

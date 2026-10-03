@@ -1,0 +1,52 @@
+{
+  "observedAt": "2026-10-02T22:23:13.247Z",
+  "deployedSource": "ef27e0428f6e0fbc238c78f75d14b4e108bba070",
+  "api": "https://studyroom-sut-api.onrender.com/api",
+  "checks": [
+    {
+      "name": "Render authenticated API → public ngrok → real local Whisper persists literal words and timestamps",
+      "passed": true
+    },
+    {
+      "name": "Repeating a client batch does not duplicate transcript",
+      "passed": true
+    },
+    {
+      "name": "Private Supabase Storage accepts generated PNG and DOCX; real OCR/text extraction succeeds",
+      "passed": true
+    },
+    {
+      "name": "Historical report retains actual voice, chat and the extracted contents of both attachment formats",
+      "passed": true
+    },
+    {
+      "name": "Private downloads work after close; nonparticipants and public URLs are denied",
+      "passed": true
+    },
+    {
+      "name": "Full Markdown export includes literal voice and document text without signed URLs",
+      "passed": true
+    },
+    {
+      "name": "Private question completes with local Qwen and authorized report citations",
+      "passed": true
+    }
+  ],
+  "source": "Generated Spanish SAPI WAV, PNG and DOCX fixtures; no user microphone or files",
+  "limitations": [
+    "Does not certify all accents or a prolonged call on four physical devices."
+  ],
+  "recognizedText": "Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación.",
+  "recognizedWords": 12,
+  "answer": "La fórmula del área mencionada en los archivos compartidos es \"base por altura\". Esta información aparece en el mensaje sintético del reporte [mensaje:855bf338-dff4-4809-a2af-a1600a9372d2] y en los apuntes sintéticos [documento:737b0701-5052-41d6-8be4-8374b17fc4a9], así como en la imagen sintética [documento:034886b4-e9bf-4437-a67d-69f69ade92f8]. No se proporciona una fórmula matemática específica ni se detallan unidades o condiciones. La cobertura de voz es parcial, y no se afirma que se reconoció toda la conversación.",
+  "citations": [
+    "mensaje:855bf338-dff4-4809-a2af-a1600a9372d2",
+    "documento:737b0701-5052-41d6-8be4-8374b17fc4a9",
+    "documento:034886b4-e9bf-4437-a67d-69f69ade92f8"
+  ],
+  "passed": false,
+  "error": "Automatic quiz failed: Quiz inválido: no se publicará contenido sin validar",
+  "cleanedUp": true,
+  "cleanupScope": "Test room closed, generated uploaded objects and own two Firebase test accounts removed; synthetic historical database records retained",
+  "cleanupErrors": []
+}

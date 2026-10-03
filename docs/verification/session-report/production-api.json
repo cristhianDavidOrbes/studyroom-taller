@@ -1,0 +1,144 @@
+{
+  "observedAt": "2026-10-03T02:55:39.879Z",
+  "deployedSource": "81dec28ff35c073ae15a2d400cc152493da383bd",
+  "api": "https://studyroom-sut-api.onrender.com/api",
+  "checks": [
+    {
+      "name": "Both cloud participants enable transcription on room entry without a manual voice start",
+      "passed": true
+    },
+    {
+      "name": "Real Whisper automatically recognizes both synthetic published microphones, with words and one microphone request per person",
+      "passed": true
+    },
+    {
+      "name": "Both isolated microphones are muted and automatic transcription is stopped and drained through the UI",
+      "passed": true
+    },
+    {
+      "name": "Render authenticated API → public ngrok → real local Whisper persists literal words and timestamps",
+      "passed": true
+    },
+    {
+      "name": "Repeating a client batch does not duplicate transcript",
+      "passed": true
+    },
+    {
+      "name": "Private Supabase Storage accepts generated PNG and DOCX; real OCR/text extraction succeeds",
+      "passed": true
+    },
+    {
+      "name": "Historical report retains actual voice, chat and the extracted contents of both attachment formats",
+      "passed": true
+    },
+    {
+      "name": "Both participants receive the same full transcript in spoken order, even when the later speaker uploads first",
+      "passed": true
+    },
+    {
+      "name": "Private downloads work after close; nonparticipants and public URLs are denied",
+      "passed": true
+    },
+    {
+      "name": "Full Markdown export includes literal voice and document text without signed URLs",
+      "passed": true
+    },
+    {
+      "name": "Private question completes with local Qwen and authorized report citations",
+      "passed": true
+    },
+    {
+      "name": "A second participant can open the report while personal report questions remain private",
+      "passed": true
+    },
+    {
+      "name": "Report summary and key points complete; questionnaire is absent and cannot be generated or submitted",
+      "passed": true
+    },
+    {
+      "name": "A non-host downloads the complete offline ZIP with both speakers, original image/document and matching hashes; outsider denied",
+      "passed": true
+    },
+    {
+      "name": "Downloaded archive renders its full chronological conversation and embedded original image on desktop/mobile without external resources",
+      "passed": true
+    },
+    {
+      "name": "Published public landing fits desktop/mobile and the Windows installer downloads with its matching SHA256",
+      "passed": true
+    },
+    {
+      "name": "Published frontend authenticates, displays real voice/resources/answer and private image on desktop/mobile with readable citations",
+      "passed": true
+    }
+  ],
+  "source": "Generated Spanish SAPI WAV, PNG and DOCX fixtures; no user microphone or files",
+  "limitations": [
+    "Does not certify all accents or a prolonged call on four physical devices.",
+    "Windows tool health in the isolated browser is a test-only HTTP fixture; native installation is verified separately without executing the installer."
+  ],
+  "automaticVoice": {
+    "automatic": true,
+    "manualStart": false,
+    "physicalMedia": false,
+    "confirmationDialogs": 0,
+    "healthFixture": "StudyRoom.Tools 1.1.0",
+    "speakers": 2,
+    "recognizedWords": 51,
+    "microphoneRequests": [
+      {
+        "participant": "host",
+        "count": 1
+      },
+      {
+        "participant": "peer",
+        "count": 1
+      }
+    ],
+    "stoppedAndDrained": true,
+    "pageErrors": 0
+  },
+  "recognizedText": "Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación.",
+  "recognizedWords": 12,
+  "answer": "La fórmula del área mencionada en los archivos es \"base por altura\" (fuente: [mensaje:97f930c6-52c7-4123-b9a2-7497081d5b30] y [documento:fea69603-8c2a-43d2-afa6-d2a492b2294c]). Esta información está presente en los apuntes sintéticos y en el reporte verificado, aunque no se especifica el contexto geométrico o el tipo de figura. No se proporciona evidencia de que se haya mencionado una fórmula más específica o derivada. Los fragmentos recuperados no sustentan una afirmación sobre la fórmula en un contexto más amplio.",
+  "citations": [
+    "mensaje:97f930c6-52c7-4123-b9a2-7497081d5b30",
+    "documento:fea69603-8c2a-43d2-afa6-d2a492b2294c"
+  ],
+  "artifacts": [
+    {
+      "kind": "summary",
+      "status": "completed",
+      "sourceCount": 17
+    },
+    {
+      "kind": "keypoints",
+      "status": "completed",
+      "sourceCount": 17
+    }
+  ],
+  "archive": {
+    "resources": [
+      {
+        "name": "Imagen sintética.png",
+        "bytes": 6363,
+        "sha256": "324efd1653061de68b786f56220f7f819c1e52fbd891307e9cdae53da91d2eaa"
+      },
+      {
+        "name": "Apuntes sintéticos.docx",
+        "bytes": 986,
+        "sha256": "ec43ff60a05ab2067074d50c8a3a92d618fc5663151b3944c5feb6d1ef03a938"
+      }
+    ],
+    "speakers": 2
+  },
+  "installer": {
+    "bytes": 88064,
+    "sha256": "ec883a27a1e31aaef937fd5338211a345b4def18895032b2bbf5d6e72702af73",
+    "executed": false
+  },
+  "passed": true,
+  "cleanedUp": true,
+  "cleanupScope": "Test room closed, generated uploaded objects and own generated Firebase test accounts removed; synthetic historical database records retained",
+  "cleanupErrors": []
+}

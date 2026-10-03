@@ -64,5 +64,34 @@
       "questionnaires removed from UI, scheduling and endpoints",
       "Jest test tools updated without changes to 473 runtime packages"
     ]
+  },
+  "currentPublication": {
+    "observedAt": "2026-10-03T02:54:33Z",
+    "sha": "81dec28ff35c073ae15a2d400cc152493da383bd",
+    "build": "passed",
+    "typecheck": "passed",
+    "apiTests": 109,
+    "webTests": 49,
+    "gatewayTests": 24,
+    "pythonWorkerTests": 2,
+    "desktopAssertions": 50,
+    "ci": {
+      "url": "https://github.com/cristhianDavidOrbes/studyroom/actions/runs/37091129021",
+      "conclusion": "success",
+      "jobs": {
+        "verify": "success",
+        "desktop": "success"
+      }
+    },
+    "productionVerification": {
+      "observedAt": "2026-10-03T02:55:39.879Z",
+      "checks": 17,
+      "passed": true,
+      "speakers": 2,
+      "confirmationDialogs": 0,
+      "pageErrors": 0,
+      "cleanedUp": true,
+      "proof": "production-api.json"
+    }
   }
 }

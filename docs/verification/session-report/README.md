@@ -4,6 +4,20 @@ La implementación conserva las palabras reconocidas por participante y tiempo, 
 
 Las comprobaciones utilizan cuentas y archivos de prueba propios. No se capturó el micrófono, escritorio ni archivos personales del usuario.
 
+## Publicación actual — 2026-10-02, hora de Bogotá
+
+[release.json](release.json) identifica los commits publicados por componente y su verificación en GitHub Actions. [production-api.json](production-api.json) recoge 17 comprobaciones del sitio público con dos participantes de prueba, Firebase, LiveKit, la API de Render, almacenamiento privado, Whisper, OCR y Qwen locales a través de ngrok.
+
+Ambos participantes activan automáticamente su transcripción al entrar a la sala, sin abrir Voz ni confirmar un diálogo. Cada uno publica un micrófono sintético mediante una sola solicitud de audio. Se comprueban palabras y tiempos, idempotencia y orden cronológico aunque un fragmento posterior llegue primero. El reporte completo es accesible para ambos; un usuario ajeno no puede verlo. Las consultas personales permanecen privadas. La activación automática mantiene un indicador y un control para pausar, y respeta el permiso de micrófono del navegador.
+
+El mismo recorrido verifica imágenes y documentos originales, OCR y texto extraído, resumen, puntos clave y preguntas con IA. El ZIP descargado por el segundo participante conserva los originales byte por byte, la conversación completa y los tiempos por palabra. Su página funciona sin recursos externos; las referencias del resumen son legibles tanto allí como en la aplicación. No existen cuestionarios ni rutas activas para generarlos o responderlos.
+
+Las capturas `production-desktop.png`, `production-mobile.png` y `offline-report-*.png` corresponden a este recorrido real. `landing-*.png` y `setup-desktop.png` muestran la portada y el acceso inicial publicados. La descarga del instalador se comprueba por firma de archivo y SHA256, sin ejecutarlo: descargarlo no desbloquea el acceso; la detección de la herramienta instalada sí lo hace. En este navegador aislado la salud de la herramienta nativa se simula con una respuesta HTTP identificada como tal; la [verificación del instalador](../desktop-installer.json) conserva el alcance de sus 50 comprobaciones separadas.
+
+[automatic-transcription-browser.json](automatic-transcription-browser.json) añade ocho comprobaciones aisladas del hook real para activación automática, pausa y respuestas antiguas entre salas. Los registros `production-api-first.json` y `production-api-second.json`, si están presentes, son intentos históricos fallidos previos a los arreglos; el resultado vigente es exclusivamente `production-api.json`. Las cuentas y archivos generados por la prueba se retiran al terminar, conservando únicamente registros históricos sintéticos.
+
+## Evidencia histórica y comprobaciones de componentes
+
 - [Voz local y túnel público](../../../apps/ai-gateway/speech-verification.json): Whisper real reconoce una frase española sintética y devuelve palabras con tiempos.
 - [OCR real](ocr.json): lectura local del texto de una imagen generada de prueba.
 - [API y preguntas](../session-report-api.json): consentimiento, identidad, idempotencia, pérdidas, cierre, aislamiento de reportes/archivos, extracción y errores de generación.

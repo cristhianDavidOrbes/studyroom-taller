@@ -1,0 +1,42 @@
+{
+  "observedAt": "2026-10-02T22:15:24.362Z",
+  "deployedSource": "49d5ef7b76ca4682a92e7b63cb7971db2bc39871",
+  "api": "https://studyroom-sut-api.onrender.com/api",
+  "checks": [
+    {
+      "name": "Render authenticated API → public ngrok → real local Whisper persists literal words and timestamps",
+      "passed": true
+    },
+    {
+      "name": "Repeating a client batch does not duplicate transcript",
+      "passed": true
+    },
+    {
+      "name": "Private Supabase Storage accepts generated PNG and DOCX; real OCR/text extraction succeeds",
+      "passed": true
+    },
+    {
+      "name": "Historical report retains actual voice, chat and the extracted contents of both attachment formats",
+      "passed": true
+    },
+    {
+      "name": "Private downloads work after close; nonparticipants and public URLs are denied",
+      "passed": true
+    },
+    {
+      "name": "Full Markdown export includes literal voice and document text without signed URLs",
+      "passed": true
+    }
+  ],
+  "source": "Generated Spanish SAPI WAV, PNG and DOCX fixtures; no user microphone or files",
+  "limitations": [
+    "Does not certify all accents or a prolonged call on four physical devices."
+  ],
+  "recognizedText": "Hola, estamos estudiando juntos. El reporte contiene la transcripción de nuestra conversación.",
+  "recognizedWords": 12,
+  "passed": false,
+  "error": "The expression evaluated to a falsy value:\n\n  assert(citations.length>0)\n",
+  "cleanedUp": true,
+  "cleanupScope": "Test room closed, generated uploaded objects and own two Firebase test accounts removed; synthetic historical database records retained",
+  "cleanupErrors": []
+}

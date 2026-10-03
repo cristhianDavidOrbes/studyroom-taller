@@ -1,0 +1,43 @@
+{
+  "observedAt": "2026-10-03T02:55:39.5341141Z",
+  "sourceCommit": "81dec28ff35c073ae15a2d400cc152493da383bd",
+  "repository": "https://github.com/cristhianDavidOrbes/studyroom",
+  "ci": {
+    "url": "https://github.com/cristhianDavidOrbes/studyroom/actions/runs/37091129021",
+    "conclusion": "success",
+    "jobs": [
+      "verify",
+      "desktop"
+    ]
+  },
+  "deployments": [
+    {
+      "component": "api",
+      "url": "https://studyroom-sut-api.onrender.com/api",
+      "deployId": "dep-db06sf0u01pc73940sug",
+      "status": "live",
+      "finishedAt": "2026-10-03T02:55:11.824005Z",
+      "sourceCommit": "81dec28ff35c073ae15a2d400cc152493da383bd"
+    },
+    {
+      "component": "web",
+      "url": "https://studyroom-sut.onrender.com",
+      "deployId": "dep-db06ifugekts738cquk0",
+      "status": "live",
+      "finishedAt": "2026-10-03T02:33:14.692514Z",
+      "sourceCommit": "9f0eed677aad3f5b2e06fd9e10872a9a4bb27eb4"
+    }
+  ],
+  "gateway": {
+    "status": "ready",
+    "speech": "faster-whisper-small",
+    "ocr": "tesseract",
+    "inference": "local Qwen",
+    "paidFallback": false
+  },
+  "limitations": [
+    "Free service quotas remain applicable.",
+    "Local AI and speech recognition require the host PC and tunnel to remain active.",
+    "Code publication does not certify all Jira acceptance criteria or all physical devices."
+  ]
+}
