@@ -68,6 +68,32 @@ export function validatedCitations(text: string, sources: string[]) {
   const allowed = new Set(sources);
   const prefixes = new Set(["mensaje", "documento", "transcripcion", "sintesis"]);
   const uuid = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}";
+  const uuidOnly = new RegExp(`^${uuid}$`);
+  const byId = new Map<string, Set<string>>();
+  for (const source of allowed) {
+    const split = source.indexOf(":");
+    const id = source.slice(split + 1);
+    if (!prefixes.has(source.slice(0, split)) || !uuidOnly.test(id)) continue;
+    if (!byId.has(id)) byId.set(id, new Set());
+    byId.get(id)!.add(source);
+  }
+  // Legacy summaries sometimes cite a list of bare UUIDs. Resolve only
+  // explicitly marked reference groups, and only when the full source is unique.
+  const ids = `${uuid}(?:\\s*(?:[,;]|y)\\s*${uuid})*`;
+  const groups = new RegExp(
+    String.raw`\[\s*(?:fuentes?|referencias?)\s*:\s*${ids}\s*\]` +
+    String.raw`|\(\s*(?:fuentes?|referencias?)\s*:\s*${ids}\s*\)` +
+    String.raw`|(?:^|(?<=\n))[ \t]*(?:fuentes?|referencias?)\s*:\s*${ids}[ \t]*\.?(?=$|\r?\n)`,
+    "giu",
+  );
+  const grouped = text.replace(groups, marker => {
+    const converted = marker.replace(new RegExp(uuid, "g"), id => {
+      const matches = byId.get(id);
+      return matches?.size === 1 ? `[${[...matches][0]}]` : "Referencia no disponible";
+    });
+    // Avoid nested citation brackets, so the first source is readable everywhere.
+    return converted.startsWith("[") ? `(${converted.slice(1, -1)})` : converted;
+  });
   // A model may use parentheses or omit citation brackets. Match those only
   // for namespaced UUIDs; ordinary notes and isolated identifiers stay intact.
   const citations = new RegExp(
@@ -76,7 +102,7 @@ export function validatedCitations(text: string, sources: string[]) {
     String.raw`|(?<![\p{L}\p{M}\p{N}_])([\p{L}\p{M}]{1,40})\s*:\s*(${uuid})(?![\p{L}\p{M}\p{N}_-])`,
     "gu",
   );
-  return text.replace(citations,
+  return grouped.replace(citations,
     (marker, bracketPrefix: string | undefined, bracketId: string | undefined,
       parenthesisPrefix: string | undefined, parenthesisId: string | undefined,
       barePrefix: string | undefined, bareId: string | undefined) => {
@@ -99,6 +125,13 @@ export function publicJob(job: AiJob) {
     ...safe
   } = job;
   let result = safe.result as any;
+  if (typeof result?.text === "string")
+    result = {
+      ...result,
+      text: validatedCitations(result.text, Array.isArray(result.sources)
+        ? result.sources.filter((source: unknown): source is string => typeof source === "string")
+        : []),
+    };
   if (job.kind === "quiz" && result?.questions)
     result = {
       ...result,

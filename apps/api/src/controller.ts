@@ -257,7 +257,7 @@ export class AppController {
   }
   @Post("rooms/:id/transcription/audio")
   @ApiConsumes("multipart/form-data")
-  @ApiOperation({ summary: "Transcribe tu micrófono con consentimiento previo; WAV PCM16 mono16k hasta30s. Guarda texto y huecos, nunca el audio." })
+  @ApiOperation({ summary: "Transcribe tu micrófono con la transcripción activa; WAV PCM16 mono16k hasta30s. Guarda texto y huecos, nunca el audio." })
   @ApiBody({ schema: { type: "object", additionalProperties: false, required: ["audio", "clientId", "sessionId", "startMs", "endMs"], properties: {
     audio: { type: "string", format: "binary", description: "WAV canónico (cabecera44bytes), máximo960044bytes." }, clientId: { type: "string", format: "uuid" }, sessionId: { type: "string", format: "uuid" }, startMs: { type: "integer", minimum: 0, description: "Milisegundos desde session.startedAt" }, endMs: { type: "integer", minimum: 1 },
   } } })

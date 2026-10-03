@@ -46,9 +46,27 @@ describe("Contexto fiel del reporte", () => {
     const result = validatedCitations(`documento:${id}, (síntesis:${id}) [transcripción:${id.toUpperCase()}] transcripción:${id}.`, [`transcripcion:${id}`]);
     expect(result).toBe(`,   [transcripcion:${id}].`);
   });
+  test("resuelve grupos de UUID a su fuente exacta y no trata duplicados iguales como ambiguos", () => {
+    const voice = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c50";
+    const document = "7483c2fa-d3c1-40fe-b569-83ba6e1a2309";
+    const sources = [`transcripcion:${voice}`, `documento:${document}`, `transcripcion:${voice}`];
+    const text = `Resumen (fuentes: ${voice}, ${document}). [REFERENCIA: ${document}]\nFuentes: ${voice} y ${document}.`;
+    expect(validatedCitations(text, sources))
+      .toBe(`Resumen (fuentes: [transcripcion:${voice}], [documento:${document}]). (REFERENCIA: [documento:${document}])\nFuentes: [transcripcion:${voice}] y [documento:${document}].`);
+  });
+  test("un grupo mixto no inventa fuentes para UUID desconocidos, ambiguos o con mayúsculas distintas", () => {
+    const known = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c50";
+    const missing = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c51";
+    const ambiguous = "7483c2fa-d3c1-40fe-b569-83ba6e1a2309";
+    const text = `Acuerdo (referencias: ${known}; ${missing}; ${ambiguous}; ${known.toUpperCase()}).`;
+    const result = validatedCitations(text, [`mensaje:${known}`, `documento:${ambiguous}`, `mensaje:${ambiguous}`]);
+    expect(result).toBe(`Acuerdo (referencias: [mensaje:${known}]; Referencia no disponible; Referencia no disponible; Referencia no disponible).`);
+    expect(result).not.toContain(missing);
+    expect(result).not.toContain(ambiguous);
+  });
   test("preserva notas ordinarias, UUID aisladas y namespaces desconocidos", () => {
     const id = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c50";
-    const text = `Nota (documento: revisar mañana), (base por altura), identificador ${id}, (registro:${id}) y registro:${id}.`;
+    const text = `Nota (documento: revisar mañana), (base por altura), identificador ${id}, (registro:${id}) y registro:${id}. (fuentes: consultar apuntes), (referencias: ${id} de ejemplo).`;
     expect(validatedCitations(text, [])).toBe(text);
   });
   test("exporta todos los segmentos, palabras, chat y archivos, sin URLfirmada", () => {

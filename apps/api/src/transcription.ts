@@ -107,7 +107,7 @@ export class Transcription implements OnModuleInit, OnModuleDestroy {
       if (old) { if (old.audioHash !== audioHash) throw new ConflictException("Ese identificador ya se usó para otro audio"); return { batch: old, duplicate: true }; }
       if (m.room.status === "cancelled" || (s.endedAt && Date.now() > s.endedAt.getTime() + TRANSCRIPTION_GRACE_MS)) throw new ConflictException("La ventana para enviar el último audio terminó");
       const consent = await tx.transcriptionConsent.findUnique({ where: { sessionId_userId: { sessionId: s.id, userId: i.uid } } });
-      if (!consent?.enabled || !consent.enabledSince) throw new ForbiddenException("Habilita tu consentimiento antes de enviar audio");
+      if (!consent?.enabled || !consent.enabledSince) throw new ForbiddenException("Tu transcripción está pausada o todavía no se ha activado");
       const minimum = Math.max(0, Math.max(consent.enabledSince.getTime(), m.joinedAt.getTime()) - s.startedAt.getTime() - 250);
       const maximum = (s.endedAt?.getTime() ?? Date.now()) - s.startedAt.getTime();
       if (d.startMs < minimum || d.endMs > maximum + 2000 || d.startMs >= maximum) throw new BadRequestException("El audio está fuera del intervalo autorizado de la sesión");

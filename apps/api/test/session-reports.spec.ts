@@ -9,6 +9,7 @@ import { Rooms } from "../src/rooms";
 import { AppController } from "../src/controller";
 import { documentContracts } from "../src/openapi";
 import { reportMarkdown } from "../src/report-context";
+import { reportArchiveHTML } from "../src/report-archive";
 const i = { uid: "one", name: "Student", email: "local@example.invalid" };
 describe("Historial, archivos y preguntas del reporte", () => {
   test("cerrar crea solo resumen y puntos clave del reporte", async () => {
@@ -70,6 +71,37 @@ describe("Historial, archivos y preguntas del reporte", () => {
     expect(db.aiJob.findMany.mock.calls[0][0].where.kind).toEqual({ not: "quiz" });
     expect(db.session.findMany.mock.calls[0][0].include).not.toHaveProperty("attempts");
     await expect(ai.get("old", i)).rejects.toThrow(NotFoundException);
+    expect(JSON.stringify(jobs)).toBe(before);
+  });
+  test("leer resúmenes antiguos normaliza sus referencias en reporte y exportaciones sin escribir ni mutar el registro", async () => {
+    const voice = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c50", chat = "7483c2fa-d3c1-40fe-b569-83ba6e1a2309";
+    const missing = "30cfaf8c-1e3b-4b39-ae6d-f51b116a6c51";
+    const original = Object.freeze({ text: `Estudiamos el área (fuentes: ${voice}, ${chat}, ${missing}).`, sources: Object.freeze([`transcripcion:${voice}`, `mensaje:${chat}`]), contextFragments: 2 });
+    const job = Object.freeze({ id: "summary", kind: "summary", shared: true, status: "completed", result: original, payload: { context: "CONTEXTO_PRIVADO" } });
+    const jobs = Object.freeze([job]), before = JSON.stringify(jobs);
+    const session = { id: "s", roomId: "r", title: "Geometría", startedAt: new Date(), endedAt: new Date(), participantIds: [i.uid], context: { messages: [{ id: chat, text: "Base por altura", displayName: "Luis" }] } };
+    const db: any = {
+      session: { findUnique: jest.fn(async () => session) },
+      aiJob: { findMany: jest.fn(async () => jobs), update: jest.fn(), updateMany: jest.fn() },
+      sessionDocument: { findMany: jest.fn(async () => []) }, document: { findMany: jest.fn(async () => []) },
+    };
+    const ai = new Ai(db, { member: jest.fn() } as any, new RateLimiter(), { view: jest.fn(async () => ({
+      segments: [{ id: voice, speakerName: "Ana", text: "Estudiamos el área", startMs: 0, endMs: 1000 }], batches: [], coverage: { notice: "Reconocimiento automático", status: "complete", pendingBatches: 0, failedBatches: 0 },
+    })) } as any);
+    const detail = await ai.detail("s", i), report = await ai.report("s", i);
+    const expected = `Estudiamos el área (fuentes: [transcripcion:${voice}], [mensaje:${chat}], Referencia no disponible).`;
+    for (const value of [detail, report]) {
+      expect(value.jobs[0].result.text).toBe(expected);
+      expect(value.jobs[0].result).not.toBe(original);
+      expect(value.jobs[0].result.contextFragments).toBe(2);
+      expect(JSON.stringify(value)).not.toContain("CONTEXTO_PRIVADO");
+    }
+    expect(reportMarkdown(report)).toContain(expected);
+    const html = reportArchiveHTML(report, []);
+    expect(html).toContain("Voz · Ana · 00:00"); expect(html).toContain("Mensaje · Luis");
+    expect(html).toContain("Referencia no disponible");
+    for (const id of [voice, chat, missing]) expect(html).not.toContain(id);
+    expect(db.aiJob.update).not.toHaveBeenCalled(); expect(db.aiJob.updateMany).not.toHaveBeenCalled();
     expect(JSON.stringify(jobs)).toBe(before);
   });
   test("contrato API admite solo partes del reporte y elimina la ruta de intentos", () => {
