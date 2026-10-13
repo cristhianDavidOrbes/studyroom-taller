@@ -130,3 +130,68 @@ describe("Autorización de salas", () => {
     ).rejects.toThrow(ForbiddenException);
   });
 });
+
+describe("Descubrimiento de salas", () => {
+  const identity = { uid: "student", email: "student@example.invalid", name: "Student" };
+  const room = (id: string, subject: string, members = 1) => ({
+    id, subject, title: `${subject} en grupo`, _count: { memberships: members },
+  });
+  test("combina búsqueda y visibilidad: no expone salas privadas ajenas", async () => {
+    const db: any = {
+      room: { updateMany: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [] }) },
+    };
+    const rooms = new Rooms(db, new Events(), new RateLimiter());
+    await rooms.list(identity, { q: "álgebra" });
+    const where = db.room.findMany.mock.calls[0][0].where;
+    expect(where.AND).toEqual([
+      { OR: [
+        { privacy: "public" },
+        { memberships: { some: { userId: identity.uid, active: true, banned: false } } },
+      ] },
+      { OR: [
+        { title: { contains: "álgebra", mode: "insensitive" } },
+        { subject: { contains: "álgebra", mode: "insensitive" } },
+      ] },
+    ]);
+  });
+  test("recomienda únicamente materias afines y no inventa sugerencias sin intereses", async () => {
+    const db: any = {
+      room: { updateMany: jest.fn(), findMany: jest.fn().mockResolvedValue([
+        room("math", "Matemáticas"), room("history", "Historia"),
+      ]) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: ["matemáticas"] }) },
+    };
+    const rooms = new Rooms(db, new Events(), new RateLimiter());
+    jest.spyOn(rooms, "format").mockImplementation(async (value: any) => value);
+    expect((await rooms.list(identity, { recommended: "true" })).map((r: any) => r.id)).toEqual(["math"]);
+    expect(db.room.findMany.mock.calls[0][0].where.AND).toContainEqual({
+      OR: [{ subject: { contains: "matemáticas", mode: "insensitive" } }],
+    });
+    db.user.findUniqueOrThrow.mockResolvedValue({ interests: [] });
+    expect(await rooms.list(identity, { recommended: "true" })).toEqual([]);
+  });
+  test("ordena por participantes activos", async () => {
+    const db: any = {
+      room: { updateMany: jest.fn(), findMany: jest.fn().mockResolvedValue([
+        room("small", "Física", 1), room("large", "Física", 4),
+      ]) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [] }) },
+    };
+    const rooms = new Rooms(db, new Events(), new RateLimiter());
+    jest.spyOn(rooms, "format").mockImplementation(async (value: any) => value);
+    expect((await rooms.list(identity, { sort: "activity" })).map((r: any) => r.id)).toEqual(["large", "small"]);
+  });
+  test("la búsqueda por relevancia antepone coincidencias del título", async () => {
+    const db: any = {
+      room: { updateMany: jest.fn(), findMany: jest.fn().mockResolvedValue([
+        { ...room("subject", "Álgebra", 4), title: "Repaso general" },
+        { ...room("title", "Matemáticas", 1), title: "Álgebra en grupo" },
+      ]) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [] }) },
+    };
+    const rooms = new Rooms(db, new Events(), new RateLimiter());
+    jest.spyOn(rooms, "format").mockImplementation(async (value: any) => value);
+    expect((await rooms.list(identity, { q: "álgebra", sort: "relevance" })).map((r: any) => r.id)).toEqual(["title", "subject"]);
+  });
+});

@@ -549,16 +549,26 @@ export function ExplorePage() {
           <Empty
             title="Tu próxima sala puede empezar contigo"
             action={
-              <button
-                className="button secondary"
-                onClick={() => setCreate(true)}
-              >
-                <Plus size={17} />
-                Crear una sala
-              </button>
+              tab === "recommended" && !profile?.interests?.length ? (
+                <Link className="button secondary" to="/perfil">
+                  Completar mi perfil
+                </Link>
+              ) : (
+                <button
+                  className="button secondary"
+                  onClick={() => setCreate(true)}
+                >
+                  <Plus size={17} />
+                  Crear una sala
+                </button>
+              )
             }
           >
-            {q || subject || level || modality
+            {tab === "recommended"
+              ? profile?.interests?.length
+                ? "No encontramos salas que coincidan con tus intereses. Prueba Explorar o actualiza tus intereses en tu perfil."
+                : "Añade tus intereses en tu perfil para recibir recomendaciones de salas."
+              : q || subject || level || modality
               ? "Prueba con otros filtros o busca un tema más general."
               : "Todavía no hay salas en esta sección. Comparte lo que quieres estudiar e invita a tu grupo."}
           </Empty>

@@ -57,7 +57,20 @@ test('Flujos reales Firebase+PostgreSQL: acceso, salas, colaboración e historia
   const exported=await ok(member,`/sessions/${room.sessionId}/export?format=json`);assert.deepEqual(exported.transcription.batches,report.transcription.batches);assert.equal(exported.attempts,undefined);assert.ok(exported.jobs.every(j=>j.kind!=='quiz'));assert.equal(report.attempts,undefined);assert.ok(report.jobs.every(j=>j.kind!=='quiz'));
   const answer=await ok(member,`/sessions/${room.sessionId}/questions`,'POST',{question:'Qué organiza una matriz?',clientId:randomUUID()});assert.equal(answer.kind,'answer');assert.equal(answer.shared,false);assert.equal((await req(owner,`/ai/jobs/${answer.id}`)).status,403);await ok(member,`/ai/jobs/${answer.id}/cancel`,'POST',{});
  });
- await t.test('sala privada: código, enlace y expulsión',async()=>{const p=await ok(owner,'/rooms','POST',roomBody('Privada integración',{privacy:'private',accessCode:'estudiar-2026'}));assert.equal((await req(member,`/rooms/${p.id}/join`,'POST',{code:'incorrecto'})).status,403);const invite=await ok(owner,`/rooms/${p.id}/invites`,'POST',{});assert.match(invite.url,/\/salas\//);await ok(member,`/rooms/${p.id}/join`,'POST',{inviteToken:invite.token});await ok(owner,`/rooms/${p.id}/members/${member.id}`,'DELETE');assert.equal((await req(member,`/rooms/${p.id}/join`,'POST',{code:'estudiar-2026'})).status,403);assert.equal((await req(member,`/rooms/${p.id}/state`)).status,403);await ok(owner,`/rooms/${p.id}/close`,'POST',{});});
+ await t.test('sala privada: búsqueda, código, enlace y expulsión',async()=>{
+  const p=await ok(owner,'/rooms','POST',roomBody('Privada integración',{privacy:'private',accessCode:'estudiar-2026'}));
+  assert.ok((await ok(owner,'/rooms?q=Privada')).some(x=>x.id===p.id));
+  assert.ok(!(await ok(member,'/rooms?q=Privada')).some(x=>x.id===p.id));
+  assert.equal((await req(member,`/rooms/${p.id}/join`,'POST',{code:'incorrecto'})).status,403);
+  const invite=await ok(owner,`/rooms/${p.id}/invites`,'POST',{});assert.match(invite.url,/\/salas\//);
+  await ok(member,`/rooms/${p.id}/join`,'POST',{inviteToken:invite.token});
+  assert.ok((await ok(member,'/rooms?q=Privada')).some(x=>x.id===p.id));
+  await ok(owner,`/rooms/${p.id}/members/${member.id}`,'DELETE');
+  assert.ok(!(await ok(member,'/rooms?q=Privada')).some(x=>x.id===p.id));
+  assert.equal((await req(member,`/rooms/${p.id}/join`,'POST',{code:'estudiar-2026'})).status,403);
+  assert.equal((await req(member,`/rooms/${p.id}/state`)).status,403);
+  await ok(owner,`/rooms/${p.id}/close`,'POST',{});
+ });
  await t.test('capacidad bajo solicitudes simultáneas',async()=>{const p=await ok(owner,'/rooms','POST',roomBody('Capacidad integración',{capacity:2}));const r=await Promise.all([req(member,`/rooms/${p.id}/join`,'POST',{}),req(outsider,`/rooms/${p.id}/join`,'POST',{})]);assert.equal(r.filter(x=>x.status===201).length,1);assert.equal(r.filter(x=>x.status===409).length,1);assert.equal((await ok(owner,`/rooms/${p.id}`)).participantCount,2);await ok(owner,`/rooms/${p.id}/close`,'POST',{});});
  await t.test('programación futura y cancelación',async()=>{const p=await ok(owner,'/rooms','POST',roomBody('Programada integración',{scheduledAt:new Date(Date.now()+3600000).toISOString()}));assert.equal(p.status,'scheduled');assert.equal((await req(member,`/rooms/${p.id}/join`,'POST',{})).status,409);await ok(owner,`/rooms/${p.id}/cancel`,'POST',{});assert.equal((await ok(owner,`/rooms/${p.id}`)).status,'cancelled');});
  await t.test('cuotas disponibles sin revelar secretos',async()=>{const u=await ok(owner,'/usage');assert.ok(u.limits.participantMinutes<=5000);assert.equal(JSON.stringify(u).includes('service_role'),false);});

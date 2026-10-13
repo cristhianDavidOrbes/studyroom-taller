@@ -187,19 +187,34 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
         .strict(),
       q,
     ) as Record<string, string>;
+    const u = await this.db.user.findUniqueOrThrow({ where: { id: i.uid } });
+    if (q.recommended === "true" && u.interests.length === 0) return [];
     const rows = await this.db.room.findMany({
       where: {
         status: { in: ["open", "scheduled"] },
-        ...(q.q
-          ? {
-              OR: [
-                { title: { contains: q.q.slice(0, 120), mode: "insensitive" } },
-                {
-                  subject: { contains: q.q.slice(0, 120), mode: "insensitive" },
-                },
-              ],
-            }
-          : {}),
+        // Keep private rooms discoverable only to their current participants.
+        // The text search must be conjoined with visibility, never replace it.
+        AND: [
+          {
+            OR: [
+              { privacy: "public" },
+              { memberships: { some: { userId: i.uid, active: true, banned: false } } },
+            ],
+          },
+          ...(q.q
+            ? [{
+                OR: [
+                  { title: { contains: q.q, mode: "insensitive" as const } },
+                  { subject: { contains: q.q, mode: "insensitive" as const } },
+                ],
+              }]
+            : []),
+          ...(q.recommended === "true"
+            ? [{ OR: u.interests.map((interest) => ({
+                subject: { contains: interest, mode: "insensitive" as const },
+              })) }]
+            : []),
+        ],
         ...(q.subject
           ? { subject: { equals: q.subject, mode: "insensitive" } }
           : {}),
@@ -213,24 +228,23 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
         q.sort === "scheduled" ? { scheduledAt: "asc" } : { updatedAt: "desc" },
       take: 100,
     });
-    const u = await this.db.user.findUniqueOrThrow({ where: { id: i.uid } });
     if (q.sort === "activity")
       rows.sort((a, b) => b._count.memberships - a._count.memberships);
-    if (q.sort === "relevance" || q.recommended === "true")
-      rows.sort(
-        (a, b) =>
-          Number(
-            u.interests.some((x) =>
-              b.subject.toLowerCase().includes(x.toLowerCase()),
-            ),
-          ) -
-          Number(
-            u.interests.some((x) =>
-              a.subject.toLowerCase().includes(x.toLowerCase()),
-            ),
-          ),
-      );
-    return Promise.all(rows.map((r) => this.format(r, i.uid)));
+    if (q.sort === "relevance" || (!q.sort && q.recommended === "true")) {
+      const relevance = (room: (typeof rows)[number]) => {
+        const title = room.title.toLowerCase(), subject = room.subject.toLowerCase();
+        const search = q.q?.toLowerCase();
+        return (search ? Number(title.includes(search)) * 4 + Number(subject.includes(search)) * 3 : 0)
+          + Number(u.interests.some((interest) => subject.includes(interest.toLowerCase()))) * 2;
+      };
+      rows.sort((a, b) => relevance(b) - relevance(a) || b._count.memberships - a._count.memberships);
+    }
+    const visible = q.recommended === "true"
+      ? rows.filter((room) => u.interests.some((interest) =>
+          room.subject.toLowerCase().includes(interest.toLowerCase()),
+        ))
+      : rows;
+    return Promise.all(visible.map((r) => this.format(r, i.uid)));
   }
   async get(id: string, i: Identity) {
     let r = await this.db.room.findUnique({ where: { id } });
