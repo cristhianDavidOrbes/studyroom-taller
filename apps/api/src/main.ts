@@ -81,12 +81,16 @@ export async function bootstrap() {
 }
 if (require.main === module)
   void bootstrap().catch((error: unknown) => {
-    const diagnostic = error as { name?: string; code?: string } | null;
+    const diagnostic = error as {
+      name?: string;
+      code?: string;
+      errorCode?: string;
+    } | null;
     process.stderr.write(
       JSON.stringify({
         event: "startup_failed",
         errorName: diagnostic?.name ?? "UnknownError",
-        errorCode: diagnostic?.code ?? "UNKNOWN",
+        errorCode: diagnostic?.code ?? diagnostic?.errorCode ?? "UNKNOWN",
       }) + "\n",
     );
     process.stderr.write(
