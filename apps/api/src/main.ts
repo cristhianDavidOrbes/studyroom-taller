@@ -80,7 +80,15 @@ export async function bootstrap() {
   return app;
 }
 if (require.main === module)
-  void bootstrap().catch(() => {
+  void bootstrap().catch((error: unknown) => {
+    const diagnostic = error as { name?: string; code?: string } | null;
+    process.stderr.write(
+      JSON.stringify({
+        event: "startup_failed",
+        errorName: diagnostic?.name ?? "UnknownError",
+        errorCode: diagnostic?.code ?? "UNKNOWN",
+      }) + "\n",
+    );
     process.stderr.write(
       "No se pudo iniciar StudyRoom. Revisa configuración y conexión a PostgreSQL.\n",
     );
