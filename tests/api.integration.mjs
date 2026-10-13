@@ -17,6 +17,29 @@ test('Flujos reales Firebase+PostgreSQL: acceso, salas, colaboración e historia
  await t.test('perfil idempotente y preferencias validadas',async()=>{const p=await ok(owner,'/me');assert.equal(p.id,owner.id);assert.equal((await ok(owner,'/me')).id,p.id);const edited=await ok(owner,'/me','PATCH',{displayName:'Ana de prueba',interests:['Álgebra'],onboarded:true,notifications:{inApp:true,email:false}});assert.equal(edited.displayName,'Ana de prueba');assert.equal((await req(owner,'/me','PATCH',{role:'admin'})).status,400);});
  let room;
  await t.test('crear, buscar, filtrar y editar salas',async()=>{room=await ok(owner,'/rooms','POST',roomBody('Álgebra integración'));assert.equal(room.myRole,'host');assert.equal(room.participantCount,1);assert.ok((await ok(owner,'/rooms?q=integración&subject=Álgebra')).some(x=>x.id===room.id));assert.equal((await req(owner,'/rooms','POST',roomBody('X',{capacity:100}))).status,400);await ok(owner,`/rooms/${room.id}`,'PATCH',{description:'Vectores y matrices'});assert.equal((await ok(owner,`/rooms/${room.id}`)).description,'Vectores y matrices');});
+ await t.test('descubrimiento combina filtros, recomendaciones y actividad',async()=>{
+  const marker=`Descubrimiento-${randomUUID().slice(0,8)}`;
+  const algebra=await ok(owner,'/rooms','POST',roomBody(`${marker} algebra`,{subject:'Álgebra aplicada',level:'intermedio'}));
+  const physics=await ok(owner,'/rooms','POST',roomBody(`${marker} fisica`,{subject:'Física',level:'avanzado',modality:'tutoría'}));
+  try{
+   const search=encodeURIComponent(marker);
+   const results=await ok(owner,`/rooms?q=${search}`);
+   assert.deepEqual(new Set(results.map(x=>x.id)),new Set([algebra.id,physics.id]));
+   const filtered=await ok(owner,`/rooms?q=${search}&subject=${encodeURIComponent('Álgebra aplicada')}&level=intermedio&modality=colaborativa`);
+   assert.deepEqual(filtered.map(x=>x.id),[algebra.id]);
+   assert.deepEqual(await ok(owner,`/rooms?q=${search}&level=principiante`),[]);
+   const recommended=await ok(owner,`/rooms?q=${search}&recommended=true`);
+   assert.deepEqual(recommended.map(x=>x.id),[algebra.id]);
+   await ok(member,`/rooms/${physics.id}/join`,'POST',{});
+   const active=await ok(owner,`/rooms?q=${search}&sort=activity`);
+   assert.equal(active[0].id,physics.id);
+   const relevant=await ok(owner,`/rooms?q=${search}&sort=relevance`);
+   assert.equal(relevant[0].id,algebra.id);
+  }finally{
+   await ok(owner,`/rooms/${algebra.id}/cancel`,'POST',{});
+   await ok(owner,`/rooms/${physics.id}/cancel`,'POST',{});
+  }
+ });
  await t.test('aislamiento y autorización de participantes',async()=>{assert.equal((await req(outsider,`/rooms/${room.id}/messages`)).status,403);assert.equal((await req(outsider,`/rooms/${room.id}/notes`)).status,403);await ok(member,`/rooms/${room.id}/join`,'POST',{});await ok(member,`/rooms/${room.id}/join`,'POST',{});assert.equal((await ok(owner,`/rooms/${room.id}`)).participantCount,2);assert.equal((await req(member,`/rooms/${room.id}`,'PATCH',{title:'Ataque'})).status,403);});
  await t.test('chat idempotente y notas privadas',async()=>{const payload={text:'Una matriz organiza números en filas y columnas.',clientId:randomUUID()};const first=await ok(member,`/rooms/${room.id}/messages`,'POST',payload);assert.equal((await ok(member,`/rooms/${room.id}/messages`,'POST',payload)).id,first.id);assert.equal((await req(member,`/rooms/${room.id}/messages`,'POST',{text:'',clientId:'empty'})).status,400);await ok(owner,`/rooms/${room.id}/notes`,'PUT',{text:'Nota privada del anfitrión'});assert.equal((await ok(member,`/rooms/${room.id}/notes`)).text,'');assert.equal((await ok(owner,`/rooms/${room.id}/notes`)).text,'Nota privada del anfitrión');});
  await t.test('temporizador y moderación por rol',async()=>{assert.equal((await req(member,`/rooms/${room.id}/timer`,'PUT',{action:'start',mode:'focus'})).status,403);await ok(owner,`/rooms/${room.id}/members/${member.id}`,'PATCH',{role:'moderator'});const timer=await ok(member,`/rooms/${room.id}/timer`,'PUT',{action:'start',mode:'focus',durationSeconds:60});assert.equal(timer.running,true);await ok(member,`/rooms/${room.id}/timer`,'PUT',{action:'pause',mode:'focus'});assert.equal((await ok(owner,`/rooms/${room.id}/timer`)).running,false);assert.equal((await req(member,`/rooms/${room.id}/members/${owner.id}`,'DELETE')).status,403);});
