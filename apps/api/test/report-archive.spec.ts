@@ -55,7 +55,8 @@ describe("Reporte ZIP completo y autorizado", () => {
     expect(html).toContain("recursos/doc-0-001-%C3%81rea%20compartida.png");
     expect(html).toContain("Texto conservado del eliminado");
     expect(html).toContain("Original eliminado o no disponible");
-    expect(Object.keys(zip.files).filter(name => !zip.files[name].dir)).toHaveLength(10);
+    expect(Object.keys(zip.files).filter(name => !zip.files[name].dir)).toHaveLength(11);
+    expect(zip.file("reporte.docx")).not.toBeNull();
     expect(JSON.parse(await zip.file("reporte.json")!.async("string")).documents).toHaveLength(7);
     expect(await zip.file("LEEME.txt")!.async("string")).toContain("abre index.html");
   });

@@ -353,11 +353,14 @@ export class Ai
     await this.rooms.member(s.roomId, uid, undefined, true);
     return s;
   }
-  async history(i: Identity) {
+  async history(i: Identity, after?: string) {
+    if (after && !await this.db.session.findFirst({ where: { id: after, participantIds: { has: i.uid } }, select: { id: true } }))
+      throw new BadRequestException("Cursor de historial inválido");
     const list = await this.db.session.findMany({
       where: { participantIds: { has: i.uid } },
-      orderBy: { startedAt: "desc" },
+      orderBy: [{ startedAt: "desc" }, { id: "desc" }],
       take: 100,
+      ...(after ? { cursor: { id: after }, skip: 1 } : {}),
       include: {
         jobs: {
           where: { shared: true, kind: { not: "quiz" } },

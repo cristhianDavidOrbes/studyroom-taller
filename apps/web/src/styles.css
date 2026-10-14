@@ -3841,6 +3841,25 @@ textarea::placeholder {
 .report-section h2, .report-learning-section h2 { display: flex; align-items: center; gap: 10px; font-size: 20px; }
 .report-section .section-heading { flex-wrap: wrap; gap: 12px; }
 .report-section .muted { font-size: 13px; line-height: 1.7; }
+.report-timeline-filters { display: flex; gap: 12px; margin: 22px 0 12px; }
+.report-timeline-filters .search-field { flex: 1; min-width: 0; }
+.report-timeline-filters > label:last-child { min-width: 180px; }
+.report-timeline-filters select { width: 100%; }
+.report-timeline { position: relative; list-style: none; padding: 0; margin: 0; }
+.report-timeline::before { content: ""; position: absolute; top: 20px; bottom: 20px; left: 82px; width: 2px; background: #dce8d5; }
+.report-timeline-entry { position: relative; display: grid; grid-template-columns: 62px 24px minmax(0, 1fr); gap: 13px; align-items: start; padding: 18px 0; }
+.report-timeline-entry + .report-timeline-entry { border-top: 1px solid #edf1e9; }
+.report-timeline-time { font-size: 12px; font-variant-numeric: tabular-nums; color: #62735b; padding-top: 7px; text-align: right; }
+.report-timeline-icon { z-index: 1; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%; background: #e3eedc; color: #4d7854; }
+.report-timeline-entry.message .report-timeline-icon { background: #e3eeef; color: #36727a; }
+.report-timeline-entry.document .report-timeline-icon { background: #f2ecdb; color: #887248; }
+.report-timeline-content { min-width: 0; padding: 2px 0 0 4px; }
+.report-timeline-content > div { min-width: 0; }
+.report-timeline-kind { display: block; margin-bottom: 6px; color: #687d60; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.report-timeline-content p { margin: 9px 0 0; color: #394b36; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.report-timeline-content .report-document { max-width: 570px; margin-top: 8px; background: #fff; }
+.report-word-times { margin-top: 12px; font-size: 12px; }
+.report-word-times summary { cursor: pointer; color: #496f47; font-weight: 650; }
 .report-chat-log { padding: 0; list-style: none; }
 .report-chat-log li { padding: 15px 0; border-bottom: 1px solid #e9ede4; }
 .report-documents { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
@@ -3871,6 +3890,10 @@ textarea::placeholder {
   .report-overview > div { padding: 15px; }
   .report-documents { grid-template-columns: 1fr; }
   .transcript-filters { flex-direction: column; }
+  .report-timeline-filters { flex-direction: column; }
+  .report-timeline-filters > label:last-child { min-width: 0; }
+  .report-timeline::before { left: 68px; }
+  .report-timeline-entry { grid-template-columns: 48px 24px minmax(0, 1fr); gap: 13px; }
   .report-section h2, .report-learning-section h2 { font-size: 18px; }
 }
 @media (max-width: 780px) {

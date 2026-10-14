@@ -122,7 +122,7 @@ function Shell() {
       </NavLink>
       <NavLink to="/historial">
         <History size={20} />
-        Mi aprendizaje
+        Mis reportes
       </NavLink>
       <NavLink to="/perfil">
         <UserRound size={20} />

@@ -23,11 +23,11 @@ const fixture = {
   transcription: { sessionId: "session-test", startedAt: "2026-10-02T12:00:00Z", segments: [{ id: "voice", speakerId: "ana", speakerName: "Ana", text: "Voz original conservada", startMs: 20000, endMs: 25000 }], batches: [], participants: [{ userId: "ana", displayName: "Ana", enabled: false }], coverage: { status: "available", pendingBatches: 0, failedBatches: 0, completedBatches: 1, consentingParticipants: 1, totalParticipants: 1 } },
 } as unknown as SessionReport;
 
-function renderPage(path: string) {
+function renderPage(path: string, report: SessionReport = fixture) {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } });
-  client.setQueryData(["session", fixture.id], fixture);
-  client.setQueryData(["sessions"], [fixture]);
-  client.setQueryData(["session-notes", fixture.roomId], { text: "Nota privada conservada" });
+  client.setQueryData(["session", report.id], report);
+  client.setQueryData(["sessions"], [report]);
+  client.setQueryData(["session-notes", report.roomId], { text: "Nota privada conservada" });
   return renderToStaticMarkup(<QueryClientProvider client={client}><MemoryRouter initialEntries={[path]}><Routes><Route path="/sesiones/:id" element={<SessionPage />} /><Route path="/historial" element={<HistoryPage />} /></Routes></MemoryRouter></QueryClientProvider>);
 }
 
@@ -44,6 +44,27 @@ describe("reporte sin cuestionarios", () => {
     for (const text of ["Voz original conservada", "Mensaje compartido conservado", "Archivo conservado.txt", "Resumen conservado", "Voz · Ana · 00:20", "Nota privada conservada", "Consultar este reporte", "Descargar reporte completo", "Otros formatos"]) expect(html).toContain(text);
     expect(html).toContain('href="#report-source-transcripcion-voice"');
     expect(html.match(/class="artifact-action"/g)).toHaveLength(2);
+  });
+
+  it("intercala voz, chat, imagen y archivo en una sola cronología", () => {
+    const report = {
+      ...fixture,
+      messages: [{ ...fixture.messages[0], createdAt: "2026-10-02T12:00:10Z", text: "CHAT_10" }],
+      documents: [
+        { ...fixture.documents[0], id: "image", name: "IMAGEN_30.png", mimeType: "image/png", createdAt: "2026-10-02T12:00:30Z" },
+        { ...fixture.documents[0], id: "file", name: "ARCHIVO_40.txt", createdAt: "2026-10-02T12:00:40Z" },
+      ],
+      transcription: { ...fixture.transcription, segments: [{ ...fixture.transcription.segments[0], text: "VOZ_20" }] },
+    } as SessionReport;
+    const html = renderPage(`/sesiones/${report.id}`, report);
+    const positions = ["CHAT_10", "VOZ_20", "IMAGEN_30.png", "ARCHIVO_40.txt"].map((marker) => html.indexOf(marker));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(html.match(/class="report-timeline-entry /g)).toHaveLength(4);
+    expect(html).toContain('id="report-source-transcripcion-voice"');
+    expect(html).toContain('id="report-source-mensaje-chat"');
+    expect(html).toContain('id="report-source-documento-image"');
+    expect(html).toContain("Documento Word");
   });
 
   it("mantiene el acceso al reporte desde Mi aprendizaje sin mostrar cuestionarios", () => {

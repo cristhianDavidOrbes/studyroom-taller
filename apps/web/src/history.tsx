@@ -33,7 +33,16 @@ export function HistoryPage() {
     refetch,
   } = useQuery({
     queryKey: ["sessions"],
-    queryFn: () => api<Session[]>("/sessions"),
+    queryFn: async () => {
+      const all: Session[] = [];
+      let after = "";
+      for (;;) {
+        const page = await api<Session[]>(`/sessions${after ? `?after=${encodeURIComponent(after)}` : ""}`);
+        all.push(...page);
+        if (page.length < 100) return all;
+        after = page[page.length - 1].id;
+      }
+    },
   });
   const filtered = sessions.filter(
     (s) =>
@@ -61,10 +70,10 @@ export function HistoryPage() {
   );
   return (
     <div className="page">
-      <span className="eyebrow">CADA SESIÓN CUENTA</span>
-      <h1>Tu aprendizaje, en perspectiva</h1>
+      <span className="eyebrow">TUS SESIONES GUARDADAS</span>
+      <h1>Mis reportes</h1>
       <p className="page-intro">
-        Vuelve a las ideas importantes y descubre cuánto has avanzado.
+        Consulta los reportes de las reuniones en las que participaste.
       </p>
       <div className="stats-grid">
         <div className="stat-card">
@@ -95,7 +104,7 @@ export function HistoryPage() {
       </div>
       <section className="history-list">
         <div className="section-heading">
-          <h2>Tu recorrido</h2>
+          <h2>Todos tus reportes</h2>
           <label className="search-field">
             <Search size={17} />
             <input
@@ -221,7 +230,7 @@ export function SessionPage() {
       setBusy(false);
     }
   }
-  async function download(format: "json" | "markdown" | "zip") {
+  async function download(format: "json" | "markdown" | "docx" | "zip") {
     if (downloading) return;
     setDownloading(true); setError("");
     try {
@@ -261,7 +270,7 @@ export function SessionPage() {
     <div className="page session-page">
       <Link className="text-button" to="/historial">
         <ArrowLeft size={17} />
-        Mi aprendizaje
+        Mis reportes
       </Link>
       <div className="welcome-row report-header-card">
         <div>
@@ -277,7 +286,7 @@ export function SessionPage() {
         </div>
         <div className="report-download-actions">
         <button className="button primary" disabled={downloading} onClick={() => void download("zip")}><Download size={17} />{downloading ? "Preparando descarga…" : "Descargar reporte completo"}</button>
-        <span>Incluye conversación, imágenes y archivos disponibles.</span>
+        <span>Incluye Word, conversación en orden y todos los archivos originales disponibles.</span>
         <details className="export-menu">
           <summary className="button secondary">
             <Download size={16} />
@@ -286,6 +295,7 @@ export function SessionPage() {
           <button disabled={downloading} onClick={() => void download("markdown")}>
             Documento Markdown
           </button>
+          <button disabled={downloading} onClick={() => void download("docx")}>Documento Word</button>
           <button disabled={downloading} onClick={() => void download("json")}>Datos JSON</button>
         </details>
         </div>

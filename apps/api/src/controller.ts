@@ -31,7 +31,7 @@ import { Ai } from "./ai";
 import { StorageGuard } from "./storage-guard";
 import { Transcription, AUDIO_MAX_BYTES } from "./transcription";
 import { reportMarkdown } from "./report-context";
-import { createReportArchive } from "./report-archive";
+import { createReportArchive, createReportWord } from "./report-archive";
 import { pipeline } from "node:stream/promises";
 type Authed = Request & { identity: Identity };
 @Controller()
@@ -301,8 +301,8 @@ export class AppController {
   ) {
     return this.ai.feedback(id, r.identity, b);
   }
-  @Get("sessions") sessions(@Req() r: Authed) {
-    return this.ai.history(r.identity);
+  @Get("sessions") sessions(@Req() r: Authed, @Query("after") after?: string) {
+    return this.ai.history(r.identity, after);
   }
   @Get("sessions/:id") session(@Req() r: Authed, @Param("id") id: string) {
     return this.ai.detail(id, r.identity);
@@ -334,6 +334,18 @@ export class AppController {
         res.type("application/zip");
         try { await pipeline(archive.stream, res); }
         catch (error) { if (!res.headersSent) throw error; res.destroy(); }
+      } finally { this.archiveInFlight = false; }
+      return;
+    }
+    if (format === "docx") {
+      this.rate.check(`report-export:${r.identity.uid}`, 3, 60000);
+      if (this.archiveInFlight) throw new ServiceUnavailableException("Se está preparando otra descarga. Intenta nuevamente en un momento.");
+      this.archiveInFlight = true;
+      try {
+        const word = await createReportWord(data, (documentId, maxBytes) => this.documents.downloadForReport(id, documentId, r.identity, maxBytes));
+        res.setHeader("Content-Disposition", `attachment; filename="studyroom-${data.id}.docx"`);
+        res.setHeader("Cache-Control", "private, no-store");
+        res.type("application/vnd.openxmlformats-officedocument.wordprocessingml.document").send(word);
       } finally { this.archiveInFlight = false; }
       return;
     }
