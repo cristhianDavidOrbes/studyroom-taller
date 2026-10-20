@@ -4,7 +4,7 @@ import { createReportArchive, type ArchiveReport } from "./report-archive";
 
 const report: ArchiveReport = {
   id: "session-1", title: "Reunión de prueba", startedAt: "2026-10-02T12:00:00Z", endedAt: "2026-10-02T12:01:00Z", jobs: [],
-  messages: [{ id: "chat", displayName: "Ana", text: "CHAT_10", createdAt: "2026-10-02T12:00:10Z" }],
+  messages: [{ id: "chat", displayName: "Ana", text: "CHAT_10 https://ejemplo.com/uno y www.ejemplo.com/dos.", createdAt: "2026-10-02T12:00:10Z" }],
   documents: [
     { id: "image", name: "IMAGEN_30.png", mimeType: "image/png", size: 1, available: true, createdAt: "2026-10-02T12:00:30Z", uploadedBy: "ana" },
     { id: "file", name: "ARCHIVO_40.txt", mimeType: "text/plain", size: 7, available: true, createdAt: "2026-10-02T12:00:40Z", uploadedBy: "ana" },
@@ -28,11 +28,13 @@ it("incluye Word y originales en el ZIP con la conversación en orden", async ()
   expect(Object.keys(zip.files).filter((name) => !zip.files[name].dir).sort()).toEqual([archive.wordName, ...archive.resources.map((resource) => resource.archivePath).filter((path): path is string => !!path)].sort());
   const word = await JSZip.loadAsync(await zip.file(archive.wordName)!.async("nodebuffer"));
   const content = await word.file("word/document.xml")!.async("string");
-  const markers = ["CHAT_10", "VOZ_20", "IMAGEN_30.png", "ARCHIVO_40.txt"].map((marker) => content.indexOf(marker));
+  const markers = ["CHAT_10", "https://ejemplo.com/uno", "www.ejemplo.com/dos", "VOZ_20", "IMAGEN_30.png", "ARCHIVO_40.txt"].map((marker) => content.indexOf(marker));
   expect(markers.every((position) => position >= 0)).toBe(true);
   expect(markers).toEqual([...markers].sort((a, b) => a - b));
   expect(Object.keys(word.files).some((name) => name.startsWith("word/media/"))).toBe(true);
   const relations = await word.file("word/_rels/document.xml.rels")!.async("string");
   expect(relations).toContain("adjuntos/001-IMAGEN_30.png");
   expect(relations).toContain("adjuntos/002-ARCHIVO_40.txt");
+  expect(relations).toContain('Target="https://ejemplo.com/uno"');
+  expect(relations).toContain('Target="https://www.ejemplo.com/dos"');
 });

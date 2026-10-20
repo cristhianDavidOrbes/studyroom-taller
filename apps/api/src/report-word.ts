@@ -14,6 +14,27 @@ function clock(ms: number) {
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+function messageRuns(text: string): (TextRun | ExternalHyperlink)[] {
+  const runs: (TextRun | ExternalHyperlink)[] = [];
+  const pattern = /\b(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+  let cursor = 0;
+  for (const match of text.matchAll(pattern)) {
+    const start = match.index;
+    const visible = match[0].replace(/[.,!?;:)\]}]+$/, "");
+    if (!visible) continue;
+    const target = visible.toLowerCase().startsWith("www.") ? `https://${visible}` : visible;
+    try {
+      const url = new URL(target);
+      if (url.protocol !== "http:" && url.protocol !== "https:") continue;
+    } catch { continue; }
+    if (start > cursor) runs.push(new TextRun(text.slice(cursor, start)));
+    runs.push(new ExternalHyperlink({ children: [new TextRun({ text: visible, style: "Hyperlink" })], link: target }));
+    cursor = start + visible.length;
+  }
+  if (cursor < text.length || !runs.length) runs.push(new TextRun(text.slice(cursor)));
+  return runs;
+}
+
 export async function reportWord(report: ArchiveReport, originals: Original[] = []) {
   const started = instant(report.startedAt);
   const source = new Map(originals.map((item) => [item.id, item]));
@@ -26,7 +47,7 @@ export async function reportWord(report: ArchiveReport, originals: Original[] = 
   const children: Paragraph[] = [
     new Paragraph({ text: report.title || "Reporte de sesión", style: "Title" }),
     new Paragraph({ text: `StudyRoom · ${new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeStyle: "short", timeZone: "America/Bogota" }).format(started)}` }),
-    new Paragraph({ text: "Transcripción, mensajes, imágenes y archivos en el orden en que ocurrieron. La voz reconocida puede contener errores; los originales disponibles se incluyen en el ZIP del reporte." }),
+    new Paragraph({ text: "Transcripción, mensajes, enlaces, imágenes y archivos en el orden en que ocurrieron. La voz reconocida puede contener errores; los originales disponibles se incluyen en el ZIP del reporte." }),
     new Paragraph({ text: `${report.transcription.coverage.pendingBatches || 0} fragmentos de voz pendientes · ${report.transcription.coverage.failedBatches || 0} fragmentos sin transcribir. El texto conserva exactamente el resultado reconocido, sin reconstruir palabras ausentes.` }),
     new Paragraph({ text: "Conversación en orden", heading: HeadingLevel.HEADING_1 }),
   ];
@@ -40,7 +61,7 @@ export async function reportWord(report: ArchiveReport, originals: Original[] = 
     } else if (event.kind === "message") {
       const message = event.value as ArchiveReport["messages"][number];
       children.push(new Paragraph({ children: [new TextRun({ text: `${stamp}  Mensaje · ${message.displayName || "Participante"}`, bold: true })], keepNext: true }));
-      children.push(new Paragraph({ text: message.text || "" }));
+      children.push(new Paragraph({ children: messageRuns(message.text || "") }));
     } else {
       const resource = event.value as ArchiveReport["documents"][number];
       const original = source.get(resource.id);

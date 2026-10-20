@@ -18,6 +18,27 @@ function eventTime(value: string, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function linkedMessage(text: string) {
+  const parts: (string | React.JSX.Element)[] = [];
+  const pattern = /\b(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+  let cursor = 0;
+  for (const match of text.matchAll(pattern)) {
+    const start = match.index;
+    const visible = match[0].replace(/[.,!?;:)\]}]+$/, "");
+    if (!visible) continue;
+    const target = visible.toLowerCase().startsWith("www.") ? `https://${visible}` : visible;
+    try {
+      const url = new URL(target);
+      if (url.protocol !== "http:" && url.protocol !== "https:") continue;
+    } catch { continue; }
+    if (start > cursor) parts.push(text.slice(cursor, start));
+    parts.push(<a key={start} href={target} target="_blank" rel="noopener noreferrer">{visible}</a>);
+    cursor = start + visible.length;
+  }
+  if (cursor < text.length || !parts.length) parts.push(text.slice(cursor));
+  return parts;
+}
+
 export function reportTimeline(session: SessionReport): TimelineEvent[] {
   const started = eventTime(session.startedAt, 0);
   return [
@@ -92,12 +113,12 @@ export function ReportArchive({ session }: { session: SessionReport }) {
       <div><Users size={20} /><strong>{session.transcription?.participants?.length || 0}</strong><span>Participantes registrados</span></div>
     </div>
     <nav className="report-section-links" aria-label="Secciones del reporte"><a href="#report-timeline">Conversación en orden</a><a href="#report-questions">Preguntar al reporte</a></nav>
-    <section className="panel report-section" id="report-timeline"><div className="section-heading"><h2><AudioLines size={23} /> La reunión, de principio a fin</h2><Badge>{timeline.length} momentos</Badge></div><p className="muted">Voz transcrita, mensajes, imágenes y archivos aparecen juntos en el orden en que se compartieron. Los tiempos se cuentan desde el inicio de la sesión.</p><CoverageNotice data={session.transcription} />
+    <section className="panel report-section" id="report-timeline"><div className="section-heading"><h2><AudioLines size={23} /> La reunión, de principio a fin</h2><Badge>{timeline.length} momentos</Badge></div><p className="muted">Voz transcrita, mensajes, enlaces, imágenes y archivos aparecen juntos en el orden en que se compartieron. Los tiempos se cuentan desde el inicio de la sesión.</p><CoverageNotice data={session.transcription} />
       <div className="report-timeline-filters"><label className="search-field"><Search size={16} /><input aria-label="Buscar en el reporte" placeholder="Buscar en la conversación…" value={search} onChange={(event) => { setSearch(event.target.value); setLimit(100); }} /></label><label><span className="sr-only">Tipo de contenido</span><select aria-label="Filtrar eventos del reporte" value={kind} onChange={(event) => { setKind(event.target.value as typeof kind); setLimit(100); }}><option value="all">Todo</option><option value="voice">Voz</option><option value="message">Mensajes</option><option value="document">Imágenes y archivos</option></select></label></div>
       {filtered.length ? <ol className="report-timeline">{filtered.slice(0, limit).map((entry) => <li key={`${entry.kind}:${entry.id}`} className={`report-timeline-entry ${entry.kind}`}>
         <time className="report-timeline-time" dateTime={new Date(entry.at).toISOString()} title={shortTime(new Date(entry.at).toISOString())}>{elapsedTime(entry.at - started)}</time>
         <span className="report-timeline-icon" aria-hidden="true">{entry.kind === "voice" ? <AudioLines size={18} /> : entry.kind === "message" ? <MessageSquare size={18} /> : entry.document.mimeType.startsWith("image/") ? <Image size={18} /> : <FileText size={18} />}</span>
-        <div className="report-timeline-content">{entry.kind === "voice" ? <div id={reportSourceAnchor("transcripcion", entry.id)} tabIndex={-1}><span className="report-timeline-kind">Voz reconocida</span><div className="transcript-byline"><strong>{entry.segment.speakerName || "Participante"}</strong><time>{elapsedTime(entry.segment.startMs)}–{elapsedTime(entry.segment.endMs)}</time></div><p className="preserve-lines">{entry.segment.text}</p>{!!entry.segment.words?.length && <details className="report-word-times"><summary>Ver palabras y tiempos</summary><p>{entry.segment.words.map((word) => `${elapsedTime(word.startMs)} ${word.word}`).join(" · ")}</p></details>}</div> : entry.kind === "message" ? <div id={reportSourceAnchor("mensaje", entry.id)} tabIndex={-1}><span className="report-timeline-kind">Mensaje escrito</span><div className="transcript-byline"><strong>{entry.message.displayName || (entry.message.kind === "ai" ? "Asistente" : "Participante")}</strong><time>{shortTime(entry.message.createdAt)}</time></div><p className="preserve-lines">{entry.message.text}</p></div> : <><span className="report-timeline-kind">{entry.document.mimeType.startsWith("image/") ? "Imagen compartida" : "Archivo compartido"} · {people.get(entry.document.uploadedBy) || "Participante"}</span><ReportDocument sessionId={session.id} document={entry.document} /></>}</div>
+        <div className="report-timeline-content">{entry.kind === "voice" ? <div id={reportSourceAnchor("transcripcion", entry.id)} tabIndex={-1}><span className="report-timeline-kind">Voz reconocida</span><div className="transcript-byline"><strong>{entry.segment.speakerName || "Participante"}</strong><time>{elapsedTime(entry.segment.startMs)}–{elapsedTime(entry.segment.endMs)}</time></div><p className="preserve-lines">{entry.segment.text}</p>{!!entry.segment.words?.length && <details className="report-word-times"><summary>Ver palabras y tiempos</summary><p>{entry.segment.words.map((word) => `${elapsedTime(word.startMs)} ${word.word}`).join(" · ")}</p></details>}</div> : entry.kind === "message" ? <div id={reportSourceAnchor("mensaje", entry.id)} tabIndex={-1}><span className="report-timeline-kind">Mensaje escrito</span><div className="transcript-byline"><strong>{entry.message.displayName || (entry.message.kind === "ai" ? "Asistente" : "Participante")}</strong><time>{shortTime(entry.message.createdAt)}</time></div><p className="preserve-lines">{linkedMessage(entry.message.text)}</p></div> : <><span className="report-timeline-kind">{entry.document.mimeType.startsWith("image/") ? "Imagen compartida" : "Archivo compartido"} · {people.get(entry.document.uploadedBy) || "Participante"}</span><ReportDocument sessionId={session.id} document={entry.document} /></>}</div>
       </li>)}</ol> : <Empty title={query || kind !== "all" ? "No hay coincidencias" : "Aún no hay contenido registrado"}>{query || kind !== "all" ? "Prueba otra búsqueda o muestra todo." : "La voz, el chat y los recursos aparecerán aquí en orden."}</Empty>}
       {filtered.length > limit && <button className="button secondary" onClick={() => setLimit((value) => value + 100)}>Mostrar más momentos ({filtered.length - limit} restantes)</button>}
     </section>

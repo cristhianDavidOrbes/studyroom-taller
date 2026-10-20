@@ -67,6 +67,22 @@ describe("reporte sin cuestionarios", () => {
     expect(html).toContain("Descargar Word y adjuntos (.zip)");
   });
 
+  it("muestra todos los enlaces enviados en su posición cronológica y permite abrirlos", () => {
+    const report = {
+      ...fixture,
+      messages: [
+        { ...fixture.messages[0], id: "first-link", createdAt: "2026-10-02T12:00:10Z", text: "Mira https://ejemplo.com/uno y www.ejemplo.com/dos." },
+        { ...fixture.messages[0], id: "last-link", createdAt: "2026-10-02T12:00:40Z", text: "Luego https://ejemplo.com/tres" },
+      ],
+    } as SessionReport;
+    const html = renderPage(`/sesiones/${report.id}`, report);
+    expect(html).toContain('href="https://ejemplo.com/uno" target="_blank" rel="noopener noreferrer"');
+    expect(html).toContain('href="https://www.ejemplo.com/dos" target="_blank" rel="noopener noreferrer"');
+    expect(html).toContain('href="https://ejemplo.com/tres" target="_blank" rel="noopener noreferrer"');
+    const positions = ["ejemplo.com/uno", "ejemplo.com/dos", "Voz original conservada", "ejemplo.com/tres"].map((marker) => html.indexOf(marker));
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
   it("mantiene el acceso al reporte desde Mi aprendizaje sin mostrar cuestionarios", () => {
     const html = renderPage("/historial");
     expect(html).toContain('href="/sesiones/session-test"');
