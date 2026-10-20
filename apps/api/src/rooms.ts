@@ -46,6 +46,76 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
   onModuleDestroy() {
     if (this.maintenance) clearInterval(this.maintenance);
   }
+  async refundGrant(
+    db: { mediaGrant?: any; usage?: any },
+    grant: {
+      id: string;
+      expiresAt: Date;
+      startedAt?: Date;
+      reservedMinutes?: number;
+      reservedBytes?: bigint;
+    },
+    now = new Date(),
+  ) {
+    if (grant.expiresAt <= now) return;
+    const totalMinutes = grant.reservedMinutes ?? 0;
+    const totalBytes = grant.reservedBytes ?? 0n;
+    const startedMs =
+      grant.startedAt instanceof Date
+        ? grant.startedAt.getTime()
+        : grant.expiresAt.getTime() - totalMinutes * 60000;
+    const elapsedMs = Math.max(0, now.getTime() - startedMs);
+    const usedMinutes = Math.min(totalMinutes, Math.floor(elapsedMs / 60000));
+    const unusedMinutes = Math.max(0, totalMinutes - usedMinutes);
+    const unusedBytes =
+      totalMinutes > 0
+        ? (totalBytes * BigInt(unusedMinutes)) / BigInt(totalMinutes)
+        : 0n;
+    const claimed = await db.mediaGrant?.updateMany?.({
+      where: { id: grant.id, expiresAt: grant.expiresAt },
+      data: {
+        expiresAt: now,
+        ...(grant.reservedMinutes !== undefined
+          ? {
+              reservedMinutes: usedMinutes,
+              reservedBytes: totalBytes - unusedBytes,
+            }
+          : {}),
+      },
+    });
+    grant.expiresAt = now;
+    if (grant.reservedMinutes !== undefined) {
+      grant.reservedMinutes = usedMinutes;
+      grant.reservedBytes = totalBytes - unusedBytes;
+    }
+    if (claimed && !claimed.count) return;
+    if (!unusedMinutes && !unusedBytes) return;
+    const month = (grant.startedAt ?? now).toISOString().slice(0, 7);
+    const usage = await db.usage?.findUnique?.({ where: { id: month } });
+    if (!usage) return;
+    await db.usage?.update?.({
+      where: { id: month },
+      data: {
+        participantMinutes: Math.max(
+          0,
+          usage.participantMinutes - unusedMinutes,
+        ),
+        mediaBytes:
+          usage.mediaBytes > unusedBytes ? usage.mediaBytes - unusedBytes : 0n,
+      },
+    });
+  }
+  async releaseRoomMedia(
+    db: { mediaGrant?: any; usage?: any },
+    where: Prisma.MediaGrantWhereInput,
+    now = new Date(),
+  ) {
+    const grants =
+      (await db.mediaGrant?.findMany?.({
+        where: { ...where, expiresAt: { gt: now } },
+      })) ?? [];
+    for (const grant of grants) await this.refundGrant(db, grant, now);
+  }
   async expireMedia() {
     if (!process.env.LIVEKIT_URL || this.mediaSweepActive) return;
     this.mediaSweepActive = true;
@@ -54,6 +124,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
         orderBy: { expiresAt: "asc" },
         take: 100,
       });
+      const roomParticipants = new Map<string, Set<string>>();
       for (const grant of expired) {
         try {
           const membership = await this.db.membership.findUnique({
@@ -66,14 +137,40 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
             !membership?.active ||
             membership.banned ||
             membership.room.status !== "open";
-          if (!revoked && grant.expiresAt > new Date()) continue;
-          if (revoked && grant.expiresAt > new Date()) {
-            const expiresAt = new Date();
-            await this.db.mediaGrant.updateMany({
-              where: { id: grant.id, expiresAt: grant.expiresAt },
-              data: { expiresAt },
-            });
-            grant.expiresAt = expiresAt;
+          let absentFromCall = false;
+          if (
+            !revoked &&
+            grant.expiresAt > new Date() &&
+            grant.startedAt &&
+            Date.now() - grant.startedAt.getTime() >= 60000
+          ) {
+            const client = this.mediaClient() as any;
+            if (typeof client?.listParticipants === "function") {
+              if (!roomParticipants.has(grant.roomId)) {
+                try {
+                  const list = await client.listParticipants(grant.roomId);
+                  roomParticipants.set(
+                    grant.roomId,
+                    new Set(list.map((p: { identity: string }) => p.identity)),
+                  );
+                } catch (error) {
+                  const absent = error as { status?: number; code?: string };
+                  if (absent.status === 404 || absent.code === "not_found")
+                    roomParticipants.set(grant.roomId, new Set());
+                }
+              }
+              const activeSet = roomParticipants.get(grant.roomId);
+              if (
+                activeSet &&
+                (activeSet.size === 0 || !activeSet.has(grant.userId))
+              )
+                absentFromCall = true;
+            }
+          }
+          if (!revoked && !absentFromCall && grant.expiresAt > new Date())
+            continue;
+          if ((revoked || absentFromCall) && grant.expiresAt > new Date()) {
+            await this.refundGrant(this.db, grant, new Date());
           }
           try {
             await this.mediaClient().removeParticipant(
@@ -93,11 +190,12 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
                 expiresAt: { lte: new Date(Date.now() - 60000) },
               },
             });
-          this.events.personal(grant.userId, "media:expired", {
-            roomId: grant.roomId,
-            message:
-              "La duración reservada terminó. Solicita acceso otra vez para comprobar la cuota gratuita.",
-          });
+          if (!absentFromCall)
+            this.events.personal(grant.userId, "media:expired", {
+              roomId: grant.roomId,
+              message:
+                "La duración reservada terminó. Solicita acceso otra vez para comprobar la cuota gratuita.",
+            });
         } catch {}
       }
     } catch {} finally {
@@ -406,6 +504,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       where: { id: m.id },
       data: { active: false, handRaised: false, leftAt: new Date() },
     });
+    await this.releaseRoomMedia(this.db, { roomId: id, userId: i.uid });
     this.events.evict(id, i.uid);
     await this.removeMedia(id, i.uid);
     await this.broadcastMembers(id);
@@ -454,6 +553,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       where: { id: m.id },
       data: { active: false, banned: true, leftAt: new Date() },
     });
+    await this.releaseRoomMedia(this.db, { roomId: id, userId: target });
     this.events.evict(id, target);
     await this.removeMedia(id, target);
     await this.broadcastMembers(id);
@@ -764,6 +864,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
         where: { id },
         data: { status: cancel ? "cancelled" : "closed", annotations: [] },
       });
+      await this.releaseRoomMedia(tx, { roomId: id });
       await tx.invite.deleteMany({ where: { roomId: id } });
       const session = await tx.session.findFirst({
         where: { roomId: id, endedAt: null },

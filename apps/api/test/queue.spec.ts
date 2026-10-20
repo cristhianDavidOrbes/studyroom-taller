@@ -199,4 +199,55 @@ describe("Cola durable y límites", () => {
     await rooms.expireMedia();
     expect(db.mediaGrant.findMany).toHaveBeenCalledTimes(2);
   });
+  test("devuelve la cuota no consumida cuando la llamada queda vacía o se cierra la sesión", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-20T18:05:00Z"));
+    process.env.LIVEKIT_URL = "ws://localhost:7880";
+    const startedAt = new Date("2026-10-20T18:00:00Z");
+    const grant = {
+      id: "g1",
+      roomId: "r",
+      userId: "u",
+      startedAt,
+      expiresAt: new Date("2026-10-20T19:00:00Z"),
+      reservedMinutes: 60,
+      reservedBytes: 2_700_000_000n,
+    };
+    const usage = {
+      id: "2026-10",
+      participantMinutes: 60,
+      mediaBytes: 2_700_000_000n,
+    };
+    const db: any = {
+      mediaGrant: {
+        findMany: jest.fn().mockResolvedValue([grant]),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      membership: {
+        findUnique: jest.fn().mockResolvedValue({
+          active: true,
+          banned: false,
+          room: { status: "open" },
+        }),
+      },
+      usage: {
+        findUnique: jest.fn().mockResolvedValue(usage),
+        update: jest.fn().mockResolvedValue(usage),
+      },
+    };
+    const rooms = new Rooms(db, new Events(), new RateLimiter());
+    jest.spyOn(rooms, "mediaClient").mockReturnValue({
+      listParticipants: jest.fn().mockResolvedValue([]),
+      removeParticipant: jest.fn().mockResolvedValue(undefined),
+    } as any);
+    await rooms.expireMedia();
+    expect(db.usage.update).toHaveBeenCalledWith({
+      where: { id: "2026-10" },
+      data: {
+        participantMinutes: 5,
+        mediaBytes: 225_000_000n,
+      },
+    });
+    jest.useRealTimers();
+  });
 });
