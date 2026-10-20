@@ -30,19 +30,11 @@ import { HistoryPage, SessionPage } from "./history";
 import { errorText } from "./api";
 import { UsageButton } from "./usage";
 import { LandingPage } from "./landing";
-import { DesktopSetup } from "./desktop-setup";
-
-// Temporarily optional while the Windows signing application is under review.
-const desktopInstallationRequired = false;
 
 function Protected() {
   const { user, loading, error, reload, profile, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [readyUser, setReadyUser] = useState<string | null>(null);
-  useEffect(() => {
-    if (!user) setReadyUser(null);
-  }, [user]);
   if (loading)
     return (
       <div className="fullscreen-loading">
@@ -75,16 +67,6 @@ function Protected() {
           Volver a iniciar sesión
         </button>
       </div>
-    );
-  if (desktopInstallationRequired && readyUser !== user.uid)
-    return (
-      <DesktopSetup
-        key={user.uid}
-        onReady={() => setReadyUser(user.uid)}
-        onLogout={() =>
-          void logout().catch(() => {}).finally(() => navigate("/"))
-        }
-      />
     );
   return <Outlet />;
 }

@@ -193,8 +193,7 @@ export function HistoryPage() {
 }
 export function SessionPage() {
   const { id } = useParams();
-  const [error, setError] = useState(""),
-    [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [downloading, setDownloading] = useState(false);
   const toast = useToast();
   const {
@@ -206,7 +205,7 @@ export function SessionPage() {
     queryKey: ["session", id],
     queryFn: () => api<SessionReport>(`/sessions/${id}/report`),
     refetchInterval: (query) =>
-      query.state.data?.transcription?.coverage.pendingBatches || query.state.data?.jobs?.some((j) =>
+      (query.state.data?.endedAt && Date.now() < new Date(query.state.data.endedAt).getTime() + 60000) || query.state.data?.transcription?.coverage.pendingBatches || query.state.data?.jobs?.some((j) =>
         ["summary", "keypoints", "answer"].includes(j.kind) && ["running", "queued"].includes(j.status),
       )
         ? 4000
@@ -217,26 +216,13 @@ export function SessionPage() {
     queryFn: () => api<{ text: string }>(`/rooms/${session!.roomId}/notes`),
     enabled: !!session?.roomId,
   });
-  async function generate(kind: "summary" | "keypoints") {
-    setBusy(true);
-    setError("");
-    try {
-      await api<Job>(`/sessions/${id}/artifacts`, json("POST", { kind }));
-      await refetch();
-      toast("La solicitud quedó guardada");
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function download(format: "json" | "markdown" | "docx" | "zip") {
+  async function download() {
     if (downloading) return;
     setDownloading(true); setError("");
     try {
       const token = await auth.currentUser?.getIdToken();
       const response = await fetch(
-        `${API_URL}/sessions/${id}/export?format=${format}`,
+        `${API_URL}/sessions/${id}/export?format=zip`,
         { headers: { Authorization: `Bearer ${token}` } },
       );
       if (!response.ok) {
@@ -247,7 +233,7 @@ export function SessionPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `studyroom-sesion-${id}.${format === "markdown" ? "md" : format}`;
+      a.download = `${(session?.title || "Reunión").replace(/[<>:"/\\|?*\x00-\x1f]/g, "_")}.zip`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -264,7 +250,7 @@ export function SessionPage() {
         />
       </div>
     );
-  const jobs = (session.jobs || []).filter((job) => ["summary", "keypoints", "answer"].includes(job.kind));
+  const jobs = (session.jobs || []).filter((job) => job.kind === "answer");
   const sourceMap = buildReportSources(session);
   return (
     <div className="page session-page">
@@ -285,87 +271,12 @@ export function SessionPage() {
           <p className="report-header-description">Lo que hablaron, las ideas que compartieron y los recursos para volver a entenderlo. Disponible para todos los participantes de esta reunión.</p>
         </div>
         <div className="report-download-actions">
-        <button className="button primary" disabled={downloading} onClick={() => void download("zip")}><Download size={17} />{downloading ? "Preparando descarga…" : "Descargar reporte completo"}</button>
-        <span>Incluye Word, conversación en orden y todos los archivos originales disponibles.</span>
-        <details className="export-menu">
-          <summary className="button secondary">
-            <Download size={16} />
-            Otros formatos
-          </summary>
-          <button disabled={downloading} onClick={() => void download("markdown")}>
-            Documento Markdown
-          </button>
-          <button disabled={downloading} onClick={() => void download("docx")}>Documento Word</button>
-          <button disabled={downloading} onClick={() => void download("json")}>Datos JSON</button>
-        </details>
+        <button className="button primary" disabled={downloading || !session.endedAt || Date.now() < new Date(session.endedAt).getTime() + 60000 || !!session.transcription?.coverage.pendingBatches} onClick={() => void download()}><Download size={17} />{downloading ? "Preparando descarga…" : "Descargar Word y adjuntos (.zip)"}</button>
+        <span>Extrae el ZIP para abrir el Word y sus enlaces a los archivos de la carpeta adjuntos.</span>
         </div>
       </div>
       <ErrorBox message={error} />
       <ReportArchive key={session.id} session={session} />
-      <section id="report-learning" className="report-learning-section">
-      <div className="section-heading"><h2><Sparkles size={23} /> Lo aprendido, con ayuda de la IA</h2></div>
-      <div className="artifact-actions">
-        {[
-          ["summary", "Resumen de la sesión", FileText],
-          ["keypoints", "Puntos clave y acuerdos", ListChecks],
-        ].map(([kind, title, Icon]) => {
-          const pending = jobs.some(
-            (j) => j.kind === kind && ["queued", "running"].includes(j.status),
-          );
-          const Symbol = Icon as typeof FileText;
-          return (
-            <button
-              className="artifact-action"
-              key={kind as string}
-              disabled={busy || pending || !session.endedAt}
-              onClick={() => void generate(kind as "summary" | "keypoints")}
-            >
-              <Symbol size={25} />
-              <strong>{title as string}</strong>
-              <span>
-                {pending
-                  ? "Generación en espera…"
-                  : !session.endedAt
-                    ? "Disponible al finalizar"
-                    : "Preparar con el asistente"}
-                <ArrowUpRight size={14} />
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <p className="muted">
-        El resumen y los puntos clave usan la voz registrada, el chat y los recursos
-        autorizados de la sesión. Revisa los resultados junto con las fuentes.
-      </p>
-      {jobs.length === 0 && (
-        <Empty
-          title={
-            session.endedAt
-              ? "Conserva las ideas que importan"
-              : "Tu sesión sigue en marcha"
-          }
-        >
-          {session.endedAt
-            ? "Prepara un resumen o extrae los puntos clave de este reporte."
-            : "Cuando termine, podrás consultar el reporte y hacer preguntas sobre la sesión."}
-        </Empty>
-      )}
-      <div className="artifact-list">
-        {jobs
-          .filter((j) => ["summary", "keypoints"].includes(j.kind))
-          .map((job) => (
-            <section key={job.id} id={reportSourceAnchor("sintesis", job.id)} tabIndex={-1}>
-              <h2 className="artifact-heading">
-                {job.kind === "summary"
-                  ? "Resumen"
-                  : "Puntos clave"}
-              </h2>
-              <JobCard job={job} sourceMap={sourceMap} onUpdated={() => void refetch()} />
-            </section>
-          ))}
-      </div>
-      </section>
       <ReportQuestions key={session.id} sessionId={session.id} jobs={jobs} sourceMap={sourceMap} onRefresh={() => void refetch()} />
       {privateNotes?.text && (
         <section className="panel private-notes">

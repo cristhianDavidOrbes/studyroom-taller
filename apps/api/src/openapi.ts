@@ -138,7 +138,6 @@ export function documentContracts(spec: OpenAPIObject) {
     ["/api/rooms/{id}/notes", "put", "Note"],
     ["/api/rooms/{id}/members/{uid}", "patch", "Role"],
     ["/api/rooms/{id}/timer", "put", "Timer"],
-    ["/api/rooms/{id}/annotations", "post", "Annotation"],
     ["/api/rooms/{id}/ai", "post", "Question"],
     ["/api/rooms/{id}/transcription/consent", "post", "TranscriptionConsent"],
     ["/api/rooms/{id}/transcription/gaps", "post", "TranscriptionGap"],

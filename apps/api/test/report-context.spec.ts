@@ -2,7 +2,7 @@ import { relevantSources, reportSources, reportMarkdown } from "../src/report-co
 import { validatedCitations } from "../src/ai";
 describe("Contexto fiel del reporte", () => {
   test("fuentes incluyen voz/chat/archivos sin notas privadas", () => {
-    const sources = reportSources({ transcription: { segments: [{ id: "speech", speakerName: "Ana", text: "Una derivada mide cambio", startMs: 0, endMs: 1000 }] }, messages: [{ id: "chat", text: "Pregunta", displayName: "Luis" }], documents: [{ id: "image", name: "Foto", mimeType: "image/png", extractedText: "", extractionStatus: "unavailable" }], notes: [{ text: "private secret" }] });
+    const sources = reportSources({ startedAt: "2026-10-02T12:00:00Z", transcription: { segments: [{ id: "speech", speakerName: "Ana", text: "Una derivada mide cambio", startMs: 0, endMs: 1000 }] }, messages: [{ id: "chat", text: "Pregunta", displayName: "Luis", createdAt: "2026-10-02T12:00:05Z" }], documents: [{ id: "image", name: "Foto", mimeType: "image/png", extractedText: "", extractionStatus: "unavailable", createdAt: "2026-10-02T12:00:10Z" }], notes: [{ text: "private secret" }] });
     expect(sources.map(s => s.id)).toEqual(["transcripcion:speech", "mensaje:chat", "documento:image"]);
     expect(JSON.stringify(sources)).not.toContain("private secret");
     expect(sources[2].text).toContain("No se conoce su contenido visual");

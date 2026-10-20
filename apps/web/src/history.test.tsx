@@ -39,11 +39,11 @@ describe("reporte sin cuestionarios", () => {
     expect(fixture.jobs?.filter((job) => job.kind === "quiz")).toHaveLength(5);
   });
 
-  it("conserva voz, chat, archivos, resumen citado, notas y la consulta del reporte", () => {
+  it("conserva voz, chat, archivos, notas y la consulta del reporte", () => {
     const html = renderPage(`/sesiones/${fixture.id}`);
-    for (const text of ["Voz original conservada", "Mensaje compartido conservado", "Archivo conservado.txt", "Resumen conservado", "Voz · Ana · 00:20", "Nota privada conservada", "Consultar este reporte", "Descargar reporte completo", "Otros formatos"]) expect(html).toContain(text);
-    expect(html).toContain('href="#report-source-transcripcion-voice"');
-    expect(html.match(/class="artifact-action"/g)).toHaveLength(2);
+    for (const text of ["Voz original conservada", "Mensaje compartido conservado", "Archivo conservado.txt", "Nota privada conservada", "Consultar este reporte", "Descargar Word y adjuntos (.zip)"]) expect(html).toContain(text);
+    expect(html).not.toContain("Resumen conservado");
+    expect(html).not.toContain("Otros formatos");
   });
 
   it("intercala voz, chat, imagen y archivo en una sola cronología", () => {
@@ -64,7 +64,7 @@ describe("reporte sin cuestionarios", () => {
     expect(html).toContain('id="report-source-transcripcion-voice"');
     expect(html).toContain('id="report-source-mensaje-chat"');
     expect(html).toContain('id="report-source-documento-image"');
-    expect(html).toContain("Documento Word");
+    expect(html).toContain("Descargar Word y adjuntos (.zip)");
   });
 
   it("mantiene el acceso al reporte desde Mi aprendizaje sin mostrar cuestionarios", () => {

@@ -48,30 +48,28 @@ describe("Reporte ZIP completo y autorizado", () => {
       expect(bytes.toString()).toBe(original.id);
       expect(original.sha256).toBe(createHash("sha256").update(bytes).digest("hex"));
     }
-    const manifest = JSON.parse(await zip.file("recursos.json")!.async("string"));
-    expect(manifest.at(-1)).toEqual(expect.objectContaining({ id: "deleted", status: "unavailable", archivePath: null, notice: expect.stringContaining("eliminado") }));
-    const html = await zip.file("index.html")!.async("string");
-    expect((html.match(/<img /g) || [])).toHaveLength(3);
-    expect(html).toContain("recursos/doc-0-001-%C3%81rea%20compartida.png");
-    expect(html).toContain("Texto conservado del eliminado");
-    expect(html).toContain("Original eliminado o no disponible");
-    expect(Object.keys(zip.files).filter(name => !zip.files[name].dir)).toHaveLength(11);
-    expect(zip.file("reporte.docx")).not.toBeNull();
-    expect(JSON.parse(await zip.file("reporte.json")!.async("string")).documents).toHaveLength(7);
-    expect(await zip.file("LEEME.txt")!.async("string")).toContain("abre index.html");
+    expect(archive.resources.at(-1)).toEqual(expect.objectContaining({ id: "deleted", status: "unavailable", archivePath: null }));
+    expect(archive.wordName).toBe("Geometría en compañía.docx");
+    expect(archive.fileName).toBe("Geometría en compañía.zip");
+    expect(Object.keys(zip.files).filter(name => !zip.files[name].dir)).toHaveLength(7);
+    const word = await JSZip.loadAsync(await zip.file(archive.wordName)!.async("nodebuffer"));
+    const content = await word.file("word/document.xml")!.async("string");
+    expect(content).toContain("Texto conservado del eliminado");
+    expect(content).toContain("Original eliminado o no disponible");
+    expect(zip.file("index.html")).toBeNull();
   });
   test("ordena voz tardía, chat y recursos por su momento original y preserva todas las palabras", async () => {
     const input = report();
     input.transcription.segments = [{ id: "late", speakerName: "Ana", speakerId: identity.uid, text: "VOICE_LATER", startMs: 30000, endMs: 31000, words: [{ word: "VOICE_LATER", startMs: 30001, endMs: 30599, probability: 0.8 }] }, { id: "early", speakerName: "Luis", speakerId: "guest", text: "VOICE_EARLY", startMs: 1000, endMs: 2000, words: [{ word: "VOICE_EARLY", startMs: 1010, endMs: 1900 }] }];
     input.messages = [{ id: "chat", displayName: "Ana", text: "CHAT_BETWEEN", createdAt: new Date(start.getTime() + 5000) }];
     input.documents = [{ id: "doc", name: "FILE_BETWEEN.txt", mimeType: "text/plain", size: 5, available: true, createdAt: new Date(start.getTime() + 10000) }];
-    const before = JSON.stringify(input), zip = await unzip(await createReportArchive(input, async () => Buffer.from("hello")));
-    const html = await zip.file("index.html")!.async("string"), json = JSON.parse(await zip.file("reporte.json")!.async("string"));
-    expect(html.indexOf("VOICE_EARLY")).toBeLessThan(html.indexOf("CHAT_BETWEEN"));
-    expect(html.indexOf("CHAT_BETWEEN")).toBeLessThan(html.indexOf("FILE_BETWEEN"));
-    expect(html.indexOf("FILE_BETWEEN")).toBeLessThan(html.indexOf("VOICE_LATER"));
-    expect(json.transcription.segments.map((segment: any) => segment.id)).toEqual(["early", "late"]);
-    expect(json.transcription.segments[1].words).toEqual(input.transcription.segments[0].words);
+    const before = JSON.stringify(input), archive = await createReportArchive(input, async () => Buffer.from("hello")), zip = await unzip(archive);
+    const word = await JSZip.loadAsync(await zip.file(archive.wordName)!.async("nodebuffer"));
+    const content = await word.file("word/document.xml")!.async("string");
+    expect(content.indexOf("VOICE_EARLY")).toBeLessThan(content.indexOf("CHAT_BETWEEN"));
+    expect(content.indexOf("CHAT_BETWEEN")).toBeLessThan(content.indexOf("FILE_BETWEEN"));
+    expect(content.indexOf("FILE_BETWEEN")).toBeLessThan(content.indexOf("VOICE_LATER"));
+    expect(archive.resources[0].archivePath).toBe("adjuntos/001-FILE_BETWEEN.txt");
     expect(JSON.stringify(input)).toBe(before);
   });
   test("escapa contenido hostil, crea rutas únicas y referencias legibles solo si están autorizadas", async () => {
@@ -80,16 +78,15 @@ describe("Reporte ZIP completo y autorizado", () => {
     input.transcription.segments = [{ id: "voice", speakerName: 'Ana <img onerror="x">', speakerId: identity.uid, text: '<script>alert("voice")</script>', startMs: 0, endMs: 1000 }];
     input.documents = ["../x.png", "..\\x.png", "javascript:alert(1)\".png"].map((name, index) => ({ id: index < 2 ? "duplicate" : "../unsafe/id", name, mimeType: "image/png", size: 1, available: true }));
     input.jobs = [{ id: "summary", kind: "summary", shared: true, status: "completed", result: { text: '<img src=x onerror="x"> [TRANSCRIPCIÓn:voice] [documento:foreign] [nota: repasar]', sources: ["transcripcion:voice", "documento:foreign"] } }, { id: "legacy", kind: "quiz", status: "completed", result: { text: "LEGACY_QUIZ_HIDDEN" } }];
-    const archive = await createReportArchive(input, async () => Buffer.from("x")), zip = await unzip(archive), html = await zip.file("index.html")!.async("string");
-    expect(html).not.toMatch(/<script\b|<img src=x|onerror="x"/i);
-    expect(html).toContain("&lt;script&gt;"); expect(html).toContain("Voz · Ana &lt;img");
-    expect(html).toContain('href="#voz-0"'); expect(html).toContain("Referencia no disponible"); expect(html).toContain("[nota: repasar]");
-    expect(html).not.toContain("[documento:foreign]");
-    expect(html).not.toContain("LEGACY_QUIZ_HIDDEN");
+    const archive = await createReportArchive(input, async () => Buffer.from("x")), zip = await unzip(archive);
+    const word = await JSZip.loadAsync(await zip.file(archive.wordName)!.async("nodebuffer"));
+    const content = await word.file("word/document.xml")!.async("string");
+    expect(content).toContain("&lt;script&gt;");
+    expect(content).not.toContain("LEGACY_QUIZ_HIDDEN");
     expect(new Set(archive.resources.map(resource => resource.archivePath)).size).toBe(3);
-    for (const resource of archive.resources) { expect(resource.archivePath).toMatch(/^recursos\/[a-zA-Z0-9_-]+-\d+-[^/\\]+$/); expect(resource.archivePath!.split("/")).toHaveLength(2); }
-    expect(html).not.toMatch(/(?:href|src)="(?:https?:|javascript:|data:)/i);
-    expect(JSON.parse(await zip.file("reporte.json")!.async("string")).jobs).toHaveLength(1);
+    for (const resource of archive.resources) { expect(resource.archivePath).toMatch(/^adjuntos\/\d+-[^/\\]+$/); expect(resource.archivePath!.split("/")).toHaveLength(2); }
+    const relations = await word.file("word/_rels/document.xml.rels")!.async("string");
+    expect(relations).not.toMatch(/Target="(?:https?:|javascript:|data:)/i);
   });
   test("rechaza archivos grandes antes de descargarlos y no entrega un ZIP si falta un original disponible", async () => {
     const input = report();
@@ -146,7 +143,7 @@ describe("Reporte ZIP completo y autorizado", () => {
     const controller = new AppController({} as any, {} as any, documents, { report: jest.fn(async () => input) } as any, new RateLimiter(), {} as any);
     await controller.export({ identity } as any, "session", "zip", response);
     expect(response.setHeader).toHaveBeenCalledWith("Cache-Control", "private, no-store"); expect(response.type).toHaveBeenCalledWith("application/zip");
-    const zip = await JSZip.loadAsync(Buffer.concat(chunks), { checkCRC32: true }); expect(await zip.file("recursos/doc-001-Notas.txt")!.async("string")).toBe("hello");
+    const zip = await JSZip.loadAsync(Buffer.concat(chunks), { checkCRC32: true }); expect(await zip.file("adjuntos/001-Notas.txt")!.async("string")).toBe("hello");
     documents.downloadForReport.mockRejectedValue(new ServiceUnavailableException("Sin conexión"));
     const failed: any = { setHeader: jest.fn(), type: jest.fn() };
     await expect(controller.export({ identity } as any, "session", "zip", failed)).rejects.toThrow(ServiceUnavailableException);

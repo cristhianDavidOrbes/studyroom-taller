@@ -30,8 +30,10 @@ function safeFilename(name: string) {
   return name.normalize("NFC").replace(/[\x00-\x1f\x7f<>:"/\\|?*\u202a-\u202e\u2066-\u2069]/g, "_").replace(/^[. ]+|[. ]+$/g, "").slice(0, 150) || "archivo";
 }
 function resourcePath(resource: Resource, index: number) {
-  const safeId = resource.id.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80) || "recurso";
-  return `recursos/${safeId}-${String(index + 1).padStart(3, "0")}-${safeFilename(resource.name)}`;
+  return `adjuntos/${String(index + 1).padStart(3, "0")}-${safeFilename(resource.name)}`;
+}
+export function reportFilename(title: string, extension: "zip" | "docx") {
+  return `${safeFilename(title).slice(0, 100)}.${extension}`;
 }
 function localURL(path: string) { return path.split("/").map(part => encodeURIComponent(part)).join("/"); }
 function tooLarge(): never { throw new PayloadTooLargeException("El reporte completo supera 128 MB. No se descargó un archivo parcial; conserva los originales desde el reporte en StudyRoom."); }
@@ -84,14 +86,11 @@ export function reportArchiveHTML(report: ArchiveReport, resources: ArchiveResou
 export async function createReportArchive(input: ArchiveReport, download: (documentId: string, maxBytes: number) => Promise<Buffer>) {
   const report: ArchiveReport = { ...input, jobs: input.jobs.filter(job => job.kind !== "quiz"), messages: [...input.messages].sort((a, b) => instant(a.createdAt) - instant(b.createdAt) || a.id.localeCompare(b.id)), documents: [...input.documents].sort((a, b) => instant(a.createdAt) - instant(b.createdAt) || a.id.localeCompare(b.id)), transcription: { ...input.transcription, segments: [...input.transcription.segments].sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs || a.id.localeCompare(b.id)) } };
   const resources: ArchiveResource[] = report.documents.map((resource, index) => ({ id: resource.id, name: resource.name, mimeType: resource.mimeType, size: resource.size, status: resource.available ? "included" : "unavailable", archivePath: resource.available ? resourcePath(resource, index) : null, ...(!resource.available ? { notice: "El original fue eliminado o no está disponible; se conserva el registro y el texto extraído." } : {}) }));
-  const json = JSON.stringify(report, null, 2), html = reportArchiveHTML(report, resources);
-  const instructions = "STUDYROOM — REPORTE COMPLETO\n\nExtrae esta carpeta y abre index.html.\nreporte.json conserva la transcripción, cada palabra y sus tiempos, chat, recursos, cobertura y consultas autorizadas.\nreporte.docx presenta la conversación en orden e incorpora las imágenes compatibles.\nrecursos/ incluye cada original disponible. recursos.json identifica los originales eliminados, que no se pueden recuperar.\nLa transcripción automática puede tener errores. Esta copia refleja el estado en el momento de descargarla.\n";
-  let bytes = Buffer.byteLength(json) + Buffer.byteLength(html) + Buffer.byteLength(instructions) + Buffer.byteLength(JSON.stringify(resources, null, 2)) + resources.length * 128;
+  let bytes = resources.length * 128;
   const available = report.documents.filter(resource => resource.available);
   if (available.some(resource => !Number.isSafeInteger(resource.size) || resource.size < 0 || resource.size > 10_000_000) || bytes + available.reduce((sum, resource) => sum + resource.size, 0) > REPORT_ARCHIVE_MAX_BYTES) tooLarge();
   const zip = new JSZip();
-  zip.file("index.html", html); zip.file("reporte.json", json); zip.file("LEEME.txt", instructions);
-  const originals: { id: string; data: Buffer }[] = [];
+  const originals: { id: string; data: Buffer; path?: string }[] = [];
   for (const resource of resources.filter(resource => resource.status === "included")) {
     const content = await download(resource.id, REPORT_ARCHIVE_MAX_BYTES - bytes);
     if (!Buffer.isBuffer(content)) throw new ServiceUnavailableException("No se pudo incluir un original. No se preparó un reporte parcial.");
@@ -100,14 +99,14 @@ export async function createReportArchive(input: ArchiveReport, download: (docum
     resource.size = content.length;
     resource.sha256 = createHash("sha256").update(content).digest("hex");
     zip.file(resource.archivePath!, content, { binary: true, compression: "STORE" });
-    originals.push({ id: resource.id, data: content });
+    originals.push({ id: resource.id, data: content, path: resource.archivePath! });
   }
   const word = await reportWord(report, originals);
   bytes += word.length;
   if (bytes > REPORT_ARCHIVE_MAX_BYTES) tooLarge();
-  zip.file("reporte.docx", word);
-  zip.file("recursos.json", JSON.stringify(resources, null, 2));
-  return { resources, stream: zip.generateNodeStream({ streamFiles: true, compression: "DEFLATE", compressionOptions: { level: 3 } }) };
+  const wordName = reportFilename(report.title, "docx");
+  zip.file(wordName, word);
+  return { resources, wordName, fileName: reportFilename(report.title, "zip"), stream: zip.generateNodeStream({ streamFiles: true, compression: "DEFLATE", compressionOptions: { level: 3 } }) };
 }
 
 export async function createReportWord(report: ArchiveReport, download: (documentId: string, maxBytes: number) => Promise<Buffer>) {

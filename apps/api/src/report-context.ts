@@ -1,9 +1,13 @@
 export type ReportSource = { id: string; text: string };
 export function reportSources(report: any, includeSynthesis = false): ReportSource[] {
-  return (report.transcription?.segments ?? []).map((s: any) => ({ id: `transcripcion:${s.id}`, text: `${s.speakerName} [${s.startMs}-${s.endMs} ms]: ${s.text}` }))
-    .concat((report.messages ?? []).map((m: any) => ({ id: `mensaje:${m.id}`, text: `${m.displayName ?? "Participante"}: ${m.text}` })))
-    .concat((report.documents ?? []).map((d: any) => ({ id: `documento:${d.id}`, text: `${d.name} (${d.extractionStatus ?? "unknown"}): ${d.extractedText || "Archivo sin texto extraíble. No se conoce su contenido visual."}${d.available === false ? " El archivo original fue eliminado." : ""}` })))
-    .concat(includeSynthesis ? (report.jobs ?? []).filter((j: any) => j.shared && j.status === "completed" && ["summary", "keypoints"].includes(j.kind) && j.result?.text).map((j: any) => ({ id: `sintesis:${j.id}`, text: `Síntesis automática, puede contener errores: ${j.result.text}` })) : []);
+  const started = new Date(report.startedAt).getTime() || 0;
+  const events = [
+    ...(report.transcription?.segments ?? []).map((s: any) => ({ at: started + s.startMs, source: { id: `transcripcion:${s.id}`, text: `${s.speakerName} [${s.startMs}-${s.endMs} ms]: ${s.text}` } })),
+    ...(report.messages ?? []).map((m: any) => ({ at: new Date(m.createdAt).getTime() || started, source: { id: `mensaje:${m.id}`, text: `${m.displayName ?? "Participante"}: ${m.text}` } })),
+    ...(report.documents ?? []).map((d: any) => ({ at: new Date(d.createdAt).getTime() || started, source: { id: `documento:${d.id}`, text: `${d.name} (${d.extractionStatus ?? "unknown"}): ${d.extractedText || "Archivo sin texto extraíble. No se conoce su contenido visual."}${d.available === false ? " El archivo original fue eliminado." : ""}` } })),
+  ];
+  events.sort((a, b) => a.at - b.at || a.source.id.localeCompare(b.source.id));
+  return events.map(event => event.source).concat(includeSynthesis ? (report.jobs ?? []).filter((j: any) => j.shared && j.status === "completed" && ["summary", "keypoints"].includes(j.kind) && j.result?.text).map((j: any) => ({ id: `sintesis:${j.id}`, text: `Síntesis automática, puede contener errores: ${j.result.text}` })) : []);
 }
 export function sourceText(sources: ReportSource[]) { return sources.map(s => `[${s.id}] ${s.text}`).join("\n"); }
 export function relevantSources(sources: ReportSource[], question: string, maxBytes = 50000) {

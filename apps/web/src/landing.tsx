@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Check, FileText, Files, MessageCircle, Mic, MonitorUp, Pencil, Users, Video } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, FileText, Files, MessageCircle, Mic, MonitorUp, Users, Video } from "lucide-react";
 import { Brand } from "./ui";
 
 const features = [
   { icon: Video, title: "Conversa y aprende", text: "Reúnete con tu grupo, enciende la cámara cuando quieras y comparte lo que sabes." },
-  { icon: Pencil, title: "Haz visible tu idea", text: "Comparte tu pantalla y dibuja sobre tu escritorio con lápiz, figuras, texto y colores." },
+  { icon: MonitorUp, title: "Comparte tu pantalla", text: "Muestra tu trabajo al grupo mientras conversan y resuelven dudas juntos." },
   { icon: FileText, title: "Vuelve a lo que hablaron", text: "Consulta el reporte con la transcripción de la conversación, el chat, las imágenes y los archivos de la sesión." },
   { icon: MessageCircle, title: "Pregunta sobre tu reporte", text: "Pídele al asistente que te explique una idea y vuelve al fragmento o archivo que sustenta su respuesta." },
 ];
@@ -17,7 +17,6 @@ function SessionPreview() {
         <div className="preview-session-title"><span className="preview-topic">MATEMÁTICAS · EN COMPAÑÍA</span><strong>Entenderlo, juntos.</strong></div>
         <div className="preview-workspace">
           <div className="preview-paper"><span className="preview-paper-label">Una idea, paso a paso</span><div className="preview-formula">A = base × altura</div><svg className="preview-shape" viewBox="0 0 310 125"><rect x="44" y="15" width="218" height="80" rx="6" fill="#edf3dc" stroke="#92a966" strokeWidth="2.5" /><path d="M48 113 Q153 94 258 112" fill="none" stroke="#d5a64b" strokeWidth="3.5" strokeLinecap="round" /><text x="134" y="116" fill="#647757" fontSize="12">base</text><text x="272" y="61" fill="#647757" fontSize="12">altura</text></svg><div className="preview-students"><span className="preview-student one">A<span>Alicia</span></span><span className="preview-student two">M<span>Mateo</span></span><span className="preview-student three">TÚ<span>Tú</span></span></div></div>
-          <div className="preview-tools"><Pencil size={17} /><span className="preview-tool-color" /><span className="preview-tool-shape" /><span>T</span></div>
         </div>
         <div className="preview-controls"><Mic size={16} /><Video size={17} /><MonitorUp size={17} /><span>Comparte tu forma de verlo</span></div>
       </div>
@@ -37,7 +36,7 @@ export function LandingPage() {
       </header>
       <main id="landing-main">
         <section className="landing-hero">
-          <div className="landing-hero-copy"><span className="landing-kicker"><span /> TU ESPACIO DE ESTUDIO COMPARTIDO</span><h1>Aprende en compañía.<br /><em>Conserva cada idea.</em></h1><p>El lugar donde tu grupo se reúne, comparte pantalla y entiende mejor. Al terminar, vuelve a la conversación con tu reporte y pregúntale al asistente lo que necesites.</p><div className="landing-hero-actions"><Link to="/acceso?mode=register" className="button primary">Crear mi cuenta <ArrowRight size={18} /></Link><a className="landing-how-link" href="#como-funciona">Conoce StudyRoom <ArrowUpRight size={16} /></a></div><div className="landing-windows-note"><MonitorUp size={17} /> Herramienta de dibujo para Windows · instalación gratuita</div></div>
+          <div className="landing-hero-copy"><span className="landing-kicker"><span /> TU ESPACIO DE ESTUDIO COMPARTIDO</span><h1>Aprende en compañía.<br /><em>Conserva cada idea.</em></h1><p>El lugar donde tu grupo se reúne, comparte pantalla y entiende mejor. Al terminar, vuelve a la conversación con tu reporte y pregúntale al asistente lo que necesites.</p><div className="landing-hero-actions"><Link to="/acceso?mode=register" className="button primary">Crear mi cuenta <ArrowRight size={18} /></Link><a className="landing-how-link" href="#como-funciona">Conoce StudyRoom <ArrowUpRight size={16} /></a></div></div>
           <SessionPreview />
         </section>
         <section id="como-funciona" className="landing-features" aria-labelledby="features-title"><div className="landing-section-heading"><span className="eyebrow">DE LA CONVERSACIÓN A LA COMPRENSIÓN</span><h2 id="features-title">Todo lo que tu grupo necesita<br />para seguir aprendiendo.</h2><p>Trae tus preguntas. StudyRoom guarda el hilo de la sesión para que puedas retomarlo después.</p></div><div className="landing-feature-grid">{features.map(({ icon: Icon, title, text }, i) => <article className="landing-feature" key={title}><span className={`landing-feature-icon tone-${i}`}><Icon size={24} /></span><h3>{title}</h3><p>{text}</p></article>)}</div></section>

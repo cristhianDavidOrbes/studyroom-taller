@@ -12,7 +12,6 @@ import {
   Mic,
   MicOff,
   MonitorUp,
-  MoreHorizontal,
   Settings2,
   Video,
   Volume2,
@@ -20,27 +19,13 @@ import {
   Wifi,
 } from "lucide-react";
 import { api, errorText, json } from "./api";
-import type { DrawingTool } from "./annotations";
-import { SharedScreen } from "./shared-screen";
 import { TrackElement, AudioElement, type TrackView } from "./media-elements";
-import { AnnotationToolbar } from "./annotation-toolbar";
-import { DesktopTools } from "./desktop-tools";
-import { useDesktopSharing } from "./use-desktop-sharing";
-import type { Annotation } from "./types";
 import { ErrorBox, initials } from "./ui";
 export function MediaStage({
   roomId,
-  role,
-  annotations,
-  onAnnotation,
-  collaborationConnected,
   onMicrophone,
 }: {
   roomId: string;
-  role?: string;
-  annotations: Annotation[];
-  onAnnotation: (a: Annotation) => Promise<void>;
-  collaborationConnected: boolean;
   onMicrophone?: (track: MediaStreamTrack | null) => void;
 }) {
   const [room] = useState(
@@ -64,14 +49,8 @@ export function MediaStage({
     [state, setState] = useState<ConnectionState>(ConnectionState.Disconnected),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
-    [menu, setMenu] = useState(false),
     [devicesOpen, setDevicesOpen] = useState(false),
     [devices, setDevices] = useState<MediaDeviceInfo[]>([]),
-    [tool, setTool] = useState<DrawingTool>("off"),
-    [color, setColor] = useState("#f6bf4f"),
-    [strokeWidth, setStrokeWidth] = useState(3),
-    [fontSize, setFontSize] = useState(24),
-    [text, setText] = useState(""),
     [audioOnly, setAudioOnly] = useState(false),
     [selectedScreen, setSelectedScreen] = useState("");
   const stats = useRef<unknown[]>([]);
@@ -166,16 +145,11 @@ export function MediaStage({
     screen =
       screens.find((s) => s.publication.trackSid === selectedScreen) ||
       screens[0];
-  const localScreen = screens.find((source) => source.participant.isLocal);
   const localMicrophone = all.find((source) => source.participant.isLocal && source.publication.source === Track.Source.Microphone)?.track.mediaStreamTrack;
   useEffect(() => {
     onMicrophone?.(state === ConnectionState.Connected ? localMicrophone || null : null);
     return () => onMicrophone?.(null);
   }, [localMicrophone, state, onMicrophone]);
-  const desktopStatus = useDesktopSharing(
-    localScreen?.publication.trackSid,
-    localScreen?.track.mediaStreamTrack,
-  );
   useEffect(() => {
     if (!audioOnly) return;
     for (const participant of room.remoteParticipants.values()) {
@@ -184,13 +158,6 @@ export function MediaStage({
       }
     }
   }, [audioOnly, room, version]);
-  const canAnnotate =
-    collaborationConnected &&
-    !!screen &&
-    (screen.participant.isLocal || role === "host" || role === "moderator");
-  useEffect(() => {
-    if (!canAnnotate) setTool("off");
-  }, [canAnnotate, screen?.publication.trackSid]);
   async function connect() {
     setBusy(true);
     setError("");
@@ -260,22 +227,12 @@ export function MediaStage({
         </span>
       </div>
       <ErrorBox message={error} />
-      <DesktopTools
-        sharing={!!localScreen}
-        status={desktopStatus}
-        displaySurface={
-          localScreen?.track.mediaStreamTrack.getSettings().displaySurface
-        }
-      />
       {screens.length > 1 && (
         <label className="screen-picker">
           Pantalla que estás viendo
           <select
             value={screen?.publication.trackSid}
-            onChange={(e) => {
-              setTool("off");
-              setSelectedScreen(e.target.value);
-            }}
+            onChange={(e) => setSelectedScreen(e.target.value)}
           >
             {screens.map((source) => (
               <option
@@ -288,18 +245,7 @@ export function MediaStage({
           </select>
         </label>
       )}
-      {screen && (
-        <SharedScreen
-          view={screen}
-          annotations={annotations}
-          tool={canAnnotate ? tool : "off"}
-          color={color}
-          strokeWidth={strokeWidth}
-          fontSize={fontSize}
-          text={text}
-          onAnnotation={onAnnotation}
-        />
-      )}
+      {screen && <div className="shared-screen"><TrackElement track={screen.track} screen muted={screen.participant.isLocal} /></div>}
       <div className={`camera-grid ${screen ? "compact" : ""}`}>
         {state === ConnectionState.Disconnected ? (
           <div className="media-welcome">
@@ -350,44 +296,6 @@ export function MediaStage({
                     <MicOff size={14} />
                   )}
                 </div>
-                {p.isLocal && (
-                  <div className="camera-menu">
-                    <button
-                      className="icon-button"
-                      aria-label="Herramientas de señalamiento"
-                      aria-expanded={menu}
-                      onClick={() => setMenu(!menu)}
-                    >
-                      <MoreHorizontal size={20} />
-                    </button>
-                    {menu && (
-                      <AnnotationToolbar
-                        hasScreen={!!screen}
-                        enabled={canAnnotate}
-                        tool={tool}
-                        setTool={setTool}
-                        color={color}
-                        setColor={setColor}
-                        strokeWidth={strokeWidth}
-                        setStrokeWidth={setStrokeWidth}
-                        fontSize={fontSize}
-                        setFontSize={setFontSize}
-                        text={text}
-                        setText={setText}
-                        close={() => setMenu(false)}
-                        clear={() => {
-                          setTool("off");
-                          void change(() =>
-                            onAnnotation({
-                              action: "clear",
-                              screenId: screen!.publication.trackSid,
-                            }),
-                          );
-                        }}
-                      />
-                    )}
-                  </div>
-                )}
               </div>
             );
           })

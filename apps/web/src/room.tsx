@@ -1,4 +1,3 @@
-import { applyAnnotation } from "./annotations";
 import {
   useCallback,
   useEffect,
@@ -57,7 +56,6 @@ import type {
   Timer,
   Job,
   RoomState,
-  Annotation,
 } from "./types";
 import {
   Badge,
@@ -180,7 +178,6 @@ export function RoomPage() {
   const [members, setMembers] = useState<Member[]>([]),
     [messages, setMessages] = useState<Message[]>([]),
     [timer, setTimer] = useState<Timer>(defaultTimer),
-    [annotations, setAnnotations] = useState<Annotation[]>([]),
     [jobs, setJobs] = useState<Job[]>([]),
     [connected, setConnected] = useState(false),
     [reaction, setReaction] = useState(""),
@@ -285,7 +282,6 @@ export function RoomPage() {
     setMembers(state.members || []);
     setMessages(state.messages || []);
     setTimer(state.timer || defaultTimer);
-    setAnnotations(state.annotations || []);
   }, []);
   useEffect(() => {
     if (!joined || !id) return;
@@ -340,9 +336,6 @@ export function RoomPage() {
         ),
       );
       socket.on("timer:updated", setTimer);
-      socket.on("annotation:updated", (annotation: Annotation) =>
-        setAnnotations((old) => applyAnnotation(old, annotation)),
-      );
       socket.on("ai:updated", (job: Job & { roomId?: string }) => {
         if (!job.roomId || job.roomId === id) upsertJob(job);
       });
@@ -380,7 +373,7 @@ export function RoomPage() {
           );
         }
       });
-      socket.on("room:closed", async (event: { roomId: string }) => {
+      socket.on("room:closed", async (event: { roomId: string; sessionId?: string }) => {
         if (event.roomId !== id) return;
         void finishTranscription.current();
         try {
@@ -392,7 +385,7 @@ export function RoomPage() {
           toast(
             "La sesión terminó. Tu aprendizaje está guardado en el historial.",
           );
-          navigate("/historial");
+          navigate(event.sessionId ? `/sesiones/${event.sessionId}` : "/historial");
         } catch {
           setTab("notes");
           setError(
@@ -559,16 +552,9 @@ export function RoomPage() {
       await finishTranscription.current();
       if (!noteSaved)
         await api(`/rooms/${id}/notes`, json("PUT", { text: notes }));
-      await api(`/rooms/${id}/${confirm}`, json("POST"));
-      navigate(confirm === "close" ? "/historial" : "/");
+      const closed = await api<{ id?: string }>(`/rooms/${id}/${confirm}`, json("POST"));
+      navigate(confirm === "close" && closed?.id ? `/sesiones/${closed.id}` : confirm === "close" ? "/historial" : "/");
     });
-  }
-  async function onAnnotation(a: Annotation) {
-    const saved = await api<Annotation>(
-      `/rooms/${id}/annotations`,
-      json("POST", a),
-    );
-    setAnnotations((old) => applyAnnotation(old, saved));
   }
   if (isPending)
     return (
@@ -712,10 +698,6 @@ export function RoomPage() {
           <MediaStage
             key={id}
             roomId={id!}
-            role={role}
-            annotations={annotations}
-            onAnnotation={onAnnotation}
-            collaborationConnected={connected}
             onMicrophone={transcription.setMicrophone}
           />
           <div className="room-bottom-tools">

@@ -1,8 +1,8 @@
-import { Document, HeadingLevel, ImageRun, Packer, Paragraph, TextRun } from "docx";
-import { imageSize } from "image-size";
+import { Document, ExternalHyperlink, HeadingLevel, ImageRun, Packer, Paragraph, TextRun } from "docx";
+import sharp from "sharp";
 import type { ArchiveReport } from "./report-archive";
 
-type Original = { id: string; data: Buffer };
+type Original = { id: string; data: Buffer; path?: string };
 type Event = { at: number; tie: string; kind: "voice" | "message" | "document"; value: any };
 
 function instant(value: unknown, fallback = 0) {
@@ -16,7 +16,7 @@ function clock(ms: number) {
 
 export async function reportWord(report: ArchiveReport, originals: Original[] = []) {
   const started = instant(report.startedAt);
-  const source = new Map(originals.map((item) => [item.id, item.data]));
+  const source = new Map(originals.map((item) => [item.id, item]));
   const people = new Map((report.transcription.participants || []).map((person) => [person.userId, person.displayName]));
   const events: Event[] = [
     ...report.transcription.segments.map((value) => ({ at: started + value.startMs, tie: `0-${value.id}`, kind: "voice" as const, value })),
@@ -27,6 +27,7 @@ export async function reportWord(report: ArchiveReport, originals: Original[] = 
     new Paragraph({ text: report.title || "Reporte de sesión", style: "Title" }),
     new Paragraph({ text: `StudyRoom · ${new Intl.DateTimeFormat("es-CO", { dateStyle: "long", timeStyle: "short", timeZone: "America/Bogota" }).format(started)}` }),
     new Paragraph({ text: "Transcripción, mensajes, imágenes y archivos en el orden en que ocurrieron. La voz reconocida puede contener errores; los originales disponibles se incluyen en el ZIP del reporte." }),
+    new Paragraph({ text: `${report.transcription.coverage.pendingBatches || 0} fragmentos de voz pendientes · ${report.transcription.coverage.failedBatches || 0} fragmentos sin transcribir. El texto conserva exactamente el resultado reconocido, sin reconstruir palabras ausentes.` }),
     new Paragraph({ text: "Conversación en orden", heading: HeadingLevel.HEADING_1 }),
   ];
   if (!events.length) children.push(new Paragraph("No hay voz, mensajes ni recursos registrados."));
@@ -44,23 +45,15 @@ export async function reportWord(report: ArchiveReport, originals: Original[] = 
       const resource = event.value as ArchiveReport["documents"][number];
       const original = source.get(resource.id);
       children.push(new Paragraph({ children: [new TextRun({ text: `${stamp}  ${resource.mimeType.startsWith("image/") ? "Imagen" : "Archivo"} · ${resource.name}`, bold: true })], keepNext: true }));
-      children.push(new Paragraph({ text: `Compartido por ${people.get(resource.uploadedBy || "") || "Participante"}. ${resource.available ? "Original disponible desde el reporte y en la carpeta recursos del ZIP." : "Original eliminado o no disponible."}` }));
-      if (original && ["image/png", "image/jpeg"].includes(resource.mimeType)) {
+      children.push(new Paragraph({ text: `Compartido por ${people.get(resource.uploadedBy || "") || "Participante"}. ${resource.available ? "Original disponible desde el reporte." : "Original eliminado o no disponible."}` }));
+      if (original?.path) children.push(new Paragraph({ children: [new ExternalHyperlink({ children: [new TextRun({ text: `Abrir adjunto ${resource.name}`, style: "Hyperlink" })], link: original.path })] }));
+      if (original && ["image/png", "image/jpeg", "image/webp"].includes(resource.mimeType)) {
         try {
-          const size = imageSize(original);
-          const ratio = Math.min(420 / (size.width || 420), 280 / (size.height || 280), 1);
-          children.push(new Paragraph({ children: [new ImageRun({ type: resource.mimeType === "image/png" ? "png" : "jpg", data: original, transformation: { width: Math.max(1, Math.round((size.width || 420) * ratio)), height: Math.max(1, Math.round((size.height || 280) * ratio)) }, altText: { title: resource.name, name: resource.name, description: resource.name } })] }));
-        } catch { children.push(new Paragraph("La imagen original se conserva en la carpeta recursos del ZIP.")); }
+          const image = await sharp(original.data, { limitInputPixels: 40_000_000 }).rotate().resize({ width: 560, height: 350, fit: "inside", withoutEnlargement: true }).png().toBuffer({ resolveWithObject: true });
+          children.push(new Paragraph({ children: [new ImageRun({ type: "png", data: image.data, transformation: { width: image.info.width, height: image.info.height }, altText: { title: resource.name, name: resource.name, description: resource.name } })] }));
+        } catch { children.push(new Paragraph("No se pudo mostrar la vista previa; abre el adjunto original desde el ZIP.")); }
       }
       if (resource.extractedText) children.push(new Paragraph({ text: `Texto reconocido: ${resource.extractedText}` }));
-    }
-  }
-  const synthesis = report.jobs.filter((job) => job.shared && job.status === "completed" && ["summary", "keypoints"].includes(job.kind));
-  if (synthesis.length) {
-    children.push(new Paragraph({ text: "Resumen y puntos clave", heading: HeadingLevel.HEADING_1 }));
-    for (const job of synthesis) {
-      children.push(new Paragraph({ text: job.kind === "summary" ? "Resumen" : "Puntos clave", heading: HeadingLevel.HEADING_2 }));
-      children.push(new Paragraph({ text: typeof job.result?.text === "string" ? job.result.text : "" }));
     }
   }
   const document = new Document({ sections: [{ properties: { page: { size: { width: 12240, height: 15840 } } }, children }] });

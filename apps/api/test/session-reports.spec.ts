@@ -12,7 +12,7 @@ import { reportMarkdown } from "../src/report-context";
 import { reportArchiveHTML } from "../src/report-archive";
 const i = { uid: "one", name: "Student", email: "local@example.invalid" };
 describe("Historial, archivos y preguntas del reporte", () => {
-  test("cerrar crea solo resumen y puntos clave del reporte", async () => {
+  test("cerrar guarda la sesión sin crear síntesis adicionales", async () => {
     const session = { id: "s", roomId: "r", startedAt: new Date(Date.now() - 1000), participantIds: [i.uid] };
     const tx: any = {
       room: { findUniqueOrThrow: jest.fn(async () => ({ id: "r", status: "open" })), update: jest.fn() },
@@ -28,13 +28,13 @@ describe("Historial, archivos y preguntas del reporte", () => {
     jest.spyOn(rooms, "member").mockResolvedValue({ role: "host" } as any);
     jest.spyOn(rooms, "mediaClient").mockReturnValue({ deleteRoom: jest.fn() } as any);
     await rooms.close("r", i);
-    expect(tx.aiJob.upsert.mock.calls.map(([arg]: any[]) => arg.create.kind)).toEqual(["summary", "keypoints"]);
+    expect(tx.aiJob.upsert).not.toHaveBeenCalled();
     const artifact = jest.fn();
     const controller = new AppController({ close: jest.fn(async () => ({ id: "s" })) } as any,
       {} as any, {} as any, { artifact } as any, {} as any, {} as any);
     artifact.mockResolvedValue({});
     await controller.close({ identity: i } as any, "r");
-    expect(artifact.mock.calls.map(call => call[2].kind)).toEqual(["summary", "keypoints"]);
+    expect(artifact).not.toHaveBeenCalled();
   });
   test("rechaza crear cuestionarios y no procesa los trabajos antiguos", async () => {
     const db: any = { aiJob: { upsert: jest.fn() }, ensureWriteSpace: jest.fn() };

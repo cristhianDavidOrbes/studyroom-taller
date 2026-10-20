@@ -14,6 +14,7 @@ import {
   UseInterceptors,
   UseGuards,
   ServiceUnavailableException,
+  ConflictException,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
@@ -29,7 +30,7 @@ import { Rooms } from "./rooms";
 import { Documents } from "./documents";
 import { Ai } from "./ai";
 import { StorageGuard } from "./storage-guard";
-import { Transcription, AUDIO_MAX_BYTES } from "./transcription";
+import { Transcription, AUDIO_MAX_BYTES, TRANSCRIPTION_GRACE_MS } from "./transcription";
 import { reportMarkdown } from "./report-context";
 import { createReportArchive, createReportWord } from "./report-archive";
 import { pipeline } from "node:stream/promises";
@@ -112,11 +113,6 @@ export class AppController {
     @Param("id") id: string,
   ) {
     const session = await this.rooms.close(id, r.identity);
-    if (session)
-      for (const kind of ["summary", "keypoints"])
-        await this.ai
-          .artifact(session.id, r.identity, { kind })
-          .catch(() => {});
     return session
       ? { id: session.id, roomId: id, endedAt: session.endedAt }
       : null;
@@ -268,13 +264,6 @@ export class AppController {
   @Post("rooms/:id/transcription/gaps") transcriptionGap(@Req() r: Authed, @Param("id") id: string, @Body() b: unknown) {
     return this.transcription.gap(id, r.identity, b);
   }
-  @Post("rooms/:id/annotations") annotate(
-    @Req() r: Authed,
-    @Param("id") id: string,
-    @Body() b: unknown,
-  ) {
-    return this.rooms.annotate(id, r.identity, b);
-  }
   @Get("usage") usage() {
     return this.rooms.usage();
   }
@@ -324,12 +313,14 @@ export class AppController {
   ) {
     const data = await this.ai.report(id, r.identity);
     if (format === "zip") {
+      if (!data.endedAt || Date.now() < new Date(data.endedAt).getTime() + TRANSCRIPTION_GRACE_MS || data.transcription.coverage.pendingBatches)
+        throw new ConflictException("El informe se está preparando. Espera a que termine la transcripción y vuelve a descargarlo.");
       this.rate.check(`report-export:${r.identity.uid}`, 3, 60000);
       if (this.archiveInFlight) throw new ServiceUnavailableException("Se está preparando otra descarga completa. Intenta nuevamente en un momento.");
       this.archiveInFlight = true;
       try {
         const archive = await createReportArchive(data, (documentId, maxBytes) => this.documents.downloadForReport(id, documentId, r.identity, maxBytes));
-        res.setHeader("Content-Disposition", `attachment; filename="studyroom-${data.id}.zip"`);
+        res.setHeader("Content-Disposition", `attachment; filename="reporte.zip"; filename*=UTF-8''${encodeURIComponent(archive.fileName)}`);
         res.setHeader("Cache-Control", "private, no-store");
         res.type("application/zip");
         try { await pipeline(archive.stream, res); }

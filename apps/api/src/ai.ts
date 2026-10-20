@@ -402,7 +402,7 @@ export class Ai
     if (old && ["queued", "running", "completed"].includes(old.status)) return publicJob(old);
     this.limiter.check(`ai:${i.uid}`, 10, 3600000);
     if (await this.db.aiJob.count({ where: { kind: { not: "quiz" }, userId: i.uid, createdAt: { gte: new Date(Date.now() - 86400000) } } }) >= 50 || await this.db.aiJob.count({ where: { kind: { not: "quiz" }, status: { in: ["queued", "running"] } } }) >= 50) denyQuota("Se alcanzó el límite gratuito de consultas de IA");
-    const sources = reportSources(report, true);
+    const sources = reportSources(report);
     if (!sources.length) throw new BadRequestException("Este reporte aún no tiene transcripción, chat ni archivos para responder");
     const reserveInstruction = jobInstruction("answer", { question: d.question, coverage: report.transcription.coverage, retrieval: { complete: false, selectedFragments: 99999, totalFragments: 99999 } });
     const contextBudget = Math.min(6000, inputContextBudget(reserveInstruction));
