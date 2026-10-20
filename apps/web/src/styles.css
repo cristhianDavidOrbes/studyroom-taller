@@ -1984,6 +1984,20 @@ a:focus-visible {
 .document-row .icon-button {
   color: #afbc9f;
 }
+.document-preview-shell {
+  position: relative;
+  min-height: 180px;
+}
+.document-preview-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+  background: #f8faf8;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
 .document-image {
   max-width: 100%;
   display: block;

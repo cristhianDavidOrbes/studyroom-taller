@@ -390,6 +390,7 @@ export function ExplorePage() {
   } = useQuery({
     queryKey: ["rooms", query.toString()],
     queryFn: ({ signal }) => api<StudyRoom[]>(`/rooms?${query}`, { signal }),
+    refetchInterval: 5000,
   });
   const displayRooms =
     tab === "scheduled" ? rooms.filter((r) => r.status === "scheduled") : rooms;

@@ -189,12 +189,15 @@ export function RoomPage() {
     [noteBusy, setNoteBusy] = useState(false),
     [invite, setInvite] = useState(""),
     [documentPreview, setDocumentPreview] = useState<{
-      url: string;
       doc: StudyDocument;
+      url?: string;
+      status: "requesting" | "loading" | "ready" | "error";
+      error?: string;
     } | null>(null);
   const socketRef = useRef<Socket | null>(null),
     bottom = useRef<HTMLDivElement>(null),
-    fileRef = useRef<HTMLInputElement>(null);
+    fileRef = useRef<HTMLInputElement>(null),
+    previewRequest = useRef(0);
   const reactionTimeout = useRef<ReturnType<typeof setTimeout>>();
   const notesRef = useRef(notes);
   notesRef.current = notes;
@@ -229,6 +232,7 @@ export function RoomPage() {
     queryKey: ["documents", id],
     queryFn: () => api<StudyDocument[]>(`/rooms/${id}/documents`),
     enabled: joined,
+    refetchInterval: tab === "documents" ? 15000 : false,
   });
   useEffect(() => {
     if (!joined || noteSaved) return;
@@ -326,6 +330,10 @@ export function RoomPage() {
       socket.on("room:state", snapshot);
       socket.on("room:members", setMembers);
       socket.on("room:updated", updateRoom);
+      socket.on("documents:updated", (event: { roomId: string }) => {
+        if (event.roomId === id)
+          void queryClient.invalidateQueries({ queryKey: ["documents", id] });
+      });
       socket.on("chat:message", (m: Message) =>
         setMessages((old) =>
           old.some(
@@ -419,7 +427,7 @@ export function RoomPage() {
       socketRef.current = null;
       clearTimeout(reactionTimeout.current);
     };
-  }, [joined, id, navigate, snapshot, updateRoom, upsertJob, toast]);
+  }, [joined, id, navigate, snapshot, updateRoom, upsertJob, toast, queryClient]);
   useEffect(() => {
     if (!joined) return;
     const pending = jobs.filter(
@@ -530,6 +538,27 @@ export function RoomPage() {
       toast("Documento compartido");
     });
   }
+  async function openDocument(doc: StudyDocument) {
+    const request = ++previewRequest.current;
+    setDocumentPreview({ doc, status: "requesting" });
+    try {
+      const response = await api<{ url: string }>(`/rooms/${id}/documents/${doc.id}/url`);
+      if (previewRequest.current === request)
+        setDocumentPreview({ doc, url: response.url, status: "loading" });
+    } catch (failure) {
+      if (previewRequest.current === request)
+        setDocumentPreview({ doc, status: "error", error: errorText(failure) });
+    }
+  }
+  useEffect(() => {
+    if (documentPreview?.status !== "loading") return;
+    const timeout = setTimeout(() => {
+      setDocumentPreview((current) => current?.status === "loading"
+        ? { ...current, status: "error", error: "La vista previa está tardando. Puedes abrir el archivo directamente." }
+        : current);
+    }, 20000);
+    return () => clearTimeout(timeout);
+  }, [documentPreview?.status, documentPreview?.url]);
   async function memberAction(
     member: Member,
     mode: "promote" | "demote" | "kick",
@@ -980,14 +1009,7 @@ export function RoomPage() {
                           <small>{prettyBytes(doc.size)}</small>
                           <button
                             className="text-button"
-                            onClick={() =>
-                              void action(async () => {
-                                const response = await api<{ url: string }>(
-                                  `/rooms/${id}/documents/${doc.id}/url`,
-                                );
-                                setDocumentPreview({ url: response.url, doc });
-                              })
-                            }
+                            onClick={() => void openDocument(doc)}
                           >
                             Ver documento
                             <ExternalLink size={12} />
@@ -1175,31 +1197,47 @@ export function RoomPage() {
       {documentPreview && (
         <Modal
           title={documentPreview.doc.name}
-          onClose={() => setDocumentPreview(null)}
+          onClose={() => {
+            previewRequest.current++;
+            setDocumentPreview(null);
+          }}
         >
-          {documentPreview.doc.mimeType.startsWith("image/") ? (
-            <img
-              className="document-image"
-              src={documentPreview.url}
-              alt={documentPreview.doc.name}
-            />
-          ) : (
-            <iframe
-              className="document-preview"
-              title={documentPreview.doc.name}
-              src={documentPreview.url}
-              sandbox="allow-same-origin"
-            />
+          <div className="document-preview-shell">
+            {(documentPreview.status === "requesting" || documentPreview.status === "loading") && (
+              <div className="document-preview-loading">
+                <Spinner label="Cargando archivo…" />
+              </div>
+            )}
+            {documentPreview.status === "error" && (
+              <ErrorBox message={documentPreview.error} retry={() => void openDocument(documentPreview.doc)} />
+            )}
+            {documentPreview.url && (documentPreview.doc.mimeType.startsWith("image/") ? (
+              <img
+                className="document-image"
+                src={documentPreview.url}
+                alt={documentPreview.doc.name}
+                style={{ visibility: documentPreview.status === "ready" ? "visible" : "hidden" }}
+                onLoad={() => setDocumentPreview((current) => current && current.url === documentPreview.url ? { ...current, status: "ready" } : current)}
+                onError={() => setDocumentPreview((current) => current && current.url === documentPreview.url ? { ...current, status: "error", error: "No se pudo mostrar la imagen. Ábrela directamente." } : current)}
+              />
+            ) : (
+              <iframe
+                className="document-preview"
+                title={documentPreview.doc.name}
+                src={documentPreview.url}
+                sandbox="allow-same-origin"
+                style={{ visibility: documentPreview.status === "ready" ? "visible" : "hidden" }}
+                onLoad={() => setDocumentPreview((current) => current && current.url === documentPreview.url ? { ...current, status: "ready" } : current)}
+                onError={() => setDocumentPreview((current) => current && current.url === documentPreview.url ? { ...current, status: "error", error: "No se pudo mostrar la vista previa. Abre el archivo directamente." } : current)}
+              />
+            ))}
+          </div>
+          {documentPreview.url && (
+            <a className="button secondary" href={documentPreview.url} target="_blank" rel="noreferrer">
+              Abrir archivo
+              <ExternalLink size={16} />
+            </a>
           )}
-          <a
-            className="button secondary"
-            href={documentPreview.url}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Abrir archivo
-            <ExternalLink size={16} />
-          </a>
         </Modal>
       )}
     </div>
