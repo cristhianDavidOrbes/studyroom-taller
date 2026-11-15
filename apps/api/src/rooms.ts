@@ -33,6 +33,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { AccessToken, RoomServiceClient } from "livekit-server-sdk";
 import { Prisma } from "@prisma/client";
+import { ageOn, parseBirthDate, requireAge } from "./age";
 
 @Injectable()
 export class Rooms implements OnModuleInit, OnModuleDestroy {
@@ -214,6 +215,7 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
     });
     if (!m || m.banned || (!history && !m.active))
       throw new ForbiddenException("No tienes acceso a esta sala");
+    requireAge(m.user.birthDate, m.room.minAge);
     if (
       m.room.status === "scheduled" &&
       m.room.scheduledAt &&
@@ -234,12 +236,12 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
     return m;
   }
   async profile(i: Identity, body?: unknown) {
-    return body === undefined
-      ? this.db.user.findUniqueOrThrow({ where: { id: i.uid } })
-      : this.db.user.update({
-          where: { id: i.uid },
-          data: parse(profileSchema, body),
-        });
+    if (body === undefined) return this.db.user.findUniqueOrThrow({ where: { id: i.uid } });
+    const { birthDate, ...data } = parse(profileSchema, body);
+    return this.db.user.update({
+      where: { id: i.uid },
+      data: { ...data, ...(birthDate ? { birthDate: parseBirthDate(birthDate) } : {}) },
+    });
   }
   async format(room: any, uid: string) {
     const membership =
@@ -286,10 +288,12 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       q,
     ) as Record<string, string>;
     const u = await this.db.user.findUniqueOrThrow({ where: { id: i.uid } });
+    requireAge(u.birthDate, 0);
     if (q.recommended === "true" && u.interests.length === 0) return [];
     const rows = await this.db.room.findMany({
       where: {
         status: { in: ["open", "scheduled"] },
+        minAge: { lte: ageOn(u.birthDate!) },
         // Keep private rooms discoverable only to their current participants.
         // The text search must be conjoined with visibility, never replace it.
         AND: [
@@ -347,6 +351,9 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
   async get(id: string, i: Identity) {
     let r = await this.db.room.findUnique({ where: { id } });
     if (!r) throw new NotFoundException("Sala no encontrada");
+    const user = await this.db.user.findUniqueOrThrow({ where: { id: i.uid } });
+    requireAge(user.birthDate, 0);
+    if (ageOn(user.birthDate!) < r.minAge) throw new NotFoundException("Sala no encontrada");
     if (
       r.status === "scheduled" &&
       r.scheduledAt &&
@@ -363,6 +370,8 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
   async create(i: Identity, body: unknown) {
     this.limiter.check(`create:${i.uid}`, 5, 3600000);
     const data = parse(roomSchema, body);
+    const user = await this.db.user.findUniqueOrThrow({ where: { id: i.uid } });
+    requireAge(user.birthDate, data.minAge);
     if (data.privacy === "private" && !data.accessCode)
       throw new BadRequestException(
         "Las salas privadas necesitan un código de al menos seis caracteres",
@@ -398,6 +407,8 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
       });
       if (!m?.active || m.banned || m.role !== "host")
         throw new ForbiddenException("Solo el anfitrión puede editar la sala");
+      const host = await tx.user.findUniqueOrThrow({ where: { id: i.uid } });
+      requireAge(host.birthDate, d.minAge ?? m.room.minAge);
       if (!["open", "scheduled"].includes(m.room.status))
         throw new ConflictException("La sala ya terminó");
       if (
@@ -412,6 +423,12 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
         throw new BadRequestException("La fecha debe ser futura");
       if (d.privacy === "private" && !d.accessCode && !m.room.accessHash)
         throw new BadRequestException("Define un código privado");
+      if (d.minAge !== undefined && d.minAge > m.room.minAge) {
+        const targetAge = d.minAge;
+        const active = await tx.membership.findMany({ where: { roomId: id, active: true, banned: false }, include: { user: true } });
+        if (active.some(member => !member.user.birthDate || ageOn(member.user.birthDate) < targetAge))
+          throw new ConflictException("Hay participantes que no cumplen la nueva edad mínima");
+      }
       const { accessCode, scheduledAt, ...rest } = d;
       return tx.room.update({
         where: { id },
@@ -446,6 +463,8 @@ export class Rooms implements OnModuleInit, OnModuleDestroy {
     await this.db.serial(async (tx) => {
       const r = await tx.room.findUnique({ where: { id } });
       if (!r) throw new NotFoundException("Sala no encontrada");
+      const user = await tx.user.findUniqueOrThrow({ where: { id: i.uid } });
+      requireAge(user.birthDate, r.minAge);
       if (["closed", "cancelled"].includes(r.status))
         throw new ConflictException("La sala ya terminó");
       const old = await tx.membership.findUnique({

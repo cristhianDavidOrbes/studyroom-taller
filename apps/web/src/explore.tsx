@@ -50,6 +50,7 @@ export function RoomForm({
       subject: String(d.get("subject")),
       modality: String(d.get("modality")),
       level: String(d.get("level")),
+      minAge: Number(d.get("minAge")),
       privacy,
       capacity: Number(d.get("capacity")),
       durationMinutes: Number(d.get("durationMinutes")),
@@ -164,6 +165,15 @@ export function RoomForm({
             </select>
           </label>
           <label>
+            Edad mínima
+            <select name="minAge" defaultValue={room?.minAge ?? 0}>
+              <option value={0}>Todas las edades</option>
+              <option value={13}>13 años o más</option>
+              <option value={16}>16 años o más</option>
+              <option value={18}>18 años o más</option>
+            </select>
+          </label>
+          <label>
             Duración estimada
             <select
               name="durationMinutes"
@@ -241,6 +251,7 @@ export function RoomCard({
       <div className="room-card-body">
         <div className="card-badges">
           <Badge>{room.level}</Badge>
+          {room.minAge > 0 && <Badge>{room.minAge}+</Badge>}
           {room.privacy === "private" && (
             <LockKeyhole size={14} aria-label="Sala privada" />
           )}
@@ -308,6 +319,7 @@ export function RoomDetails({
       <div className="detail-tags">
         <Badge tone="green">{room.subject}</Badge>
         <Badge>{room.level}</Badge>
+        {room.minAge > 0 && <Badge>{room.minAge}+</Badge>}
         <Badge>{room.modality}</Badge>
       </div>
       <p className="preserve-lines">{room.description}</p>

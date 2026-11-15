@@ -2,6 +2,7 @@ import { z } from "zod";
 export const profileSchema = z
   .object({
     displayName: z.string().trim().min(2).max(80).optional(),
+    birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     bio: z.string().max(500).optional(),
     interests: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
     level: z.string().min(1).max(40).optional(),
@@ -18,6 +19,7 @@ export const roomSchema = z
     subject: z.string().trim().min(1).max(80),
     modality: z.string().min(1).max(40).default("colaborativa"),
     level: z.string().min(1).max(40).default("principiante"),
+    minAge: z.number().int().min(0).max(18).default(0),
     privacy: z.enum(["public", "private"]).default("public"),
     accessCode: z.string().min(6).max(64).optional(),
     capacity: z.number().int().min(2).max(4).default(4),

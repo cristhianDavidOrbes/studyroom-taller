@@ -28,6 +28,7 @@ describe("Autorización de salas", () => {
             banned: false,
             role: "host",
             room: scheduled,
+            user: { birthDate: new Date("2000-01-01") },
           }),
       },
       room: {
@@ -68,6 +69,7 @@ describe("Autorización de salas", () => {
           active: true,
           banned: false,
           room: {},
+          user: { birthDate: new Date("2000-01-01") },
         }),
       },
     };
@@ -84,6 +86,7 @@ describe("Autorización de salas", () => {
           active: true,
           banned: false,
           room: { status: "open" },
+          user: { birthDate: new Date("2000-01-01") },
         }),
       },
     };
@@ -108,6 +111,7 @@ describe("Autorización de salas", () => {
           active: true,
           banned: false,
           room: { status: "open" },
+          user: { birthDate: new Date("2000-01-01") },
         }),
       },
     };
@@ -139,7 +143,7 @@ describe("Descubrimiento de salas", () => {
   test("combina búsqueda y visibilidad: no expone salas privadas ajenas", async () => {
     const db: any = {
       room: { updateMany: jest.fn(), findMany: jest.fn().mockResolvedValue([]) },
-      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [] }) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [], birthDate: new Date("2000-01-01") }) },
     };
     const rooms = new Rooms(db, new Events(), new RateLimiter());
     await rooms.list(identity, { q: "álgebra" });
@@ -160,7 +164,7 @@ describe("Descubrimiento de salas", () => {
       room: { updateMany: jest.fn(), findMany: jest.fn().mockResolvedValue([
         room("math", "Matemáticas"), room("history", "Historia"),
       ]) },
-      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: ["matemáticas"] }) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: ["matemáticas"], birthDate: new Date("2000-01-01") }) },
     };
     const rooms = new Rooms(db, new Events(), new RateLimiter());
     jest.spyOn(rooms, "format").mockImplementation(async (value: any) => value);
@@ -168,7 +172,7 @@ describe("Descubrimiento de salas", () => {
     expect(db.room.findMany.mock.calls[0][0].where.AND).toContainEqual({
       OR: [{ subject: { contains: "matemáticas", mode: "insensitive" } }],
     });
-    db.user.findUniqueOrThrow.mockResolvedValue({ interests: [] });
+    db.user.findUniqueOrThrow.mockResolvedValue({ interests: [], birthDate: new Date("2000-01-01") });
     expect(await rooms.list(identity, { recommended: "true" })).toEqual([]);
   });
   test("ordena por participantes activos", async () => {
@@ -176,7 +180,7 @@ describe("Descubrimiento de salas", () => {
       room: { updateMany: jest.fn(), findMany: jest.fn().mockResolvedValue([
         room("small", "Física", 1), room("large", "Física", 4),
       ]) },
-      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [] }) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [], birthDate: new Date("2000-01-01") }) },
     };
     const rooms = new Rooms(db, new Events(), new RateLimiter());
     jest.spyOn(rooms, "format").mockImplementation(async (value: any) => value);
@@ -188,7 +192,7 @@ describe("Descubrimiento de salas", () => {
         { ...room("subject", "Álgebra", 4), title: "Repaso general" },
         { ...room("title", "Matemáticas", 1), title: "Álgebra en grupo" },
       ]) },
-      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [] }) },
+      user: { findUniqueOrThrow: jest.fn().mockResolvedValue({ interests: [], birthDate: new Date("2000-01-01") }) },
     };
     const rooms = new Rooms(db, new Events(), new RateLimiter());
     jest.spyOn(rooms, "format").mockImplementation(async (value: any) => value);

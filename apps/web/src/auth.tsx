@@ -160,7 +160,7 @@ export function AuthPage() {
         await updateProfile(user, { displayName: String(data.get("name")) });
         await api(
           "/me",
-          json("PATCH", { displayName: String(data.get("name")) }),
+          json("PATCH", { displayName: String(data.get("name")), birthDate: String(data.get("birthDate")) }),
         );
         await reload();
         navigate(safeReturnPath(params.get("next"), "/perfil"));
@@ -254,6 +254,13 @@ export function AuthPage() {
                   maxLength={60}
                   placeholder="Cómo te llamas"
                 />
+              </label>
+            )}
+            {mode === "register" && (
+              <label>
+                Fecha de nacimiento
+                <input name="birthDate" type="date" required max={new Date().toISOString().slice(0, 10)} />
+                <small>Se usa para mostrarte solo las salas apropiadas para tu edad.</small>
               </label>
             )}
             {mode !== "reset" && (
@@ -399,6 +406,7 @@ export function ProfilePage() {
             email: d.get("email") === "on",
           },
           onboarded: true,
+          birthDate: String(d.get("birthDate")),
         }),
       );
       await reload();
@@ -413,7 +421,7 @@ export function ProfilePage() {
   return (
     <div className="page narrow">
       <span className="eyebrow">TU ESPACIO</span>
-      <h1>{profile.onboarded ? "Mi perfil" : "Hagamos este espacio tuyo"}</h1>
+      <h1>{!profile.birthDate ? "Indica tu edad para continuar" : profile.onboarded ? "Mi perfil" : "Hagamos este espacio tuyo"}</h1>
       <p className="page-intro">
         Tus intereses nos ayudan a acercarte a las salas adecuadas.
       </p>
@@ -437,6 +445,11 @@ export function ProfilePage() {
             maxLength={60}
             defaultValue={profile.displayName}
           />
+        </label>
+        <label>
+          Fecha de nacimiento
+          <input name="birthDate" type="date" required max={new Date().toISOString().slice(0, 10)} defaultValue={profile.birthDate?.slice(0, 10)} />
+          <small>Tu fecha no se muestra a otros usuarios. Sirve para controlar a qué salas puedes entrar.</small>
         </label>
         <label>
           Sobre mí

@@ -68,6 +68,8 @@ function Protected() {
         </button>
       </div>
     );
+  if (profile && !profile.birthDate && location.pathname !== "/perfil")
+    return <Navigate replace to="/perfil?edad=1" />;
   return <Outlet />;
 }
 function Shell() {
