@@ -72,6 +72,21 @@ describe("Reporte ZIP completo y autorizado", () => {
     expect(archive.resources[0].archivePath).toBe("adjuntos/001-FILE_BETWEEN.txt");
     expect(JSON.stringify(input)).toBe(before);
   });
+  test("numera adjuntos disponibles en orden cronológico sin saltos por originales eliminados", async () => {
+    const input = report();
+    input.documents = [
+      { id: "later", name: "Segundo.txt", mimeType: "text/plain", size: 2, available: true, createdAt: new Date(start.getTime() + 3000) },
+      { id: "deleted", name: "Eliminado.txt", mimeType: "text/plain", size: 2, available: false, createdAt: new Date(start.getTime() + 1000) },
+      { id: "earlier", name: "Primero.txt", mimeType: "text/plain", size: 2, available: true, createdAt: new Date(start.getTime() + 2000) },
+    ];
+    const archive = await createReportArchive(input, async () => Buffer.from("ok"));
+    expect(archive.resources.map(resource => [resource.id, resource.archivePath])).toEqual([
+      ["deleted", null], ["earlier", "adjuntos/001-Primero.txt"], ["later", "adjuntos/002-Segundo.txt"],
+    ]);
+    const zip = await unzip(archive);
+    expect(await zip.file("adjuntos/001-Primero.txt")!.async("string")).toBe("ok");
+    expect(await zip.file("adjuntos/002-Segundo.txt")!.async("string")).toBe("ok");
+  });
   test("escapa contenido hostil, crea rutas únicas y referencias legibles solo si están autorizadas", async () => {
     const input = report();
     input.title = '<script>alert("title")</script>';
