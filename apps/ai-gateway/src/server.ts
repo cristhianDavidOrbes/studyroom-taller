@@ -7,6 +7,7 @@ import { BASE_MODEL, CONTEXT_TOKENS, MAX_BODY_BYTES, MAX_RESPONSE_BYTES, MODEL, 
 import { authorized, GatewayError, parseInput, SingleQueue, UsageMeter, type GenerateInput } from './core.js';
 import { ASR_MODEL, ASR_URL, MAX_AUDIO_BODY_BYTES, MAX_TRANSCRIPT_BYTES, parseSpeechInput, transcribe } from './speech.js';
 import { createImageExtractor, MAX_IMAGE_BODY_BYTES, MAX_OCR_RESPONSE_BYTES, parseImageInput } from './image-extraction.js';
+import { describeImage, VISION_MODEL } from './vision.js';
 
 export interface Usage { inputTokens: number; outputTokens: number; totalDurationMs: number; tokensPerSecond: number; firstTokenMs: number | null }
 interface OllamaPart { error?: string; done?: boolean; done_reason?: string; message?: { content?: string }; prompt_eval_count?: number; eval_count?: number; total_duration?: number; eval_duration?: number; }
@@ -151,6 +152,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
         let ready = false;
         let speechReady = false;
         let modelDigest: string | null = null;
+        let visionReady = false;
         try {
           const tags = await fetcher('http://127.0.0.1:11434/api/tags', { signal: AbortSignal.timeout(3000), redirect: 'error' });
           if (tags.ok) {
@@ -158,6 +160,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
             const model = data.models?.find(item => item.name === MODEL);
             ready = !!model;
             modelDigest = model?.digest ?? null;
+            visionReady = !!data.models?.some(item => item.name === VISION_MODEL);
           }
         } catch { /* Report readiness without leaking local network errors. */ }
         try {
@@ -165,7 +168,7 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
           if (speechHealth.ok) speechReady = (await speechHealth.json() as {status?: string}).status === 'ready';
         } catch { /* ASR remains explicitly unavailable until its local model is ready. */ }
         const usage = meter.snapshot();
-        json(res, 200, { status: ready && !pauseMode() && !usage.exhausted && usage.persistenceHealthy ? 'ready' : 'unavailable', model: MODEL, baseModel: BASE_MODEL, modelDigest, ollamaReady: ready, speech: { ready: speechReady && pauseMode() !== 'all' && !usage.exhausted && usage.persistenceHealthy, model: ASR_MODEL, pending: speechPending, maxDurationMs: 30000 }, ocr: { ready: images.ready() && !pauseMode() && !usage.exhausted && usage.persistenceHealthy, model: 'tesseract', pending: imagePending }, pause: pauseMode(), queue: queue.state, usage, freeMemoryMb: Math.floor(freeMemory() / 1024 / 1024), contextTokens: CONTEXT_TOKENS, localOnly: true });
+        json(res, 200, { status: ready && !pauseMode() && !usage.exhausted && usage.persistenceHealthy ? 'ready' : 'unavailable', model: MODEL, baseModel: BASE_MODEL, modelDigest, ollamaReady: ready, speech: { ready: speechReady && pauseMode() !== 'all' && !usage.exhausted && usage.persistenceHealthy, model: ASR_MODEL, pending: speechPending, maxDurationMs: 30000 }, ocr: { ready: images.ready() && !pauseMode() && !usage.exhausted && usage.persistenceHealthy, model: 'tesseract', pending: imagePending }, vision: { ready: visionReady && !pauseMode() && !usage.exhausted && usage.persistenceHealthy, model: VISION_MODEL }, pause: pauseMode(), queue: queue.state, usage, freeMemoryMb: Math.floor(freeMemory() / 1024 / 1024), contextTokens: CONTEXT_TOKENS, localOnly: true });
         return;
       }
       meter.assertQuota();
@@ -179,9 +182,15 @@ export function createGateway(config: GatewayConfig, dependencies: Dependencies 
         const resources = { priority: 'background' } as const;
         ensureResources(resources);
         release = meter.reserve(MAX_OCR_RESPONSE_BYTES);
-        timeout = setTimeout(() => { timedOut = true; controller.abort(); }, Math.min(config.timeoutMs, 45_000));
-        const result = await queue.add('background', controller.signal, async () => { ensureResources(resources); return images.extract(input, controller.signal); });
-        log({ event: 'image_extraction', model: 'tesseract', truncated: result.truncated });
+        timeout = setTimeout(() => { timedOut = true; controller.abort(); }, Math.min(config.timeoutMs, 110_000));
+        const result = await queue.add('background', controller.signal, async () => {
+          ensureResources(resources);
+          const ocr = await images.extract(input, controller.signal).catch(() => null);
+          const description = await describeImage(fetcher, input, controller.signal).catch(() => '');
+          if (!ocr && !description) throw new GatewayError(503, 'IMAGE_UNAVAILABLE', 'No se pudo interpretar esta imagen con la IA local.', 30);
+          return { text: ocr?.text ?? '', description, model: description ? VISION_MODEL : 'tesseract', language: 'spa+eng', truncated: ocr?.truncated ?? false, visionStatus: description ? 'described' : 'unavailable' };
+        });
+        log({ event: 'image_extraction', model: result.model, truncated: result.truncated, visionStatus: result.visionStatus });
         json(res, 200, result);
         return;
       }

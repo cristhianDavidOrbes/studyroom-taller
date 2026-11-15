@@ -52,10 +52,10 @@ describe("Extracción segura de documentos de reporte", () => {
     return { service, file, tx, storage };
   }
   test("OCR truncado queda partial en archivo y proveniencia", async () => {
-    const f = uploadFixture(); jest.spyOn(f.service as any, "extractImage").mockResolvedValue({ text: "Texto reconocido parcial", truncated: true });
+    const f = uploadFixture(); jest.spyOn(f.service as any, "extractImage").mockResolvedValue({ text: "Texto reconocido parcial", description: "", visionStatus: "unavailable", truncated: true });
     const result = await f.service.upload("r", { uid: "u", name: "U", email: "local@example.invalid" }, f.file);
-    expect(result.extractionStatus).toBe("partial"); expect(result.extractionError).toContain("incompleta");
-    expect(f.tx.sessionDocument.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ extractionStatus: "partial", extractedText: "Texto reconocido parcial" }) }));
+    expect(result.extractionStatus).toBe("partial"); expect(result.extractionError).toContain("IA visual no estuvo disponible");
+    expect(f.tx.sessionDocument.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ extractionStatus: "partial", extractedText: "Texto reconocido: Texto reconocido parcial" }) }));
   });
   test("fallo OCR conserva el adjunto y declara unavailable", async () => {
     const f = uploadFixture(); jest.spyOn(f.service as any, "extractImage").mockRejectedValue(new Error("private token issue"));

@@ -151,9 +151,11 @@ export class Documents {
     }
     if (mime.startsWith("image/")) {
       try {
-        const result = await this.extractImage(f.buffer, mime); text = result.text;
-        extractionStatus = result.truncated ? "partial" : text.trim() ? "ocr" : "no_text";
-        if (result.truncated) extractionError = "La extracción de texto de esta imagen alcanzó el límite local y está incompleta. La imagen original sigue disponible completa.";
+        const result = await this.extractImage(f.buffer, mime);
+        text = [result.description ? `Descripción visual: ${result.description}` : '', result.text ? `Texto reconocido: ${result.text}` : ''].filter(Boolean).join('\n');
+        extractionStatus = result.truncated || result.visionStatus !== 'described' ? "partial" : "vision";
+        if (result.visionStatus !== 'described') extractionError = "La IA visual no estuvo disponible. Solo se pudo reconocer texto de la imagen.";
+        else if (result.truncated) extractionError = "El texto de la imagen alcanzó el límite local; la descripción visual está disponible.";
       }
       catch { extractionStatus = "unavailable"; extractionError = "No fue posible extraer texto de esta imagen con la IA local. El archivo original sí se guardó."; }
     }
@@ -272,14 +274,14 @@ export class Documents {
       if (u.ngrokRequests + 1 > CAPS.ngrokRequests || u.ngrokBytes + BigInt(reservation) > BigInt(CAPS.ngrokBytes)) denyQuota();
       await tx.usage.update({ where: { id: month }, data: { ngrokRequests: { increment: 1 }, ngrokBytes: { increment: reservation } } });
     });
-    const response = await fetch(new URL("/v1/extract-image", url), { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.AI_GATEWAY_TOKEN}` }, body, signal: AbortSignal.timeout(45000) });
+    const response = await fetch(new URL("/v1/extract-image", url), { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.AI_GATEWAY_TOKEN}` }, body, signal: AbortSignal.timeout(120000) });
     if (!response.ok || !response.body) throw new Error("OCR unavailable");
     const chunks: Buffer[] = []; let received = 0;
     for await (const chunk of response.body as any) { received += chunk.byteLength; if (received > 500000) throw new Error("OCR response too large"); chunks.push(Buffer.from(chunk)); }
     const result = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    if (typeof result.text !== "string" || typeof result.model !== "string" || typeof result.language !== "string" || (result.truncated !== undefined && typeof result.truncated !== "boolean")) throw new Error("Invalid OCR result");
+    if (typeof result.text !== "string" || typeof result.description !== "string" || typeof result.model !== "string" || typeof result.language !== "string" || !["described", "unavailable"].includes(result.visionStatus) || (result.truncated !== undefined && typeof result.truncated !== "boolean")) throw new Error("Invalid image result");
     await this.db.usage.update({ where: { id: month }, data: { ngrokBytes: { increment: Buffer.byteLength(body) + received + 4096 - reservation } } });
-    return { text: result.text as string, truncated: result.truncated === true };
+    return { text: result.text as string, description: result.description as string, visionStatus: result.visionStatus as string, truncated: result.truncated === true };
   }
   async remove(id: string, docId: string, i: Identity) {
     const m = await this.rooms.member(id, i.uid, undefined, true);
