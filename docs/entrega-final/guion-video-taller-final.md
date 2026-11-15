@@ -2,7 +2,7 @@
 
 **Duración prevista:** 9 a 10 minutos. Este es el recorrido que debes **mostrar y explicar** en el video, siguiendo los seis criterios de la rúbrica y los seis puntos del checklist final. El [guion anterior](guion-presentacion.md) sirve para una exposición general del producto; este guía la entrega del taller.
 
-**Preparación:** abre en VS Code la carpeta `studyroom-taller-final-por-funcionalidades`, en `main`. Ten abiertas una terminal, la aplicación de prueba y la [lista de pull requests](https://github.com/cristhianDavidOrbes/studyroom-taller-final-ramas/pulls?q=is%3Apr+is%3Aclosed). Prepara una cuenta y una reunión de prueba. Usa dos cuentas o ventanas si vas a demostrar actualización en tiempo real. No abras archivos `.env` reales ni muestres contraseñas o tokens.
+**Preparación:** abre en VS Code la carpeta `studyroom-taller-final-por-funcionalidades`, en `main`. Ten abiertas una terminal, la aplicación de prueba y la [lista de pull requests](https://github.com/cristhianDavidOrbes/studyroom-taller/pulls?q=is%3Apr+is%3Aclosed). Prepara una cuenta y una reunión de prueba. Usa dos cuentas o ventanas si vas a demostrar actualización en tiempo real. No abras archivos `.env` reales ni muestres contraseñas o tokens.
 
 ## 0:00–0:45 — Presentación y necesidad
 
@@ -48,7 +48,7 @@
 
 ## 6:35–7:40 — 04: rama, commits y pull request
 
-**En pantalla:** muestra la rama `main` en VS Code y el [mapa de ramas y PR](flujo-git.md). En GitHub abre **Branches** para enseñar `feature/control-edad-salas`, `feature/contexto-visual-ia`, `feature/adjuntos-cronologicos-zip` y las demás. Abre [PR #1](https://github.com/cristhianDavidOrbes/studyroom-taller-final-ramas/pull/1), [PR #2](https://github.com/cristhianDavidOrbes/studyroom-taller-final-ramas/pull/2) y [PR #3](https://github.com/cristhianDavidOrbes/studyroom-taller-final-ramas/pull/3): enseña **Commits**, **Files changed**, rama de origen, destino `main` y el estado integrado.
+**En pantalla:** muestra la rama `main` en VS Code y el [mapa de ramas y PR](flujo-git.md). En GitHub abre **Branches** para enseñar `feature/control-edad-salas`, `feature/contexto-visual-ia`, `feature/adjuntos-cronologicos-zip` y las demás. Abre [PR #1](https://github.com/cristhianDavidOrbes/studyroom-taller/pull/1), [PR #2](https://github.com/cristhianDavidOrbes/studyroom-taller/pull/2) y [PR #3](https://github.com/cristhianDavidOrbes/studyroom-taller/pull/3): enseña **Commits**, **Files changed**, rama de origen, destino `main` y el estado integrado.
 
 **Di:** «Para este taller los cambios nuevos no se hicieron directamente en `main`. Separé funcionalidades en ramas con nombres concretos: control de edad, contexto visual de IA, adjuntos cronológicos y migraciones al iniciar la API. Cada rama tuvo su propio commit y pull request hacia `main`; después de comprobarla se integró mediante merge. Los PR conservan los archivos y commits para revisarlos. El código que ya existía está en la base inicial y no lo atribuyo a estos PR. El historial muestra autores reales. No voy a afirmar que otra persona revisó los cambios si la pestaña Reviews no lo demuestra. Si el trabajo es grupal, cada integrante debe aportar evidencia propia.»
 

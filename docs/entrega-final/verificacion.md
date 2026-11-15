@@ -1,6 +1,6 @@
 # Registro de verificación de la copia académica
 
-**Fecha:** 2026-11-15, hora de Bogotá. **Repositorio:** `studyroom-taller-final-ramas`; cambios integrados a `main` mediante ramas y PR separados.
+**Fecha:** 2026-11-15, hora de Bogotá. **Repositorio:** `studyroom-taller`; cambios integrados a `main` mediante ramas y PR separados.
 
 | Comprobación | Resultado | Evidencia observada |
 |---|---|---|

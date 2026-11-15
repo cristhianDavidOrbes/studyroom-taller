@@ -1,6 +1,6 @@
 # Entrega final de Ingeniería Web — StudyRoom
 
-Esta es una **copia académica independiente** del proyecto StudyRoom, preparada el 15 de noviembre de 2026. El repositorio original no se modifica por esta entrega. Los cambios nuevos se integraron a `main` desde ramas por funcionalidad mediante pull requests. El repositorio privado es `cristhianDavidOrbes/studyroom-taller-final-ramas`.
+Esta es una **copia académica independiente** del proyecto StudyRoom, preparada el 15 de noviembre de 2026. El repositorio original no se modifica por esta entrega. Los cambios nuevos se integraron a `main` desde ramas por funcionalidad mediante pull requests. El repositorio privado es `cristhianDavidOrbes/studyroom-taller`.
 
 ## Entregables
 
