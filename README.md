@@ -1,5 +1,7 @@
 # StudyRoom
 
+> **Copia académica de Ingeniería Web (15-11-2026):** empieza por [la guía de entrega](docs/entrega-final/README.md), que enlaza la constitución SDD, la especificación, el plan, las tareas, las pruebas y un guion oral de más de cinco minutos. Los enlaces y resultados históricos que aparecen más abajo pertenecen al proyecto previo; no prueban que los cambios de esta copia estén desplegados.
+
 StudyRoom reúne salas de estudio, videollamada, chat, documentos, notas privadas, temporizador y ayuda de IA ejecutada en tu PC. La interfaz está en español. El alcance original está conservado en las **657 incidencias Jira**: 7 épicas, 50 historias, 150 tareas y 450 actividades.
 
 **Abrir la aplicación:** [studyroom-sut.onrender.com](https://studyroom-sut.onrender.com). La interfaz y la API están publicadas en Render; la IA depende de que este PC y su túnel sigan encendidos.
