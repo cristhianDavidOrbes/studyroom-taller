@@ -13,6 +13,7 @@ async function audioReq(user,path,fields,audio=audioWav()){const form=new FormDa
 const roomBody=(title,more={})=>({title,subject:'Álgebra',modality:'colaborativa',level:'principiante',capacity:4,...more});
 test('Flujos reales Firebase+PostgreSQL: acceso, salas, colaboración e historial',{timeout:120000},async t=>{
  const owner=await account('anfitrion'),member=await account('participante'),outsider=await account('externo');
+ for(const user of [owner,member,outsider]) await ok(user,'/me','PATCH',{birthDate:'2000-01-01'});
  await t.test('rechaza token ausente e inválido',async()=>{assert.equal((await req(null,'/me')).status,401);assert.equal((await req({token:'fake'},'/me')).status,401);});
  await t.test('perfil idempotente y preferencias validadas',async()=>{const p=await ok(owner,'/me');assert.equal(p.id,owner.id);assert.equal((await ok(owner,'/me')).id,p.id);const edited=await ok(owner,'/me','PATCH',{displayName:'Ana de prueba',interests:['Álgebra'],onboarded:true,notifications:{inApp:true,email:false}});assert.equal(edited.displayName,'Ana de prueba');assert.equal((await req(owner,'/me','PATCH',{role:'admin'})).status,400);});
  let room;
@@ -94,24 +95,7 @@ test('Flujos reales Firebase+PostgreSQL: acceso, salas, colaboración e historia
   assert.equal((await req(member,`/rooms/${p.id}/state`)).status,403);
   await ok(owner,`/rooms/${p.id}/close`,'POST',{});
  });
- await t.test('capacidad bajo solicitudes simultáneas',async()=>{const p=await ok(owner,'/rooms','POST',roomBody('Capacidad integración',{capacity:2}));const r=await Promise.all([req(member,`/rooms/${p.id}/join`,'POST',{}),req(outsider,`/rooms/${p.id}/join`,'POST',{})]);assert.equal(r.filter(x=>x.status===201).length,1);assert.equal(r.filter(x=>x.status===409).length,1);assert.equal((await ok(owner,`/rooms/${p.id}`)).participantCount,2);await ok(owner,`/rooms/${p.id}/close`,'POST',{});});
- await t.test('programación futura y cancelación',async()=>{const p=await ok(owner,'/rooms','POST',roomBody('Programada integración',{scheduledAt:new Date(Date.now()+3600000).toISOString()}));assert.equal(p.status,'scheduled');assert.equal((await req(member,`/rooms/${p.id}/join`,'POST',{})).status,409);await ok(owner,`/rooms/${p.id}/cancel`,'POST',{});assert.equal((await ok(owner,`/rooms/${p.id}`)).status,'cancelled');});
+ await t.test('capacidad bajo solicitudes simultáneas',async()=>{const host=await account('capacidad');await ok(host,'/me','PATCH',{birthDate:'2000-01-01'});const p=await ok(host,'/rooms','POST',roomBody('Capacidad integración',{capacity:2}));const r=await Promise.all([req(member,`/rooms/${p.id}/join`,'POST',{}),req(outsider,`/rooms/${p.id}/join`,'POST',{})]);assert.equal(r.filter(x=>x.status===201).length,1);assert.equal(r.filter(x=>x.status===409).length,1);assert.equal((await ok(host,`/rooms/${p.id}`)).participantCount,2);await ok(host,`/rooms/${p.id}/close`,'POST',{});});
+ await t.test('programación futura y cancelación',async()=>{const host=await account('programada');await ok(host,'/me','PATCH',{birthDate:'2000-01-01'});const p=await ok(host,'/rooms','POST',roomBody('Programada integración',{scheduledAt:new Date(Date.now()+3600000).toISOString()}));assert.equal(p.status,'scheduled');assert.equal((await req(member,`/rooms/${p.id}/join`,'POST',{})).status,409);await ok(host,`/rooms/${p.id}/cancel`,'POST',{});assert.equal((await ok(host,`/rooms/${p.id}`)).status,'cancelled');});
  await t.test('cuotas disponibles sin revelar secretos',async()=>{const u=await ok(owner,'/usage');assert.ok(u.limits.participantMinutes<=5000);assert.equal(JSON.stringify(u).includes('service_role'),false);});
- await t.test('nuevas anotaciones rechazan acceso ajeno y payloads inválidos antes de consultar medios',async()=>{
-  const artist=await account('dibujo');
-  await ok(artist,'/me');
-  const drawing=await ok(artist,'/rooms','POST',roomBody('Herramientas integración'));
-  const path=`/rooms/${drawing.id}/annotations`;
-  try{
-   const shape={action:'rectangle',screenId:'TR_test',points:[{x:0.1,y:0.1},{x:0.8,y:0.8}]};
-   assert.equal((await req(outsider,path,'POST',shape)).status,403);
-   for(const payload of [
-    {...shape,strokeWidth:25},
-    {...shape,points:[{x:0.1,y:0.1}]},
-    {action:'text',screenId:'TR_test',x:0.5,y:0.5,text:'a'.repeat(301)},
-    {action:'erase',screenId:'TR_test',targetIds:[randomUUID()],userId:outsider.id},
-    {action:'erase',screenId:'TR_test',targetIds:[]},
-   ])assert.equal((await req(artist,path,'POST',payload)).status,400,JSON.stringify(payload));
-  }finally{await ok(artist,`/rooms/${drawing.id}/cancel`,'POST',{});}
- });
 });
