@@ -15,7 +15,7 @@ describe("Herramientas de anotación y aislamiento", () => {
   const validate = (body: unknown) => parse(annotationSchema, body);
   function fixture(options: { role?: string; owner?: string; annotations?: any[] } = {}) {
     const room = { id: "room", status: "open", annotations: options.annotations ?? [] };
-    const membership = { active: true, banned: false, role: options.role ?? "participant", room };
+    const membership = { active: true, banned: false, role: options.role ?? "participant", room, user: { birthDate: new Date("2000-01-01") } };
     const tx: any = {
       room: { findUniqueOrThrow: jest.fn().mockResolvedValue(room), update: jest.fn(async ({ data }: any) => Object.assign(room, data)) },
       membership: { findUnique: jest.fn(async () => membership) },

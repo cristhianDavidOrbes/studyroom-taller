@@ -10,6 +10,7 @@ model User {
  id String @id
  email String
  displayName String
+ birthDate DateTime? @db.Date
  bio String @default("")
  interests String[] @default([])
  level String @default("principiante")
@@ -26,6 +27,7 @@ model Room {
  subject String
  modality String @default("colaborativa")
  level String @default("principiante")
+ minAge Int @default(0)
  privacy String @default("public")
  accessHash String?
  capacity Int @default(4)

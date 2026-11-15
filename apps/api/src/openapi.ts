@@ -24,6 +24,7 @@ export function documentContracts(spec: OpenAPIObject) {
   const schemas: Record<string, any> = {
     ProfileUpdate: object({
       displayName: { ...string(80), minLength: 2 },
+      birthDate: { type: "string", format: "date", description: "Fecha de nacimiento privada para acceso por edad" },
       bio: string(500),
       interests: { type: "array", items: string(50), maxItems: 20 },
       level: string(40),
@@ -40,6 +41,7 @@ export function documentContracts(spec: OpenAPIObject) {
         subject: string(80),
         modality: string(40),
         level: string(40),
+        minAge: { type: "integer", minimum: 0, maximum: 18, default: 0 },
         privacy: {
           type: "string",
           enum: ["public", "private"],

@@ -2,6 +2,7 @@ export interface Profile {
   id: string;
   email: string;
   displayName: string;
+  birthDate: string | null;
   bio?: string;
   interests: string[];
   level: string;
@@ -15,6 +16,7 @@ export interface StudyRoom {
   subject: string;
   modality: string;
   level: string;
+  minAge: number;
   privacy: "public" | "private";
   capacity: number;
   durationMinutes?: number;
