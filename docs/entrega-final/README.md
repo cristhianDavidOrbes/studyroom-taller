@@ -14,11 +14,13 @@ Esta es una **copia académica independiente** del proyecto StudyRoom, preparada
 | Requisitos → código → pruebas | [trazabilidad.md](trazabilidad.md) |
 | Pruebas y límites | [verificacion.md](verificacion.md) |
 | Exposición de más de cinco minutos | [guion-presentacion.md](guion-presentacion.md) |
-| Video del taller, seis criterios y checklist final | [guion-video-taller-final.md](guion-video-taller-final.md) |
+| Video del taller, adopción de Spec Kit, seis criterios y checklist final | [guion-video-taller-final.md](guion-video-taller-final.md) |
 | Ramas y PR por funcionalidad | [flujo-git.md](flujo-git.md) |
 | Instalación y ejecución | [README principal](../../README.md) y archivos `.env.example` de cada aplicación |
 
 ## Preparación rápida en VS Code
+
+Spec Kit se inicializó **dentro de la copia de un proyecto existente** con `specify init --here --force --non-interactive --integration copilot --script ps`. La configuración registrada en `.specify/init-options.json` y `.specify/integration.json` permite mostrar cómo se añadió; no hace falta repetir ese comando. Después se redactaron la constitución, la especificación, el plan, las tareas y la trazabilidad, y los cambios nuevos se llevaron a ramas y PR.
 
 1. Abrir **esta carpeta**, no la carpeta original, con `code .` o **Archivo → Abrir carpeta**.
 2. Revisar **Control de código fuente**: `main` contiene los PR integrados; las ramas `feature/*`, `test/*`, `chore/*` y `docs/*` se conservan. `origin` apunta al repositorio académico privado.

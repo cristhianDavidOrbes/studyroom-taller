@@ -1,5 +1,7 @@
 # Guion de presentación de StudyRoom
 
+Para el **video del taller final**, usa [el guion con pantalla y adopción de Spec Kit](guion-video-taller-final.md). Este archivo es una exposición general del producto.
+
 **Duración objetivo:** 7 a 8 minutos, a un ritmo normal y con pausas breves para mostrar la pantalla.
 **Antes de exponer:** abrir el repositorio académico y la aplicación; tener preparadas dos cuentas de prueba, una sala y un reporte de demostración creado con datos de prueba. Probar antes el micrófono, la cámara, LiveKit y la IA local. Si un servicio externo no responde, mostrar las pruebas y explicar el límite sin simular una sesión exitosa.
 
